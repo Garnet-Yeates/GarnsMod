@@ -49,9 +49,9 @@ namespace GarnsMod.Content.Items.Weapons
 
         public static int ChargeTimeTicks => (int)(ChargeTime * 60);
 
-        private float ChargeProgress => charge / (float)ChargeTimeTicks;
+        private float ChargeProgress => currentCharge / (float)ChargeTimeTicks;
 
-        private int charge = 0;
+        private int currentCharge = 0;
 
         // If chargeTimeout hits 0, we lose our charge progress
         private int chargeTimeout = 3;
@@ -83,7 +83,6 @@ namespace GarnsMod.Content.Items.Weapons
 
         public override bool Shoot(Player player, EntitySource_ItemUse_WithAmmo source, Vector2 position, Vector2 velocity, int type, int damage, float knockback)
         {
-            Main.NewText(velocity.Length());
             return true;
         }
 
@@ -92,7 +91,7 @@ namespace GarnsMod.Content.Items.Weapons
             if (--chargeTimeout == 0)
             {
                 Main.NewText("Charge lost");
-                charge = 0;
+                currentCharge = 0;
                 Item.useTime = BaseUseTime;
                 Item.reuseDelay = BaseReuseDelay;
                 Item.shootSpeed = BaseShootSpeed;
@@ -105,7 +104,7 @@ namespace GarnsMod.Content.Items.Weapons
             // Make this client sided, doesn't need to be synced
             if (Main.myPlayer == player.whoAmI)
             {
-                Main.NewText($"Charge: {charge} ticks {charge * 100 / ChargeTimeTicks}%");
+                Main.NewText($"Charge: {currentCharge} ticks {currentCharge * 100 / ChargeTimeTicks}%");
                 Item.useTime = (int)Math.Round(BaseUseTime - (BaseUseTime - ChargedUseTime) * ChargeProgress);
                 Item.reuseDelay = (int)Math.Round(BaseReuseDelay - (BaseReuseDelay - ChargedReuseDelay) * ChargeProgress);
                 Item.useAnimation = (int)Math.Round(BaseUseAnimation - (BaseUseAnimation - ChargedUseAnimation) * ChargeProgress);
@@ -121,10 +120,10 @@ namespace GarnsMod.Content.Items.Weapons
             if (Main.myPlayer == player.whoAmI)
             {
                 chargeTimeout = 3;
-                charge++;
-                if (charge > ChargeTimeTicks)
+                currentCharge++;
+                if (currentCharge > ChargeTimeTicks)
                 {
-                    charge = ChargeTimeTicks;
+                    currentCharge = ChargeTimeTicks;
                 }
             }
         }

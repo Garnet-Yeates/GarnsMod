@@ -10,15 +10,15 @@ namespace GarnsMod
         public override void Load()
         {
             Ref<Effect> vertexPixelShaderRef = Main.VertexPixelShaderRef;
-            GameShaders.Misc["TrailShaderFirey"] = new MiscShaderData(vertexPixelShaderRef, "MagicMissile").UseProjectionMatrix(doUse: true);
-            GameShaders.Misc["TrailShaderFirey"].UseImage0("Images/Extra_" + (short)195);
-            GameShaders.Misc["TrailShaderFirey"].UseImage1("Images/Extra_" + (short)197);
-            GameShaders.Misc["TrailShaderFirey"].UseImage2("Images/Extra_" + (short)193);
+            GameShaders.Misc["TrailShaderFire"] = new MiscShaderData(vertexPixelShaderRef, "MagicMissile").UseProjectionMatrix(doUse: true);
+            GameShaders.Misc["TrailShaderFire"].UseImage0("Images/Extra_" + (short)195);
+            GameShaders.Misc["TrailShaderFire"].UseImage1("Images/Extra_" + (short)197);
+            GameShaders.Misc["TrailShaderFire"].UseImage2("Images/Extra_" + (short)193);
 
-            GameShaders.Misc["TrailShaderLiney"] = new MiscShaderData(vertexPixelShaderRef, "MagicMissile").UseProjectionMatrix(doUse: true);
-            GameShaders.Misc["TrailShaderLiney"].UseImage0("Images/Extra_" + (short)195);
-            GameShaders.Misc["TrailShaderLiney"].UseImage1("Images/Extra_" + (short)197);
-            GameShaders.Misc["TrailShaderLiney"].UseImage2("Images/Extra_" + (short)196);
+            GameShaders.Misc["TrailShaderStream"] = new MiscShaderData(vertexPixelShaderRef, "MagicMissile").UseProjectionMatrix(doUse: true);
+            GameShaders.Misc["TrailShaderStream"].UseImage0("Images/Extra_" + (short)195);
+            GameShaders.Misc["TrailShaderStream"].UseImage1("Images/Extra_" + (short)197);
+            GameShaders.Misc["TrailShaderStream"].UseImage2("Images/Extra_" + (short)196);
 
             GameShaders.Misc["TrailShaderPlain"] = new MiscShaderData(vertexPixelShaderRef, "MagicMissile").UseProjectionMatrix(doUse: true);
             GameShaders.Misc["TrailShaderPlain"].UseImage0("Images/Extra_" + (short)195);

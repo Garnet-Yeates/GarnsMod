@@ -5,10 +5,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace GarnsMod
+namespace GarnsMod.Tools
 {
 
-    public class ColorHelper
+    public class ColorTools
     {
         public static readonly List<Color> RainbowColors = new()
         {
@@ -40,9 +40,9 @@ namespace GarnsMod
         public static Dictionary<int, ColorGradient> InitGradients()
         {
             Dictionary<int, ColorGradient> dict = new();
-            for (int i = 0; i < ColorHelper.RainbowColors.Count; i++)
+            for (int i = 0; i < ColorTools.RainbowColors.Count; i++)
             {
-                dict.Add(i, FromCollectionWithStartIndex(ColorHelper.RainbowColors, i, 2));
+                dict.Add(i, FromCollectionWithStartIndex(ColorTools.RainbowColors, i, 3));
             }
             return dict;
         }
@@ -96,12 +96,13 @@ namespace GarnsMod
             // 100% would be 1 for progress btw, keep it as a decimal
             int currIndex = (int)(progress / inc);
             int nextIndex = currIndex + 1;
-            float p = (progress % inc) / inc; // little p is our progress between currIndex and nextIndex
+            float p = progress % inc / inc; // little p is our progress between currIndex and nextIndex
             if (nextIndex >= n)
             {
                 nextIndex = currIndex; // dont think this is even needed but it is incase progress is somehow > 100%
             }
-            return (colors[nextIndex].Average(colors[currIndex], p));
+
+            return Color.Lerp(colors[currIndex], colors[nextIndex], p);
         }
     }
 }
