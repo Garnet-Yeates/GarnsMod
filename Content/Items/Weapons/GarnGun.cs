@@ -101,7 +101,8 @@ namespace GarnsMod.Content.Items.Weapons
 
         public override bool? UseItem(Player player)
         {
-            // Make this client sided, doesn't need to be synced
+            // Make this client sided, other players don't need to see these changes
+            // as item use/shoot stuff is client sided anyways and this stuff resets after 0.2s of not using the item
             if (Main.myPlayer == player.whoAmI)
             {
                 Main.NewText($"Charge: {currentCharge} ticks {currentCharge * 100 / ChargeTimeTicks}%");

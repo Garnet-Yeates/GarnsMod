@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Terraria;
 
 namespace GarnsMod.Tools
 {
@@ -35,19 +36,25 @@ namespace GarnsMod.Tools
 
         private readonly List<Color> colors = new();
 
-        public static readonly Dictionary<int, ColorGradient> RainbowGradients = InitGradients();
+        public static readonly Dictionary<int, ColorGradient> FullRainbowGradients = InitRainbowGradient();
+        public static readonly Dictionary<int, ColorGradient> PartialRainbowGradients = InitPartialGradient();
 
-        public static Dictionary<int, ColorGradient> InitGradients()
+        public static Dictionary<int, ColorGradient> InitRainbowGradient()
         {
             Dictionary<int, ColorGradient> dict = new();
             for (int i = 0; i < ColorTools.RainbowColors.Count; i++)
             {
-                dict.Add(i, FromCollectionWithStartIndex(ColorTools.RainbowColors, i, 3));
+                dict.Add(i, FromCollectionWithStartIndex(ColorTools.RainbowColors, i, extraStart: 3, extraLoops: 1 ));
             }
             return dict;
         }
 
-        public ColorGradient(IEnumerable<Color> colors = null)
+        public static Dictionary<int, ColorGradient> InitPartialGradient()
+        {
+            return null;
+        }
+
+        public ColorGradient(List<Color> colors = null)
         {
             if (colors is List<Color> c)
             {
@@ -55,7 +62,7 @@ namespace GarnsMod.Tools
             }
         }
 
-        public static ColorGradient FromCollectionWithStartIndex(List<Color> colors, int startIndex, int extraStart = 0)
+        public static ColorGradient FromCollectionWithStartIndex(List<Color> colors, int startIndex, int extraStart = 0, int extraLoops = 0)
         {
             ColorGradient grad = new();
             for (int i = 0; i < extraStart; i++)
@@ -63,7 +70,7 @@ namespace GarnsMod.Tools
                 grad.AddColor(colors[startIndex]);
             }
             int length = colors.Count;
-            for (int currIndex = startIndex, i = 0; i < length; currIndex = (currIndex + 1) % length, i++)
+            for (int currIndex = startIndex, i = 0; i < length + extraLoops; currIndex = (currIndex + 1) % length, i++)
             {
                 grad.AddColor(colors[currIndex]);
             }
@@ -99,7 +106,7 @@ namespace GarnsMod.Tools
             float p = progress % inc / inc; // little p is our progress between currIndex and nextIndex
             if (nextIndex >= n)
             {
-                nextIndex = currIndex; // dont think this is even needed but it is incase progress is somehow > 100%
+                nextIndex = currIndex; // if we are on the last color of the gradient next shld be the same as curr
             }
 
             return Color.Lerp(colors[currIndex], colors[nextIndex], p);

@@ -209,7 +209,6 @@ namespace GarnsMod.Content.Items.Tools
         // Called on all clients/server every tick that the item is in their hand
         public override void HoldItem(Player player)
         {
-     //       Main.NewText($"{trailTypeMode.Name} {trailColorMode.Name}");
             player.fishingSkill += FishingPowerAdditiveIncrease;
             if (!Main.dedServ)
             {
@@ -222,14 +221,20 @@ namespace GarnsMod.Content.Items.Tools
         // Called when the player right clicks. Normally used to dynamically decide if the item's alt function can be used, but I use this hook to change the shootmode
         public override bool AltFunctionUse(Player player)
         {
-            FishingRodUISystem.FishingRodUI.SelectedTrailColorMode = trailColorMode;
-            FishingRodUISystem.FishingRodUI.SelectedTrailTypeMode = trailTypeMode;
-            FishingRodUISystem.FishingRodUI.ToggleVisibility();
+            FishingRodUIState fishingRodUI = FishingRodUISystem.FishingRodUI;
 
+            if (FishingRodUISystem.FishingRodUI.Visible)
+            {
+                fishingRodUI.SetInvisible();
+            }
+            else
+            {
+                fishingRodUI.SetVisible(shootMode, trailColorMode, trailTypeMode, player.selectedItem);
+            }
 
-            shootMode = ((int)shootMode + 1) % ShootMode.Count;
-            shootMode = ShootMode.Cone;
-            Main.NewText($"Changed item shoot mode to [c/{GetCurrentGlowColor().Hex3()}:{shootMode.Name}]");
+            //      shootMode = ((int)shootMode + 1) % ShootMode.Count;
+            //          shootMode = ShootMode.Cone;
+            //          Main.NewText($"Changed item shoot mode to [c/{GetCurrentGlowColor().Hex3()}:{shootMode.Name}]");
             return false;
         }
 
@@ -239,24 +244,22 @@ namespace GarnsMod.Content.Items.Tools
             velocity *= ShootSpeedMultiplier;
         }
 
+
+
+
         // Called on just the client that shot it
         public override bool Shoot(Player player, EntitySource_ItemUse_WithAmmo source, Vector2 position, Vector2 velocity, int type, int damage, float knockback)
         {
             // Could be eventually set to a server-sided config called 'Broken'/'Unbalanced'. I made this just for fun
             int bonus = 0;
+            //       velocity *= 1.2f;
 
             if (level == 1)
             {
                 for (int i = 0; i < 1 + bonus; i++)
                 {
-                    GarnsFishingRodBobber spawnedBobber = (GarnsFishingRodBobber) Projectile.NewProjectileDirect(source, position, velocity, type, damage, knockback, player.whoAmI).ModProjectile;
-                    // This client that spawns the projectile determines what the fishingLineColor is, but this occurs after OnSpawn() is called inside the created projectile...
-                    spawnedBobber.fishingLineColorIndex = 0;
-                    spawnedBobber.fishingRodLevel = level;
-                    spawnedBobber.trailColorMode = trailColorMode;
-                    spawnedBobber.trailTypeMode = trailTypeMode;
-                    // ...so Send/ReceiveExtraAI already got called. Right here we are triggering a projectile Sync which will call Send/ReceiveExtraAI for us so the other clients/server know what the color is.
-                    NetMessage.SendData(MessageID.SyncProjectile, -1, -1, null, spawnedBobber.Projectile.whoAmI);
+                    Vector2 bonusSpread = i == 0 ? default : GetBonusSpreadVector(velocity, 0.15f);
+                    ShootBobber(0, source, position, velocity + bonusSpread);
                 }
 
                 return false;
@@ -285,6 +288,17 @@ namespace GarnsMod.Content.Items.Tools
             return false;
         }
 
+        // Helper method for Shoot method. Should only be called from Shoot method in GarnsFishingRod (or similar) because it doesn't do any net check before Projectile.NewProjectile and assumes the owner of the proj is Main.myPlayer
+        private void ShootBobber(int fishingLineColorIndex, EntitySource_ItemUse_WithAmmo source, Vector2 position, Vector2 velocity)
+        {
+            GarnsFishingRodBobber newBobber = (GarnsFishingRodBobber)Projectile.NewProjectileDirect(source, position, velocity, ModContent.ProjectileType<GarnsFishingRodBobber>(), 0, 0f, Main.myPlayer).ModProjectile;
+            newBobber.fishingLineColorIndex = (byte)fishingLineColorIndex;
+            newBobber.fishingRodLevel = level;
+            newBobber.trailColorMode = trailColorMode;
+            newBobber.trailTypeMode = trailTypeMode;
+            NetMessage.SendData(MessageID.SyncProjectile, -1, -1, null, newBobber.Projectile.whoAmI);
+        }
+
         private void ShootLine(Vector2 position, Vector2 velocity, EntitySource_ItemUse_WithAmmo source, Player player, int type, int bonus)
         {
             int bobberAmount = level;
@@ -298,15 +312,8 @@ namespace GarnsMod.Content.Items.Tools
                 for (int j = 0; j < 1 + bonus; j++)
                 {
                     Vector2 bobberVector = current;
-                    Vector2 bonusSpread = j == 0 ? new Vector2(0, 0) : GetBonusSpreadVector(bobberVector, 0.1f);
-
-                    // Generate new bobbers
-                    GarnsFishingRodBobber spawnedBobber = (GarnsFishingRodBobber)Projectile.NewProjectileDirect(source, position, bobberVector + bonusSpread, type, 0, 0f, player.whoAmI).ModProjectile;
-                    spawnedBobber.fishingLineColorIndex = (byte)(colorIndex % RainbowColors.Count);
-                    spawnedBobber.fishingRodLevel = level;
-                    spawnedBobber.trailColorMode = trailColorMode;
-                    spawnedBobber.trailTypeMode = trailTypeMode;
-                    NetMessage.SendData(MessageID.SyncProjectile, -1, -1, null, spawnedBobber.Projectile.whoAmI);
+                    Vector2 bonusSpread = j == 0 ? default : GetBonusSpreadVector(bobberVector, 0.15f);
+                    ShootBobber(colorIndex % RainbowColors.Count, source, position, bobberVector + bonusSpread);
                 }
 
                 if (bobberAmount < 8)
@@ -334,20 +341,14 @@ namespace GarnsMod.Content.Items.Tools
 
             float increment = MathHelper.ToRadians(-spread / (bobberAmount - 1));
 
-            for (int index = 0; index < bobberAmount; ++index)
+            for (int colorIndex = 0; colorIndex < bobberAmount; ++colorIndex)
             {
                 for (int j = 0; j < 1 + bonus; j++)
                 {
                     // Generate new bobbers
                     Vector2 bobberVector = current;
-                    Vector2 bonusSpread = j == 0 ? new Vector2(0, 0) : GetBonusSpreadVector(bobberVector, 0.1f);
-
-                    GarnsFishingRodBobber spawnedBobber = (GarnsFishingRodBobber)Projectile.NewProjectileDirect(source, position, bobberVector + bonusSpread, type, 0, 0f, player.whoAmI).ModProjectile;
-                    spawnedBobber.fishingLineColorIndex = (byte)(index % RainbowColors.Count);
-                    spawnedBobber.fishingRodLevel = level;
-                    spawnedBobber.trailColorMode = trailColorMode;
-                    spawnedBobber.trailTypeMode = trailTypeMode;
-                    NetMessage.SendData(MessageID.SyncProjectile, -1, -1, null, spawnedBobber.Projectile.whoAmI);
+                    Vector2 bonusSpread = j == 0 ? default : GetBonusSpreadVector(bobberVector, 0.15f);
+                    ShootBobber(colorIndex % RainbowColors.Count, source, position, bobberVector + bonusSpread);
                 }
 
                 current = current.RotatedBy(increment);
@@ -358,21 +359,14 @@ namespace GarnsMod.Content.Items.Tools
         {
             int bobberAmount = level;
 
-            for (int index = 0; index < bobberAmount; ++index)
+            for (int colorIndex = 0; colorIndex < bobberAmount; ++colorIndex)
             {
                 for (int j = 0; j < 1 + bonus; j++)
                 {
-                    float spreadAmount = 20f; // how much the different bobbers are randomly spread out.
-
+                    float spreadAmount = 25f; // how much the different bobbers are randomly spread out.
                     Vector2 bobberVector = velocity + new Vector2(Main.rand.NextFloat(-spreadAmount, spreadAmount) * 0.05f, Main.rand.NextFloat(-spreadAmount, spreadAmount) * 0.04f);
-                    Vector2 bonusSpread = j == 0 ? new Vector2(0, 0) : GetBonusSpreadVector(bobberVector, 0.1f);
-
-                    GarnsFishingRodBobber spawnedBobber = (GarnsFishingRodBobber)Projectile.NewProjectileDirect(source, position, bobberVector + bonusSpread, type, 0, 0f, player.whoAmI).ModProjectile;
-                    spawnedBobber.fishingLineColorIndex = (byte)(index % RainbowColors.Count);
-                    spawnedBobber.fishingRodLevel = level;
-                    spawnedBobber.trailColorMode = trailColorMode;
-                    spawnedBobber.trailTypeMode = trailTypeMode;
-                    NetMessage.SendData(MessageID.SyncProjectile, -1, -1, null, spawnedBobber.Projectile.whoAmI);
+                    Vector2 bonusSpread = j == 0 ? default : GetBonusSpreadVector(bobberVector, 0.15f);
+                    ShootBobber(colorIndex % RainbowColors.Count, source, position, bobberVector + bonusSpread);
                 }
             }
         }
@@ -380,8 +374,6 @@ namespace GarnsMod.Content.Items.Tools
         private void ShootAuto(Vector2 position, Vector2 velocity, EntitySource_ItemUse_WithAmmo source, Player player, int type, int bonus)
         {
             float rotation = MathHelper.ToDegrees(velocity.ToRotation());
-
-            Main.NewText(rotation);
 
             // Threshhold of degrees (offset from <0, 0>, aka facing right) the velocity must be within to trigger 'ShootLine'
             float lineThreshold = 30; // 30 means that if we are looking within 30 degrees up, or within 30 degrees down (but not more), we will shoot a Line 
@@ -394,11 +386,6 @@ namespace GarnsMod.Content.Items.Tools
                 // Don't need to do the 0 || -180 checks here because Y > 0 means we know we are facing down
                 if (velocity.Y > 0 && rotation > speedBoostThreshold && rotation < 180 - speedBoostThreshold)
                 {
-                    if (rotation < 90)
-                    {
-
-                    }
-                    Main.NewText("x boost");
                     velocity = new Vector2(2f, 1) * velocity;
                 }
 
@@ -417,9 +404,10 @@ namespace GarnsMod.Content.Items.Tools
             }
         }
 
-        private static Vector2 GetBonusSpreadVector(Vector2 bobberVector, float offsetSpeedPercent)
+        private Vector2 GetBonusSpreadVector(Vector2 bobberVector, float offsetSpeedPercent)
         {
             float speed = bobberVector.Length();
+            offsetSpeedPercent *= 1 + 0.5f * (level / (float)MaxLevel);
             return new Vector2(speed * offsetSpeedPercent) * Main.rand.NextVector2Unit();
         }
 
@@ -471,10 +459,7 @@ namespace GarnsMod.Content.Items.Tools
 
             public static bool operator ==(ShootMode m1, ShootMode m2) => m1.Value == m2.Value;
             public static bool operator !=(ShootMode m1, ShootMode m2) => m1.Value != m2.Value;
-
-            public override bool Equals(object obj) => obj is ShootMode m && m.Value == Value;
-
-            public override int GetHashCode() => Value.GetHashCode();
+            public override int GetHashCode() => Value;
         }
 
         internal readonly struct TrailColorMode
@@ -489,7 +474,6 @@ namespace GarnsMod.Content.Items.Tools
             internal int Value { get; }
             internal string Name { get; }
             internal Asset<Texture2D> TextureAsset { get; }
-
 
             private TrailColorMode(string name, Asset<Texture2D> asset)
             {
@@ -506,46 +490,41 @@ namespace GarnsMod.Content.Items.Tools
             public static bool operator ==(TrailColorMode m1, TrailColorMode m2) => m1.Value == m2.Value;
             public static bool operator !=(TrailColorMode m1, TrailColorMode m2) => m1.Value != m2.Value;
 
-            public override bool Equals(object obj) => obj is TrailColorMode m && m.Value == Value;
-
-            public override int GetHashCode() => Value.GetHashCode();
-
+            public override int GetHashCode() => Value;
         }
 
         internal readonly struct TrailTypeMode
         {
-            internal static List<TrailTypeMode> colorModes = new();
+            internal static List<TrailTypeMode> typeModes = new();
 
-            public static int Count => colorModes.Count;
+            public static int Count => typeModes.Count;
 
-            public static readonly TrailTypeMode Plain = new("Plain", ModContent.Request<Texture2D>("GarnsMod/UI/FishingRodUI/TrailType_Plain"));
-            public static readonly TrailTypeMode Fire = new("Fire", ModContent.Request<Texture2D>("GarnsMod/UI/FishingRodUI/TrailType_Fire"));
-            public static readonly TrailTypeMode Stream = new("Stream", ModContent.Request<Texture2D>("GarnsMod/UI/FishingRodUI/TrailType_Stream"));
+            public static readonly TrailTypeMode Plain = new("Plain", trailType: 0, ModContent.Request<Texture2D>("GarnsMod/UI/FishingRodUI/TrailType_Plain"));
+            public static readonly TrailTypeMode Fire = new("Fire", trailType: 1, ModContent.Request<Texture2D>("GarnsMod/UI/FishingRodUI/TrailType_Fire"));
+            public static readonly TrailTypeMode Stream = new("Stream", trailType: 2, ModContent.Request<Texture2D>("GarnsMod/UI/FishingRodUI/TrailType_Stream"));
 
-            internal int Value { get; }
-            internal string Name { get; }
             internal Asset<Texture2D> TextureAsset { get; }
+            internal string Name { get; }
+            internal byte CorrespondingTrailType { get;  }
+            private int Value { get; }
 
-
-            private TrailTypeMode(string name, Asset<Texture2D> asset)
+            // trailType parameter in constructor must be declared as an int (not TrailType.whatever) because it is possible that this gets initialized before TrailType enum
+            private TrailTypeMode(string name, byte trailType, Asset<Texture2D> asset)
             {
-                Value = colorModes.Count;
+                Value = typeModes.Count;
                 TextureAsset = asset;
                 Name = name;
-                colorModes.Add(this);
+                CorrespondingTrailType = trailType;
+                typeModes.Add(this);
             }
 
             public static explicit operator int(TrailTypeMode m) => m.Value;
 
-            public static implicit operator TrailTypeMode(int i) => colorModes[i];
+            public static implicit operator TrailTypeMode(int i) => typeModes[i];
 
             public static bool operator ==(TrailTypeMode m1, TrailTypeMode m2) => m1.Value == m2.Value;
             public static bool operator !=(TrailTypeMode m1, TrailTypeMode m2) => m1.Value != m2.Value;
-
-            public override bool Equals(object obj) => obj is TrailTypeMode m && m.Value == Value;
-
-            public override int GetHashCode() => Value.GetHashCode();
-
+            public override int GetHashCode() => Value;
         }
     }
 }

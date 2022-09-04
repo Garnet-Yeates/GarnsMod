@@ -21,7 +21,6 @@ namespace GarnsMod.UI.FishingRodUI
             FishingRodUI.Activate();
             _fishingRodUI = new UserInterface();
             _fishingRodUI.SetState(FishingRodUI);
-
         }
 
         public override void UpdateUI(GameTime gameTime)

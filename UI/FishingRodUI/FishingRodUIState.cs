@@ -18,17 +18,15 @@ namespace GarnsMod.UI.FishingRodUI
 {
     internal class FishingRodUIState : UIState
     {
-        public UIHoverImageButton ExampleButton;
+        private UIHoverImageButton TrailColorButton;
+        private UIHoverImageButton TrailTypeButton;
 
-        public UIHoverImageButton TrailColorButton;
-        public UIHoverImageButton TrailTypeButton;
-
-        public Vector2 Origin;
-        public bool Visible;
-
-        public TrailColorMode SelectedTrailColorMode;
-        public TrailTypeMode SelectedTrailTypeMode;
-
+        public bool Visible { get; private set; }
+        public Vector2 Origin { get; private set; }
+        public int HotbarNum { get; private set; }
+        public TrailColorMode SelectedTrailColorMode { get; private set; }
+        public TrailTypeMode SelectedTrailTypeMode { get; private set; }
+        public ShootMode SelectedShootMode { get; private set; }
 
         public override void OnInitialize()
         {
@@ -74,35 +72,39 @@ namespace GarnsMod.UI.FishingRodUI
             RefreshButtons();
         }
 
-        internal void ToggleVisibility()
+        internal void SetVisible(ShootMode shootMode, TrailColorMode colorMode, TrailTypeMode typeMode, int hotbarOffset)
         {
-            if (Visible)
-            {
-                SoundEngine.PlaySound(SoundID.MenuClose);
-                Visible = false;
-                Origin = new(-1000, -1000);
-                RefreshButtons();
-            }
-            else
-            {
-                SoundEngine.PlaySound(SoundID.MenuOpen);
-                Origin = Main.MouseScreen;
-                Visible = true;
-                RefreshButtons();
-            }
+            SoundEngine.PlaySound(SoundID.MenuOpen);
+            HotbarNum = hotbarOffset;
+            SelectedTrailColorMode = colorMode;
+            SelectedTrailTypeMode = typeMode;
+            SelectedShootMode = shootMode;
+            Origin = Main.MouseScreen;
+            Visible = true;
+            RefreshButtons(); // Refresh buttons so their texture changes and they move to the new origin
+        }
+
+        internal void SetInvisible()
+        {
+            SoundEngine.PlaySound(SoundID.MenuClose);
+            Visible = false;
+            Origin = new(-1000, -1000);
+            RefreshButtons(); // Refresh buttons so they move to the new origin
         }
 
         public override void Update(GameTime gameTime)
         {
             base.Update(gameTime); // don't remove.
 
-            if (Visible && Main.player[Main.myPlayer].HeldItem.ModItem is not GarnsFishingRod)
+            Player myPlayer = Main.player[Main.myPlayer];
+
+            if (Visible && (myPlayer.HeldItem.ModItem is not GarnsFishingRod || myPlayer.selectedItem != HotbarNum))
             {
-                ToggleVisibility();
+                SetInvisible();
             }
         }
 
-        public static readonly int ButtonSize = 38;
+        public static readonly int ButtonSize = 38; // Should correspond to the texture size since the draw size is based on the texture size
 
         private void RefreshButtons()
         {
@@ -129,12 +131,7 @@ namespace GarnsMod.UI.FishingRodUI
                 TrailTypeButton.Top.Set(Origin.Y - half, 0f);
 
                 TrailTypeButton.Recalculate();
-
             }
-
         }
-
     }
-
-
 }

@@ -20,14 +20,14 @@ namespace GarnsMod.Content.Projectiles
 {
     public class GarnsFishingRodBobber : ModProjectile
     {
-        // This holds the index of the fishing line color in the ColorHelper.RainbowColors array.
+        // These fields are all specific to each projectile and are synced with ExtraAI
         internal byte fishingLineColorIndex;
         internal byte fishingRodLevel;
         internal TrailTypeMode trailTypeMode;
         internal TrailColorMode trailColorMode;
 
+        // Useful information that we can deduce from AI/colorIndex. Not saved to the projectile as they are all getters
         private Color FishingLineColor => RainbowColors[fishingLineColorIndex];
-
         private bool Chilling => Projectile.ai[1] == 0;
         private bool Wigglin => Projectile.ai[1] < 0;
         private bool CapturedItem => Projectile.ai[1] > 0;
@@ -90,21 +90,29 @@ namespace GarnsMod.Content.Projectiles
             lineColor = FishingLineColor;
         }
 
+        public int progressSubtractor = 0;
+
         public override bool PreDraw(ref Color lightColor)
         {
+            if (trailColorMode == TrailColorMode.AvailableColors && fishingRodLevel > RainbowColors.Count)
+            {
+                // If I make it so that the available colors gradient (which are just colors made from n subsets of rainbowcolors where n is rainbow colors length) has an extra loop to wrap back 
+                // to the original, I dont need the && fishingLevel > ... check up there
+                progressSubtractor += trailTypeMode == TrailTypeMode.Stream ? 15 : -3;
+            }
+
             if (!Wigglin)
             {
-                ColorGradient trailGradient = trailColorMode == TrailColorMode.SingleColor ? new ColorGradient(new List<Color> { FishingLineColor, Color.White }) : ColorGradient.RainbowGradients[fishingLineColorIndex];
-               default(GradientTrailDrawer).Draw(Projectile, trailGradient, trailTypeMode, new Vector2(1, -6));
-           
+               ColorGradient trailGradient = trailColorMode == TrailColorMode.SingleColor ? new ColorGradient(new List<Color> { FishingLineColor, Color.Lerp(FishingLineColor, new(255, 255, 255), 0.5f)}) : ColorGradient.FullRainbowGradients[fishingLineColorIndex];
+               TrailType type = (TrailType) trailTypeMode.CorrespondingTrailType;
+               default(GradientTrailDrawer).Draw(Projectile, trailGradient, type, offset: new Vector2(6, 0), progressModifier: progressSubtractor);
             }
+
             return false;
         }
 
         public override void PostDraw(Color lightColor)
         {
-            Projectile.scale = 1f;
-
             // Vector from the top left of your screen (world x,y) to the center of the projectile. Think of a line drawn from the TL of your screen to the proj center
             // For EntitySpriteDraw (0,0) is the top left of the screen so we need this offset vector to find out where it i s in relation to the screen
             Vector2 bobberPos = Projectile.Center - Main.screenPosition;
@@ -116,11 +124,11 @@ namespace GarnsMod.Content.Projectiles
             Texture2D starTexture = ModContent.Request<Texture2D>("GarnsMod/Content/Images/MultiColorStarCenter").Value;
             Texture2D grayscaleTexture = ModContent.Request<Texture2D>("GarnsMod/Content/Images/MultiColorStarGrayscale").Value;
 
-            Main.EntitySpriteDraw(starTexture, bobberPos, null, new Color(180, 180, 180, 0), 0f, starTexture.Size() / 2, Projectile.scale*1f, spriteEffects, 0);
+            float starScale = Projectile.scale * 1.0f;
+            Main.EntitySpriteDraw(starTexture, bobberPos, null, new Color(180, 180, 180, 0), 0f, starTexture.Size() / 2, starScale, spriteEffects, 0);
             Color col = FishingLineColor;
             col.A = (byte) (col.A / 1.5f);
-            Main.EntitySpriteDraw(grayscaleTexture, bobberPos, null, col, 0f, grayscaleTexture.Size() / 2, Projectile.scale*1f, spriteEffects, 0);
-
+            Main.EntitySpriteDraw(grayscaleTexture, bobberPos, null, col, 0f, grayscaleTexture.Size() / 2, starScale, spriteEffects, 0);
         }
 
         // Used for syncing. Called immediately after OnSpawn() as well as whenever MessageID.SyncProjectile is called (such as when .netupdate is called inside of AI())
