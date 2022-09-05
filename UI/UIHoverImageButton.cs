@@ -4,7 +4,7 @@ using ReLogic.Content;
 using Terraria;
 using Terraria.GameContent.UI.Elements;
 
-namespace GarnsMod.UI.FishingRodUI
+namespace GarnsMod.UI
 {
     internal class UIHoverImageButton : UIImageButton
     {
@@ -36,6 +36,6 @@ namespace GarnsMod.UI.FishingRodUI
             }
         }
 
-   
+
     }
 }

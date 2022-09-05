@@ -1,14 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
-using ReLogic.Content;
-using System;
-using System.Linq;
 using Terraria;
 using Terraria.Audio;
-using Terraria.GameContent;
-using Terraria.GameContent.UI.Elements;
 using Terraria.ID;
-using Terraria.Localization;
 using Terraria.ModLoader;
 using Terraria.UI;
 using GarnsMod.Content.Items.Tools;
@@ -20,32 +13,54 @@ namespace GarnsMod.UI.FishingRodUI
     {
         private UIHoverImageButton TrailColorButton;
         private UIHoverImageButton TrailTypeButton;
+        private UIHoverImageButton ShootModeButton;
 
-        public bool Visible { get; private set; }
         public Vector2 Origin { get; private set; }
-        public int HotbarNum { get; private set; }
+        public int InventoryIndex { get; private set; }
         public TrailColorMode SelectedTrailColorMode { get; private set; }
         public TrailTypeMode SelectedTrailTypeMode { get; private set; }
         public ShootMode SelectedShootMode { get; private set; }
 
+        public FishingRodUIState(ShootMode shootMode, TrailColorMode trailColorMode, TrailTypeMode trailTypeMode, int inventoryIndex)
+        {
+            Origin = MousePositionScreen();
+            SelectedShootMode = shootMode;
+            SelectedTrailColorMode = trailColorMode;
+            SelectedTrailTypeMode = trailTypeMode;
+            InventoryIndex = inventoryIndex;
+        }
+
+        // Main.MouseScreen acts as if zoom is always 100%, causing offsets when you zoom in because it thinks your mouse position is somewhere else.
+        // This method gets the actual point on your screen which is useful for UI that is supposed to appear around your cursor
+        public Vector2 MousePositionScreen()
+        {
+            Vector2 screenSize = Main.ScreenSize.ToVector2();
+            Vector2 smallScreenSize = screenSize / Main.GameZoomTarget;
+            Vector2 zoomScreenOffset = (screenSize - smallScreenSize) / 2f;
+            Vector2 smallScreenPos = Main.MouseScreen - zoomScreenOffset;
+            Vector2 smallScreenPercThru = smallScreenPos / smallScreenSize;
+            return screenSize * smallScreenPercThru;
+        }
+
         public override void OnInitialize()
         {
-            Origin = new(-100, -100);
-            Visible = false;
-
-            TrailColorButton = new UIHoverImageButton(TrailColorMode.SingleColor.TextureAsset, TrailColorMode.SingleColor.Name);
+            TrailColorButton = new UIHoverImageButton(SelectedTrailColorMode.TextureAsset, $"Trail Color: {SelectedTrailColorMode.Name}");
             TrailColorButton.Width.Set(38, 0);
             TrailColorButton.Height.Set(38, 0);
             TrailColorButton.OnClick += TrailColorButton_OnClick;
-            SelectedTrailColorMode = (TrailColorMode)0;
             Append(TrailColorButton);
 
-            TrailTypeButton = new UIHoverImageButton(TrailTypeMode.Plain.TextureAsset, TrailTypeMode.Plain.Name);
+            TrailTypeButton = new UIHoverImageButton(SelectedTrailTypeMode.TextureAsset, $"Trail Type: {SelectedTrailTypeMode.Name}");
             TrailTypeButton.Width.Set(38, 0);
             TrailTypeButton.Height.Set(38, 0);
             TrailTypeButton.OnClick += TrailTypeButton_OnClick;
-            SelectedTrailTypeMode = (TrailTypeMode)0;
             Append(TrailTypeButton);
+
+            ShootModeButton = new UIHoverImageButton(SelectedShootMode.TextureAsset, $"Shoot Mode: {SelectedShootMode.Name}");
+            ShootModeButton.Width.Set(38, 0);
+            ShootModeButton.Height.Set(38, 0);
+            ShootModeButton.OnClick += ShootModeButton_OnClick;
+            Append(ShootModeButton);
 
             RefreshButtons();
         }
@@ -72,66 +87,59 @@ namespace GarnsMod.UI.FishingRodUI
             RefreshButtons();
         }
 
-        internal void SetVisible(ShootMode shootMode, TrailColorMode colorMode, TrailTypeMode typeMode, int hotbarOffset)
+        private void ShootModeButton_OnClick(UIMouseEvent evt, UIElement listeningElement)
         {
-            SoundEngine.PlaySound(SoundID.MenuOpen);
-            HotbarNum = hotbarOffset;
-            SelectedTrailColorMode = colorMode;
-            SelectedTrailTypeMode = typeMode;
-            SelectedShootMode = shootMode;
-            Origin = Main.MouseScreen;
-            Visible = true;
-            RefreshButtons(); // Refresh buttons so their texture changes and they move to the new origin
+            SoundEngine.PlaySound(SoundID.Item10);
+            SelectedShootMode = ((int)SelectedShootMode + 1) % ShootMode.Count;
+            if (Main.player[Main.myPlayer].HeldItem.ModItem is GarnsFishingRod rod)
+            {
+                rod.shootMode = SelectedShootMode;
+            }
+            RefreshButtons();
         }
 
-        internal void SetInvisible()
+        internal static void Close()
         {
-            SoundEngine.PlaySound(SoundID.MenuClose);
-            Visible = false;
-            Origin = new(-1000, -1000);
-            RefreshButtons(); // Refresh buttons so they move to the new origin
+            ModContent.GetInstance<FishingRodUISystem>().CloseFishingRodUI();
         }
 
         public override void Update(GameTime gameTime)
         {
-            base.Update(gameTime); // don't remove.
+            base.Update(gameTime); // don't remove or else the Update() call doesn't propagate meaning UIHoverImageButton won't prevent other actions
 
             Player myPlayer = Main.player[Main.myPlayer];
 
-            if (Visible && (myPlayer.HeldItem.ModItem is not GarnsFishingRod || myPlayer.selectedItem != HotbarNum))
+            if (myPlayer.HeldItem.ModItem is not GarnsFishingRod || myPlayer.selectedItem != InventoryIndex)
             {
-                SetInvisible();
+                Close();
             }
         }
 
         public static readonly int ButtonSize = 38; // Should correspond to the texture size since the draw size is based on the texture size
 
+        // Makes sure that the bu
         private void RefreshButtons()
         {
             float half = ButtonSize / 2f;
             float space = half * 2f;
 
-            if (TrailColorButton is not null)
-            {
-                TrailColorButton.SetImage(SelectedTrailColorMode.TextureAsset);
-                TrailColorButton.HoverText = $"Trail Color: {SelectedTrailColorMode.Name}";
+            TrailColorButton.SetImage(SelectedTrailColorMode.TextureAsset);
+            TrailColorButton.HoverText = $"Trail Color: {SelectedTrailColorMode.Name}";
+            TrailColorButton.Left.Set(Origin.X - half + space, 0f);
+            TrailColorButton.Top.Set(Origin.Y - half, 0f);
+            TrailColorButton.Recalculate();
 
-                TrailColorButton.Left.Set(Origin.X - half + space, 0f);
-                TrailColorButton.Top.Set(Origin.Y - half, 0f);
+            TrailTypeButton.SetImage(SelectedTrailTypeMode.TextureAsset);
+            TrailTypeButton.HoverText = $"Trail Type: {SelectedTrailTypeMode.Name}";
+            TrailTypeButton.Left.Set(Origin.X - half - space, 0f);
+            TrailTypeButton.Top.Set(Origin.Y - half, 0f);
+            TrailTypeButton.Recalculate();
 
-                TrailColorButton.Recalculate();
-            }
-
-            if (TrailTypeButton is not null)
-            {
-                TrailTypeButton.SetImage(SelectedTrailTypeMode.TextureAsset);
-                TrailTypeButton.HoverText = $"Trail Type: {SelectedTrailTypeMode.Name}";
-
-                TrailTypeButton.Left.Set(Origin.X - half - space, 0f);
-                TrailTypeButton.Top.Set(Origin.Y - half, 0f);
-
-                TrailTypeButton.Recalculate();
-            }
+            ShootModeButton.SetImage(SelectedShootMode.TextureAsset);
+            ShootModeButton.HoverText = $"Shoot Mode: {SelectedShootMode.Name}";
+            ShootModeButton.Left.Set(Origin.X - half, 0f);
+            ShootModeButton.Top.Set(Origin.Y - half - space, 0f);
+            ShootModeButton.Recalculate();
         }
     }
 }

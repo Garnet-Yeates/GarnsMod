@@ -15,7 +15,4 @@
       <HintPath>..\..\ModReader\KokoLib\KokoLib.dll</HintPath>
     </Reference>
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="UI\Images\" />
-  </ItemGroup>
 </Project>
