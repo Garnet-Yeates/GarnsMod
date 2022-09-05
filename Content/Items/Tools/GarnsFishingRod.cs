@@ -221,20 +221,15 @@ namespace GarnsMod.Content.Items.Tools
         // Called when the player right clicks. Normally used to dynamically decide if the item's alt function can be used, but I use this hook to change the shootmode
         public override bool AltFunctionUse(Player player)
         {
-            FishingRodUIState fishingRodUI = FishingRodUISystem.FishingRodUI;
-
-            if (FishingRodUISystem.FishingRodUI.Visible)
+            FishingRodUISystem system = ModContent.GetInstance<FishingRodUISystem>();
+            if (system.IsFishingRodUIOpen)
             {
-                fishingRodUI.SetInvisible();
+                system.CloseFishingRodUI();
             }
             else
             {
-                fishingRodUI.SetVisible(shootMode, trailColorMode, trailTypeMode, player.selectedItem);
+                system.OpenFishingRodUI(shootMode, trailColorMode, trailTypeMode, player.selectedItem);
             }
-
-            //      shootMode = ((int)shootMode + 1) % ShootMode.Count;
-            //          shootMode = ShootMode.Cone;
-            //          Main.NewText($"Changed item shoot mode to [c/{GetCurrentGlowColor().Hex3()}:{shootMode.Name}]");
             return false;
         }
 
@@ -273,11 +268,6 @@ namespace GarnsMod.Content.Items.Tools
             if (shootMode == ShootMode.Cone)
             {
                 ShootCone(position, velocity, source, player, type, bonus);
-            }
-
-            if (shootMode == ShootMode.Compact)
-            {
-                ShootRandom(position, velocity, source, player, type, bonus);
             }
 
             if (shootMode == ShootMode.Auto)
@@ -355,22 +345,6 @@ namespace GarnsMod.Content.Items.Tools
             }
         }
 
-        private void ShootRandom(Vector2 position, Vector2 velocity, EntitySource_ItemUse_WithAmmo source, Player player, int type, int bonus)
-        {
-            int bobberAmount = level;
-
-            for (int colorIndex = 0; colorIndex < bobberAmount; ++colorIndex)
-            {
-                for (int j = 0; j < 1 + bonus; j++)
-                {
-                    float spreadAmount = 25f; // how much the different bobbers are randomly spread out.
-                    Vector2 bobberVector = velocity + new Vector2(Main.rand.NextFloat(-spreadAmount, spreadAmount) * 0.05f, Main.rand.NextFloat(-spreadAmount, spreadAmount) * 0.04f);
-                    Vector2 bonusSpread = j == 0 ? default : GetBonusSpreadVector(bobberVector, 0.15f);
-                    ShootBobber(colorIndex % RainbowColors.Count, source, position, bobberVector + bonusSpread);
-                }
-            }
-        }
-
         private void ShootAuto(Vector2 position, Vector2 velocity, EntitySource_ItemUse_WithAmmo source, Player player, int type, int bonus)
         {
             float rotation = MathHelper.ToDegrees(velocity.ToRotation());
@@ -393,12 +367,6 @@ namespace GarnsMod.Content.Items.Tools
             }
             else
             {
-                if (velocity.Y < 0)
-                {
-                    ShootRandom(position, velocity, source, player, type, bonus);
-                    return;
-                }
-
                 velocity *= new Vector2(1f, 1f);
                 ShootCone(position, velocity, source, player, type, bonus);
             }
@@ -438,17 +406,19 @@ namespace GarnsMod.Content.Items.Tools
 
             public static int Count => shootModes.Count;
 
-            public static readonly ShootMode Line = new("Line");
-            public static readonly ShootMode Cone = new("Cone");
-            public static readonly ShootMode Compact = new("Compact");
-            public static readonly ShootMode Auto = new("Auto");
+            public static readonly ShootMode Line = new("Line", ModContent.Request<Texture2D>("GarnsMod/UI/FishingRodUI/ShootMode_Line"));
+            public static readonly ShootMode Cone = new("Cone", ModContent.Request<Texture2D>("GarnsMod/UI/FishingRodUI/ShootMode_Cone"));
+            public static readonly ShootMode Auto = new("Auto", ModContent.Request<Texture2D>("GarnsMod/UI/FishingRodUI/ShootMode_Auto"));
 
             internal int Value { get; }
             internal string Name { get; }
+            internal Asset<Texture2D> TextureAsset { get; }
 
-            private ShootMode(string name)
+
+            private ShootMode(string name, Asset<Texture2D> asset)
             {
                 Value = shootModes.Count;
+                TextureAsset = asset;
                 Name = name;
                 shootModes.Add(this);
             }
