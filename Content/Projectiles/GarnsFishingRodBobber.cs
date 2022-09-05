@@ -15,6 +15,7 @@ using System;
 using static GarnsMod.Content.Items.Tools.GarnsFishingRod;
 using GarnsMod.Content.Shaders;
 using GarnsMod.Tools;
+using static Terraria.Graphics.VertexStrip;
 
 namespace GarnsMod.Content.Projectiles
 {
@@ -59,23 +60,39 @@ namespace GarnsMod.Content.Projectiles
             trailTypeMode = 0;
         }
 
+
+        private int notWigglingFor = int.MaxValue - 1; // The bobber has to not be wiggling for at least 10 ticks in order for the trail to be drawn
+
         // Called on clients and servers
         public override void AI()
         {
             if (Wigglin)
             {
-                if (Main.rand.NextBool(4))
+                notWigglingFor = 0;
+                if (Main.rand.NextBool(3))
                 {
                     Vector2 speed = Main.rand.NextVector2Circular(5f, 5f);
                     Dust d = Dust.NewDustDirect(Projectile.position, (int) speed.X, (int) speed.Y, DustID.RainbowTorch, 0f, 0f, 0, FishingLineColor);
                     d.noGravity = true;
-                    d.scale = 1 + Main.rand.NextFloat() * 1.5f;
+                    d.scale = 1.25f + Main.rand.NextFloat() * 1.5f;
                 }
+            }
+            else
+            {
+                notWigglingFor = Math.Min(notWigglingFor + 1, int.MaxValue - 1);
             }
 
             if (ReelingIn)
             {
                 Projectile.extraUpdates = 2;
+
+                if (CapturedItem)
+                {
+                    Vector2 speed = Main.rand.NextVector2Circular(1f, 1f);
+                    Dust d = Dust.NewDustPerfect(Projectile.position, DustID.RainbowTorch, speed, 0, FishingLineColor);
+                    d.noGravity = true;
+                    d.scale = 1.25f + Main.rand.NextFloat() * 1f;
+                }
             }
 
             if (!Main.dedServ)
@@ -99,11 +116,12 @@ namespace GarnsMod.Content.Projectiles
                 // If I make it so that the available colors gradient (which are just colors made from n subsets of rainbowcolors where n is rainbow colors length) has an extra loop to wrap back 
                 // to the original, I dont need the && fishingLevel > ... check up there
                 progressSubtractor += trailTypeMode == TrailTypeMode.Stream ? 15 : -3;
-            }
+            } 
 
-            if (!Wigglin)
+            // Cant make a trail in water if it has recently wiggled. Can always make a trail when dry
+            if (!Wigglin && (notWigglingFor > 60 || !Projectile.wet))
             {
-               ColorGradient trailGradient = trailColorMode == TrailColorMode.SingleColor ? new ColorGradient(new List<Color> { FishingLineColor, Color.Lerp(FishingLineColor, new(255, 255, 255), 0.5f)}) : ColorGradient.FullRainbowGradients[fishingLineColorIndex];
+               ColorGradient trailGradient = trailColorMode == TrailColorMode.SingleColor ? new ColorGradient(new() { Color.Lerp(FishingLineColor, new(255, 255, 255), 0.15f), FishingLineColor}) : ColorGradient.FullRainbowGradients[fishingLineColorIndex];
                TrailType type = (TrailType) trailTypeMode.CorrespondingTrailType;
                default(GradientTrailDrawer).Draw(Projectile, trailGradient, type, offset: new Vector2(6, 0), progressModifier: progressSubtractor);
             }
