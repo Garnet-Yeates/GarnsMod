@@ -12,7 +12,7 @@ using Terraria.GameContent.Creative;
 using Terraria.ID;
 using Terraria.ModLoader;
 using Terraria.ModLoader.IO;
-using static GarnsMod.Tools.ColorTools;
+using static GarnsMod.Tools.ColorGradient;
 
 
 namespace GarnsMod.Content.Items.Tools
@@ -247,7 +247,6 @@ namespace GarnsMod.Content.Items.Tools
         {
             // Could be eventually set to a server-sided config called 'Broken'/'Unbalanced'. I made this just for fun
             int bonus = 0;
-            //       velocity *= 1.2f;
 
             if (level == 1)
             {

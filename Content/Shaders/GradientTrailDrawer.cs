@@ -8,6 +8,7 @@ using Terraria;
 using Terraria.Graphics;
 using Terraria.Graphics.Shaders;
 using static Terraria.Graphics.VertexStrip;
+using static tModPorter.ProgressUpdate;
 
 namespace GarnsMod.Content.Shaders
 { 
@@ -18,15 +19,21 @@ namespace GarnsMod.Content.Shaders
     {
         private static readonly VertexStrip vertexStrip = new();
 
-        internal void Draw(Projectile proj, ColorGradient grad, TrailType trailType, Vector2 offset = default, float? overrideSaturation = null, float? overrideOpacity = null, StripHalfWidthFunction overrideWidthFunction = null, int progressModifier = 0)
+        internal void Draw(Projectile proj, ColorGradient grad, TrailType trailType, Vector2 offset = default, float? overrideSaturation = null, float? overrideOpacity = null, StripHalfWidthFunction overrideWidthFunction = null, int progressModifier = 1)
         {
             MiscShaderData miscShaderData = GameShaders.Misc[$"TrailShader{trailType.ShaderName}"];
             miscShaderData.UseSaturation(overrideSaturation ?? trailType.Saturation);
             miscShaderData.UseOpacity(overrideOpacity ?? trailType.Opacity);
             miscShaderData.Apply();
 
-            Color StripColorFunc(float progress) => grad.GetColor(Modulo(progress + progressModifier / 1000f, 1.00f));
-  
+
+            // Progress is a float between 0 and 1 where 0 is the beginning of the strip right behind the projectile and 1 is the end
+            StripColorFunction StripColorFunc = (float progress) => {
+                // For some reason, adding 1 to progress modifier (meaning there is at least a 0.001 change in progress) stops a very very odd and subtle bug with the trail 
+                float usingProgress = Modulo(progress + (progressModifier + 1) / 1000f, 1.00f);
+                return grad.GetColor(usingProgress);
+            };
+
             // OldPos is top left. We want the trail to be at the center + any additionaly offset they want. We also need to subtract the screen position to get the relative screen loc
             offset += proj.Size / 2 - Main.screenPosition;
             vertexStrip.PrepareStripWithProceduralPadding(proj.oldPos, proj.oldRot, StripColorFunc, overrideWidthFunction ?? trailType.WidthFunction, offsetForAllPositions: offset, includeBacksides: false);
@@ -36,7 +43,7 @@ namespace GarnsMod.Content.Shaders
 
 
         // C# % works strangely for negative numbers, this makes it work like modulo
-        private static float Modulo(float a, float b)
+        public static float Modulo(float a, float b)
         {
             return a - b * (float) Math.Floor(a / b);
         }
@@ -49,7 +56,7 @@ namespace GarnsMod.Content.Shaders
 
         public static int Count => typeModes.Count;
 
-        public static readonly TrailType Plain = new("Plain", saturation: 0.0f, opacity: 2.8f, PlainWidthFunction);
+        public static readonly TrailType Plain = new("Plain", saturation: 0.0f, opacity: 2.5f, PlainWidthFunction);
         public static readonly TrailType Fire = new("Fire", saturation: -1.25f, opacity: 8.0f, FireWidthFunction);
         public static readonly TrailType Stream = new("Stream", saturation: 1.5f, opacity: 2.5f, StreamWidthFunction);
         
@@ -75,25 +82,25 @@ namespace GarnsMod.Content.Shaders
 
         public static float PlainWidthFunction(float progress)
         {
-            if (progress < 0.1f)
+            if (progress < 0.2f)
             {
-                return MathHelper.Lerp(0f, 15f, progress * (1.0f / 0.1f));
+                return MathHelper.Lerp(0f, 15f, progress * (1.0f / 0.2f));
             }
-            return MathHelper.Lerp(15f, 50f, (progress - 0.1f) * (1.0f / 0.8f));
+            return MathHelper.Lerp(15f, 75f, (progress - 0.2f) * (1.0f / 0.8f));
         }
 
         public static float FireWidthFunction(float progress)
         {
             if (progress < 0.25f)
             {
-                return MathHelper.Lerp(0f, 12.5f, progress * (1.0f / 0.25f));
+                return MathHelper.Lerp(0f, 14f, progress * (1.0f / 0.25f));
             }
             if (progress >= 0.25f && progress < 0.50f)
             {
-                return MathHelper.Lerp(12.5f, 20f, (progress - 0.25f) * (1.0f / 0.25f));
+                return MathHelper.Lerp(14f, 18f, (progress - 0.25f) * (1.0f / 0.25f));
             }
 
-            return MathHelper.Lerp(20f, 10f, (progress - 0.5f) * (1.0f / 0.5f));
+            return MathHelper.Lerp(18f, 0f, (progress - 0.5f) * (1.0f / 0.5f));
         }
         
         public static float StreamWidthFunction(float progress)

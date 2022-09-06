@@ -8,8 +8,7 @@ using Terraria;
 
 namespace GarnsMod.Tools
 {
-
-    public class ColorTools
+    public class ColorGradient
     {
         public static readonly List<Color> RainbowColors = new()
         {
@@ -27,31 +26,56 @@ namespace GarnsMod.Tools
             new(255, 0, 127),
         };
 
-    }
-
-    public class ColorGradient
-    {
         private float inc;
         private int n;
 
         private readonly List<Color> colors = new();
 
-        public static readonly Dictionary<int, ColorGradient> FullRainbowGradients = InitRainbowGradient();
-        public static readonly Dictionary<int, ColorGradient> PartialRainbowGradients = InitPartialGradient();
+        public static readonly Dictionary<int, ColorGradient> FullRainbowGradients = InitRainbowGradients();
+        public static readonly Dictionary<int, Dictionary<int, ColorGradient>> PartialRainbowGradients = InitPartialGradients();
 
-        public static Dictionary<int, ColorGradient> InitRainbowGradient()
+        public static Dictionary<int, ColorGradient> InitRainbowGradients()
         {
             Dictionary<int, ColorGradient> dict = new();
-            for (int i = 0; i < ColorTools.RainbowColors.Count; i++)
+            for (int i = 0; i < RainbowColors.Count; i++)
             {
-                dict.Add(i, FromCollectionWithStartIndex(ColorTools.RainbowColors, i, extraStart: 3, extraLoops: 1 ));
+                dict.Add(i, FromCollectionWithStartIndex(RainbowColors, i, extraStart: 3, extraLoops: 1 ));
             }
             return dict;
         }
 
-        public static Dictionary<int, ColorGradient> InitPartialGradient()
+        public static Dictionary<int, Dictionary<int, ColorGradient>> InitPartialGradients()
         {
-            return null;
+            static List<Color> GetRainbowColorSubset(int upto)
+            {
+                List<Color> subset = new();
+                for (int i = 0; i <= upto; i++)
+                {
+                    subset.Add(RainbowColors[i]);
+                }
+                return subset;
+            }
+
+            Dictionary<int, Dictionary<int, ColorGradient>> partialGradients = new();
+            for (int sub = 0; sub < RainbowColors.Count; sub++)
+            {
+                Dictionary<int, ColorGradient> dict = new();
+                List<Color> subset = GetRainbowColorSubset(sub);
+                for (int i = 0; i < subset.Count; i++)
+                {
+                    int extraStart = sub < 3 ? 1 : sub / 4 + 2;
+                    if (sub < 5)
+                    {
+                        dict.Add(i, FromCollectionWithStartIndex(subset, i, extraStart: extraStart, extraLoops: 0));
+                    }
+                    else
+                    {
+                        dict.Add(i, FromCollectionWithStartIndexLoopBack(subset, i, extraStart: extraStart));
+                    }
+                }
+                partialGradients.Add(sub, dict);
+            }
+            return partialGradients;
         }
 
         public ColorGradient(List<Color> colors = null)
@@ -74,6 +98,51 @@ namespace GarnsMod.Tools
             {
                 grad.AddColor(colors[currIndex]);
             }
+            return grad;
+        }
+
+
+        private static int Modulo(int a, int b)
+        {
+            return (int) (a - b * Math.Floor(a / (float) b));
+        }
+
+
+        // e.g: [R, O, Y, G, B] would return [R*extraStart, O, Y, G, B, G, Y, O, R]. This can be offset by startindex i.e if it was 1 it would return [O, Y, G, B, R, B, G, Y, O]
+        public static ColorGradient FromCollectionWithStartIndexLoopBack(List<Color> colors, int startIndex, int extraStart = 0)
+        {
+            ColorGradient grad = new();
+            int direction = startIndex >= colors.Count / 2 ? -1 : 1;
+
+
+            for (int i = 0; i < extraStart; i++)
+            {
+                grad.AddColor(colors[startIndex]);
+            }
+
+            if (direction < 0)
+            {
+                for (int i = startIndex; i >= 0; i--)
+                {
+                    grad.AddColor(colors[i]);
+                }
+                for (int i = 0; i < colors.Count; i++)
+                {
+                    grad.AddColor(colors[i]);
+                }
+            }
+            else
+            {
+                for (int i = startIndex; i < colors.Count; i++)
+                {
+                    grad.AddColor(colors[i]);
+                }
+                for (int i = colors.Count - 1; i >= 0; i--)
+                {
+                    grad.AddColor(colors[i]);
+                }
+            }
+
             return grad;
         }
 
@@ -106,7 +175,7 @@ namespace GarnsMod.Tools
             float p = progress % inc / inc; // little p is our progress between currIndex and nextIndex
             if (nextIndex >= n)
             {
-                nextIndex = currIndex; // if we are on the last color of the gradient next shld be the same as curr
+                nextIndex = currIndex; // if we are on the last color of the gradient next will be out of bounds
             }
 
             return Color.Lerp(colors[currIndex], colors[nextIndex], p);
