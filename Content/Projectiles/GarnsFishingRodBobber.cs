@@ -10,12 +10,10 @@ using static GarnsMod.Tools.ColorGradient;
 using static Terraria.ModLoader.PlayerDrawLayer;
 using Microsoft.Xna.Framework.Graphics;
 using Terraria.GameContent;
-using ReLogic.Content;
 using System;
 using static GarnsMod.Content.Items.Tools.GarnsFishingRod;
 using GarnsMod.Content.Shaders;
 using GarnsMod.Tools;
-using static Terraria.Graphics.VertexStrip;
 
 namespace GarnsMod.Content.Projectiles
 {

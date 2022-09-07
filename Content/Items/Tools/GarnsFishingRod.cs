@@ -209,7 +209,6 @@ namespace GarnsMod.Content.Items.Tools
         // Called on all clients/server every tick that the item is in their hand
         public override void HoldItem(Player player)
         {
-            level = 20;
             player.fishingSkill += FishingPowerAdditiveIncrease;
             if (!Main.dedServ)
             {
