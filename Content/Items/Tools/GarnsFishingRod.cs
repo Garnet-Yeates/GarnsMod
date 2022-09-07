@@ -209,6 +209,7 @@ namespace GarnsMod.Content.Items.Tools
         // Called on all clients/server every tick that the item is in their hand
         public override void HoldItem(Player player)
         {
+            level = 20;
             player.fishingSkill += FishingPowerAdditiveIncrease;
             if (!Main.dedServ)
             {
@@ -216,7 +217,6 @@ namespace GarnsMod.Content.Items.Tools
                 Lighting.AddLight(loc, GetCurrentGlowColor().ToVector3());
             }
         }
-
 
         // Called when the player right clicks. Normally used to dynamically decide if the item's alt function can be used, but I use this hook to change the shootmode
         public override bool AltFunctionUse(Player player)
@@ -239,14 +239,11 @@ namespace GarnsMod.Content.Items.Tools
             velocity *= ShootSpeedMultiplier;
         }
 
-
-
-
         // Called on just the client that shot it
         public override bool Shoot(Player player, EntitySource_ItemUse_WithAmmo source, Vector2 position, Vector2 velocity, int type, int damage, float knockback)
         {
             // Could be eventually set to a server-sided config called 'Broken'/'Unbalanced'. I made this just for fun
-            int bonus = 0;
+            int bonus = 10;
 
             if (level == 1)
             {

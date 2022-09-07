@@ -36,7 +36,7 @@ namespace GarnsMod.Content.Projectiles
 
         public override void SetStaticDefaults()
         {
-            ProjectileID.Sets.TrailCacheLength[Projectile.type] = 55;
+            ProjectileID.Sets.TrailCacheLength[Projectile.type] = 75;
             ProjectileID.Sets.TrailingMode[Projectile.type] = 3;
             DisplayName.SetDefault("Garn's Bobber");
         }
@@ -122,7 +122,7 @@ namespace GarnsMod.Content.Projectiles
                 {
                     trailGradient = new ColorGradient(new() { Color.Lerp(FishingLineColor, Color.White, 0.15f), FishingLineColor });
                 }
-                else if (trailColorMode == TrailColorMode.AvailableColors)
+                else if (trailColorMode == TrailColorMode.AvailableColors) 
                 {
                     if (fishingRodLevel >= RainbowColors.Count)
                     {
@@ -135,7 +135,10 @@ namespace GarnsMod.Content.Projectiles
                     }
                 }
                 TrailType type = (TrailType) trailTypeMode.CorrespondingTrailType;
-                default(GradientTrailDrawer).Draw(Projectile, trailGradient, type, offset: new Vector2(6, 0), progressModifier: progressModifier);
+                default(GradientTrailDrawer).Draw(Projectile, trailGradient, type, offset: new Vector2(6, 0) + Projectile.Size / 2, progressModifier: progressModifier);
+
+
+
             }
             return false;
         }

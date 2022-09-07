@@ -35,7 +35,7 @@ namespace GarnsMod.Content.Shaders
             };
 
             // OldPos is top left. We want the trail to be at the center + any additionaly offset they want. We also need to subtract the screen position to get the relative screen loc
-            offset += proj.Size / 2 - Main.screenPosition;
+            offset -= Main.screenPosition;
             vertexStrip.PrepareStripWithProceduralPadding(proj.oldPos, proj.oldRot, StripColorFunc, overrideWidthFunction ?? trailType.WidthFunction, offsetForAllPositions: offset, includeBacksides: false);
             vertexStrip.DrawTrail();
             Main.pixelShader.CurrentTechnique.Passes[0].Apply();

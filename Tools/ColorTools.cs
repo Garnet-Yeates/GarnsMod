@@ -63,7 +63,16 @@ namespace GarnsMod.Tools
                 List<Color> subset = GetRainbowColorSubset(sub);
                 for (int i = 0; i < subset.Count; i++)
                 {
-                    int extraStart = sub < 3 ? 1 : sub / 4 + 2;
+                    int extraStart = sub switch // sub is numFishingLines - 1
+                    {
+                        0 => 0,
+                        1 => 0,
+                        2 => 1,
+                        3 => 1,
+                        4 => 1,
+                        5 => 4,
+                        _ => sub / 2 + 2
+                    };
                     if (sub < 5)
                     {
                         dict.Add(i, FromCollectionWithStartIndex(subset, i, extraStart: extraStart, extraLoops: 0));
@@ -101,19 +110,10 @@ namespace GarnsMod.Tools
             return grad;
         }
 
-
-        private static int Modulo(int a, int b)
-        {
-            return (int) (a - b * Math.Floor(a / (float) b));
-        }
-
-
-        // e.g: [R, O, Y, G, B] would return [R*extraStart, O, Y, G, B, G, Y, O, R]. This can be offset by startindex i.e if it was 1 it would return [O, Y, G, B, R, B, G, Y, O]
         public static ColorGradient FromCollectionWithStartIndexLoopBack(List<Color> colors, int startIndex, int extraStart = 0)
         {
             ColorGradient grad = new();
             int direction = startIndex >= colors.Count / 2 ? -1 : 1;
-
 
             for (int i = 0; i < extraStart; i++)
             {
