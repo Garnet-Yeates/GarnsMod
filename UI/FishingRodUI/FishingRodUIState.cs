@@ -6,6 +6,7 @@ using Terraria.ModLoader;
 using Terraria.UI;
 using GarnsMod.Content.Items.Tools;
 using static GarnsMod.Content.Items.Tools.GarnsFishingRod;
+using GarnsMod.Tools;
 
 namespace GarnsMod.UI.FishingRodUI
 {
@@ -23,24 +24,16 @@ namespace GarnsMod.UI.FishingRodUI
 
         public FishingRodUIState(ShootMode shootMode, TrailColorMode trailColorMode, TrailTypeMode trailTypeMode, int inventoryIndex)
         {
-            Origin = MousePositionScreen();
+            Origin = MainHelpers.MouseScreenWithoutZoom();
             SelectedShootMode = shootMode;
             SelectedTrailColorMode = trailColorMode;
             SelectedTrailTypeMode = trailTypeMode;
             InventoryIndex = inventoryIndex;
         }
 
-        // Main.MouseScreen acts as if zoom is always 100%, causing offsets when you zoom in because it thinks your mouse position is somewhere else.
-        // This method gets the actual point on your screen which is useful for UI that is supposed to appear around your cursor
-        public Vector2 MousePositionScreen()
-        {
-            Vector2 screenSize = Main.ScreenSize.ToVector2();
-            Vector2 smallScreenSize = screenSize / Main.GameZoomTarget;
-            Vector2 zoomScreenOffset = (screenSize - smallScreenSize) / 2f;
-            Vector2 smallScreenPos = Main.MouseScreen - zoomScreenOffset;
-            Vector2 smallScreenPercThru = smallScreenPos / smallScreenSize;
-            return screenSize * smallScreenPercThru;
-        }
+        // Main.MouseScreen if the pixel offset from the top right of your screen. No matter what your zoom is this will be the same if your cursor stays in place
+        // For UI drawing, it want's the MouseScreen position AS IF zoom is at 100% (default) so this method finds where MouseScreen would be if we were zoomed out
+
 
         public override void OnInitialize()
         {

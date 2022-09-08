@@ -20,7 +20,7 @@ namespace GarnsMod.Content.Items.Weapons
         public override void SetStaticDefaults()
         {
             DisplayName.SetDefault("Northern Starsword"); // The English name of the projectile
-            Tooltip.SetDefault("Fires Northern Lights that descend to deal 6x damage");
+            Tooltip.SetDefault("Fires Northern Lights that descend to deal 10x damage");
         }
 
         public override void SetDefaults()
@@ -34,7 +34,7 @@ namespace GarnsMod.Content.Items.Weapons
             Item.autoReuse = true;
             Item.DamageType = DamageClass.Melee;
 
-            Item.damage = 110;
+            Item.damage = 120;
             Item.knockBack = 6;
             Item.crit = 6;
 
@@ -43,7 +43,7 @@ namespace GarnsMod.Content.Items.Weapons
             Item.UseSound = SoundID.Item1;
 
             Item.shoot = ModContent.ProjectileType<NorthernStar>(); // ID of the projectiles the sword will shoot
-            Item.shootSpeed = 15f; // Speed of the projectiles the sword will shoot
+            Item.shootSpeed = 15f; // Speed of the projectiles the sword will shoot // used to be 15
         }
 
         public static readonly List<Color> StarColors = new() { RainbowColors[5], RainbowColors[6], RainbowColors[7] };
@@ -65,7 +65,7 @@ namespace GarnsMod.Content.Items.Weapons
 
         public override bool Shoot(Player player, EntitySource_ItemUse_WithAmmo source, Vector2 position, Vector2 velocity, int type, int damage, float knockback)
         {
-            int amount = 6;
+            int amount = 1;
 
             // Spread starts at MinSpread and scales up to MaxSpread depending on fishing rod level
             float spread = 12;
@@ -76,7 +76,7 @@ namespace GarnsMod.Content.Items.Weapons
 
             for (int i = 0; i < amount; ++i)
             {
-                    // Generate new bobbers
+                // Generate new bobbers
                 Vector2 bobberVector = current;
 
                 NorthernStar p = (NorthernStar) Projectile.NewProjectileDirect(source, position, bobberVector, type, damage, knockback, player.whoAmI).ModProjectile;

@@ -56,7 +56,7 @@ namespace GarnsMod.UI.FishingRodUI
             if (mouseTextIndex != -1)
             {
                 layers.Insert(mouseTextIndex, new LegacyGameInterfaceLayer(
-                    "YourMod: A Description",
+                    "GarnsMod: Fishing Rod UI",
                     delegate
                     {
                         _fishingRodUI.Draw(Main.spriteBatch, new GameTime());

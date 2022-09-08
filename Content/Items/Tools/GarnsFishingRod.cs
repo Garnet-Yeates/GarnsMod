@@ -167,7 +167,6 @@ namespace GarnsMod.Content.Items.Tools
             tooltips.Add(new TooltipLine(Mod, "val", $"Value: {Item.value / 100f} silver"));
         }
 
-
         private int glowColorIndex = 0;
         private int colorProgress = 0;
         private readonly int ticksPerColor = 45;
@@ -209,6 +208,7 @@ namespace GarnsMod.Content.Items.Tools
         // Called on all clients/server every tick that the item is in their hand
         public override void HoldItem(Player player)
         {
+            level = 4;
             player.fishingSkill += FishingPowerAdditiveIncrease;
             if (!Main.dedServ)
             {
@@ -242,7 +242,7 @@ namespace GarnsMod.Content.Items.Tools
         public override bool Shoot(Player player, EntitySource_ItemUse_WithAmmo source, Vector2 position, Vector2 velocity, int type, int damage, float knockback)
         {
             // Could be eventually set to a server-sided config called 'Broken'/'Unbalanced'. I made this just for fun
-            int bonus = 10;
+            int bonus = 0;
 
             if (level == 1)
             {
@@ -394,7 +394,6 @@ namespace GarnsMod.Content.Items.Tools
             trailTypeMode = tag.Get<int>("trailTypeMode");
             SetStats(level, fishTillNextLevel, totalFishCaught);
         }
-
         internal readonly struct ShootMode
         {
             internal static List<ShootMode> shootModes = new();

@@ -14,40 +14,40 @@ using Terraria.ModLoader;
 
 namespace GarnsMod.Content.Projectiles
 {
-    internal class NorthernStar : ModProjectile
+    internal class SouthernStar : ModProjectile
     {
         public override string Texture => "GarnsMod/Content/Projectiles/StarBullet";
 
         public override void SetStaticDefaults()
         {
-            DisplayName.SetDefault("Northern Star"); // The English name of the projectile
-            ProjectileID.Sets.TrailCacheLength[Projectile.type] = 35; // The length of old position to be recorded
-            ProjectileID.Sets.TrailingMode[Projectile.type] = 3; // The recording mode
+            DisplayName.SetDefault("Copy of Northern Star");
+            ProjectileID.Sets.TrailCacheLength[Projectile.type] = 60; 
+            ProjectileID.Sets.TrailingMode[Projectile.type] = 3; 
         }
 
         public override void SetDefaults()
         {
-            Projectile.usesLocalNPCImmunity = true; // Local immunity means immunity is per projectile inst per player (vs idStatic immunity which is per projectile type per player) (vs normal which is per player)
-            Projectile.localNPCHitCooldown = 8;
+    //        Projectile.usesLocalNPCImmunity = true; // Local immunity means immunity is per projectile inst per player (vs idStatic immunity which is per projectile type per player) (vs normal which is per player)
+    //        Projectile.localNPCHitCooldown = 8;
   
-            Projectile.width = 22; // The width of projectile hitbox
+            Projectile.width = 22; 
             Projectile.aiStyle = 0;
-            Projectile.height = 22; // The height of projectile hitbox
-            Projectile.friendly = true; // Can the projectile deal damage to enemies?
-            Projectile.hostile = false; // Can the projectile deal damage to the player? 
-            Projectile.DamageType = DamageClass.Ranged; // Is the projectile shoot by a ranged weapon?
-            Projectile.penetrate = 5; // How many monsters the projectile can penetrate. (OnTileCollide below also decrements penetrate for bounces as well)
-            Projectile.timeLeft = 1800; // The live time for the projectile (60 = 1 second, so 600 is 10 seconds)
-            Projectile.ignoreWater = true; // Does the projectile's speed be influenced by water?
-            Projectile.tileCollide = true; // Can the projectile collide with tiles?
-            Projectile.extraUpdates = 1;
+            Projectile.height = 22;
+            Projectile.friendly = true; 
+            Projectile.hostile = false;  
+            Projectile.DamageType = DamageClass.Ranged; 
+            Projectile.penetrate = 6; 
+            Projectile.timeLeft = int.MaxValue;
+            Projectile.ignoreWater = true;
+            Projectile.tileCollide = true; 
+            Projectile.extraUpdates = 0;
       
         }
 
         // Non deterministic data (randomly generated or set by the player who spawned it), needs to be synced
 
         private static readonly int YThreshold = 500;
-        private static readonly float YTargetBase = 1500;
+        private static readonly float YTargetBase = 1600;
         private Color StarColor => NorthernStarSword.StarColors[starColorIndex];
 
         internal byte starColorIndex;  // Set by the Northern Starsword that shot this proj, then synced with NetMessage
@@ -61,6 +61,8 @@ namespace GarnsMod.Content.Projectiles
             float screenSizeX = Main.ScreenSize.ToVector2().X;
             xTarget = Projectile.position.X - screenSizeX / 2 + Main.rand.NextFloat(screenSizeX);
             yTarget = YTargetBase - (YThreshold / 2) + Main.rand.NextFloat(YThreshold);
+            Projectile.rotation = Projectile.velocity.ToRotation();
+
         }
 
         public override void SendExtraAI(BinaryWriter writer)
@@ -90,10 +92,18 @@ namespace GarnsMod.Content.Projectiles
 
         public override void AI()
         {
+            Projectile.rotation = Projectile.velocity.ToRotation();
             numTicks++;
 
             float y = Projectile.position.Y;
             float x = Projectile.position.X;
+
+           /* Main.NewText($"DrawOffsetX {DrawOffsetX}");
+            Main.NewText($"DrawOriginOffsetX {DrawOriginOffsetX}");
+            Main.NewText($"DrawOriginOffsetY {DrawOriginOffsetY}");
+            Main.NewText($"Projectile Position: {x} {y}");
+            Main.NewText($"Projectile.width (hitbox width) {Projectile.width}");
+            Main.NewText($"Projectile.height (hitbox height) {Projectile.height}");*/
 
             Vector2 targetPosition = new(xTarget, yTarget);
             Vector2 targetsToMe = (Projectile.position - targetPosition);
@@ -118,15 +128,15 @@ namespace GarnsMod.Content.Projectiles
 
                     // Y logic
 
-                    // Cap it from falling upwards faster than 22 pixels/t
-                    if (velocity.Y < -25f)
+                    // Cap it from falling upwards faster than 25 pixels/t
+                    if (velocity.Y < -20f)
                     {
-                        velocity.Y = -25f;
+                        velocity.Y = -20f;
                     }
 
-                    if (y < 400 && Projectile.velocity.Y < 0) // Slow it down FAST (by 97.5% of its speed per tick) if it is getting very close to the ceiling of the world
+                    if (y < 250 && Projectile.velocity.Y < 0) // Slow it down FAST (by 97.5% of its speed per tick) if it is getting very close to the ceiling of the world
                     {
-                        velocity.Y *= 0.01f;
+                        Projectile.velocity.Y *= 0.01f;
                     }
 
                     // Accelerate towards the sky (some random yTarget very high up) if we are below our y target
@@ -134,12 +144,12 @@ namespace GarnsMod.Content.Projectiles
                     {
                         if (numTicks > 10)
                         {
-                            velocity.Y -= 0.15f;
+                            velocity.Y -= 0.125f;
                         }
                     }
                     else // Otherwise see if the projectile is newly spawned. If it is, force it to go up a bit before phase 2 (so it doesn't instantly go into phase 2)
                     {
-                        if (numTicks <= 150) // It MUST wait at least 150 ticks to go into Peaking phase, even if we spawned it above our y target or 'peak'
+                        if (numTicks <= 120) // It MUST wait at least 120 ticks to go into Peaking phase, even if we spawned it above our y target or 'peak'
                         {
                             velocity.Y -= 0.25f; // Make it accelerate up more rapidly than if they spawned it low down 
                         }
@@ -152,7 +162,7 @@ namespace GarnsMod.Content.Projectiles
 
                     // X logic
 
-                    if (numTicks > 40 || y < yTarget)
+                    if (numTicks > 55 || y < yTarget)
                     {
                         // Slow down x as it approaches its target (if it is facing it)
                         if (xDiffAbs < 100f && (xDir == dirToXTarget))
@@ -177,13 +187,13 @@ namespace GarnsMod.Content.Projectiles
                 case SwordProjectilePhase.Peaking:
                     peakingFor++;
 
-                    // Add a bit of downwards accel...
-                    velocity.Y += 0.075f;
+                    // Add a tiny bit of downwards accel...
+                    velocity.Y += 0.05f;
 
                     // ...and also slow down our Y speed by 3% per tick if we are still going up
                     if (velocity.Y < 0)
                     {
-                        velocity.Y *= 0.95f;
+                        velocity.Y *= 0.97f;
                     }
 
                     if (peakingFor < 130) // After 130 ticks of peaking, the next phase will happen. Until then, the stars aren't allowed to fall down regardless of the accel we added above
@@ -251,7 +261,7 @@ namespace GarnsMod.Content.Projectiles
             // Penetrate always goes down by 1 after an npc hit. If we aren't in the 'falling' phase, we lose an additional penetrate point so it is -2
             if (fallingFor <= 0)
             {
-                Projectile.penetrate -= 0;
+                Projectile.penetrate -= 1;
                 Projectile.penetrate = Math.Max(0, Projectile.penetrate);
             }
             if (fallingFor > 0) // In the falling phase we lose 0 pen (add 1 for net 0), effectively being able to penetrate infinitely
@@ -334,19 +344,22 @@ namespace GarnsMod.Content.Projectiles
             Vector2 origVec1 = new(bulletTex.Width * 0.5f, bulletTex.Height * 0.5f);
             Vector2 drawPos = Projectile.position + origVec1 - Main.screenPosition;
             drawPos += new Vector2(0f, Projectile.gfxOffY + 0f);
-
+          
             ColorGradient grad = NorthernStarSword.NorthStarColorGradients[starColorIndex];
-            float? overrideOpacity = 1f; // 1.5 fire
+            float? overrideOpacity = 1.25f; // 1.5 fire
             default(GradientTrailDrawer).Draw(Projectile, grad, TrailType.Fire, offset: origVec1, progressModifier: 0, overrideOpacity: overrideOpacity);
+
+            Projectile.scale = 5;
 
             if (!crashedDown)
             {
                 Texture2D starTexture = ModContent.Request<Texture2D>("GarnsMod/Content/Images/MultiColorStarCenter").Value;
                 Texture2D grayscaleTexture = ModContent.Request<Texture2D>("GarnsMod/Content/Images/MultiColorStarGrayscale").Value;
-                Projectile.scale = 0.8f;
+                Projectile.scale = Projectile.scale; ;
                 float starScale = Projectile.scale;
+      //          Main.EntitySpriteDraw(bulletTex, drawPos, null, new Color(0, 0, 0, 255), Projectile.rotation, bulletTex.Size() / 2, starScale, SpriteEffects.None, 0);
 
-                Main.EntitySpriteDraw(starTexture, drawPos, null, new Color(255, 255, 255, 255), Projectile.rotation, starTexture.Size() / 2, starScale, SpriteEffects.None, 0);
+                            Main.EntitySpriteDraw(starTexture, drawPos, null, new Color(255, 255, 255, 255), Projectile.rotation, starTexture.Size() / 2, starScale, SpriteEffects.None, 0);
                 Color col = StarColor;
                 col.A = (byte)(col.A / 1.5f);
                 Main.EntitySpriteDraw(grayscaleTexture, drawPos, null, col, Projectile.rotation, grayscaleTexture.Size() / 2, starScale, SpriteEffects.None, 0);
