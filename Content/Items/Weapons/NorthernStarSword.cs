@@ -77,11 +77,11 @@ namespace GarnsMod.Content.Items.Weapons
             for (int i = 0; i < amount; ++i)
             {
                 // Generate new bobbers
-                Vector2 bobberVector = current;
+                Vector2 vel = current;
 
-                NorthernStar p = (NorthernStar) Projectile.NewProjectileDirect(source, position, bobberVector, type, damage, knockback, player.whoAmI).ModProjectile;
-                NetMessage.SendData(MessageID.SyncProjectile, -1, -1, null, p.Projectile.whoAmI);
+                NorthernStar p = (NorthernStar) Projectile.NewProjectileDirect(source, position, vel, type, damage, knockback, player.whoAmI).ModProjectile;
                 p.starColorIndex = currentColor;
+                NetMessage.SendData(MessageID.SyncProjectile, -1, -1, null, p.Projectile.whoAmI);
 
                 current = current.RotatedBy(increment);
 
