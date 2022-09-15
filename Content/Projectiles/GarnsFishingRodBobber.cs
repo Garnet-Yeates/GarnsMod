@@ -68,8 +68,8 @@ namespace GarnsMod.Content.Projectiles
                 notWigglingFor = 0;
                 if (Main.rand.NextBool(3))
                 {
-                    Vector2 speed = Main.rand.NextVector2Circular(5f, 5f);
-                    Dust d = Dust.NewDustDirect(Projectile.position, (int) speed.X, (int) speed.Y, DustID.RainbowTorch, 0f, 0f, 0, FishingLineColor);
+                    Vector2 speed = Main.rand.NextVector2Circular(3f, 3f);
+                    Dust d = Dust.NewDustPerfect(Projectile.position + VanillaDrawOffset, DustID.RainbowTorch, speed, 0, FishingLineColor);
                     d.noGravity = true;
                     d.scale = 1.25f + Main.rand.NextFloat() * 1.5f;
                 }
@@ -86,9 +86,9 @@ namespace GarnsMod.Content.Projectiles
                 if (CapturedItem)
                 {
                     Vector2 speed = Main.rand.NextVector2Circular(1f, 1f);
-                    Dust d = Dust.NewDustPerfect(Projectile.position, DustID.RainbowTorch, speed, 0, FishingLineColor);
+                    Dust d = Dust.NewDustPerfect(Projectile.position + VanillaDrawOffset, DustID.RainbowTorch, new(0, 0), 0, FishingLineColor);
                     d.noGravity = true;
-                    d.scale = 1.25f + Main.rand.NextFloat() * 1f;
+                    d.scale = 1f;
                 }
             }
 
@@ -106,8 +106,10 @@ namespace GarnsMod.Content.Projectiles
 
         public int progressModifier = 01;
 
+        public static readonly Vector2 VanillaDrawOffset = new(15f, 7f);
+
         public override bool PreDraw(ref Color lightColor)
-        { 
+        {   
             // Cant make a trail in water if it has recently wiggled. Can always make a trail when dry
             if (!Wigglin && (notWigglingFor > 60 || !Projectile.wet))
             {
@@ -122,7 +124,7 @@ namespace GarnsMod.Content.Projectiles
                 }
                 else if (trailColorMode == TrailColorMode.AvailableColors) 
                 {
-                    if (fishingRodLevel >= RainbowColors.Count)
+                    if (fishingRodLevel >= RainbowColors.Count) 
                     {
                         trailGradient = FullRainbowGradients[fishingLineColorIndex];
                         progressModifier += trailTypeMode == TrailTypeMode.Stream ? 15 : -2;
@@ -133,7 +135,7 @@ namespace GarnsMod.Content.Projectiles
                     }
                 }
                 TrailType type = (TrailType) trailTypeMode.CorrespondingTrailType;
-                default(GradientTrailDrawer).Draw(Projectile, trailGradient, type, offset: new Vector2(6, 0) + Projectile.Size / 2, progressModifier: progressModifier);
+                default(GradientTrailDrawer).Draw(Projectile, trailGradient, type, VanillaDrawOffset, progressModifier: progressModifier);
 
 
 
@@ -145,10 +147,10 @@ namespace GarnsMod.Content.Projectiles
         {
             // Vector from the top left of your screen (world x,y) to the center of the projectile. Think of a line drawn from the TL of your screen to the proj center
             // For EntitySpriteDraw (0,0) is the top left of the screen so we need this offset vector to find out where it i s in relation to the screen
-            Vector2 bobberPos = Projectile.Center - Main.screenPosition;
+            Vector2 bobberPos = Projectile.position - Main.screenPosition;
 
             // Offsetting because bobber is weird
-            bobberPos += new Vector2(7f, Projectile.gfxOffY + 1f);
+            bobberPos += VanillaDrawOffset;
 
             SpriteEffects spriteEffects = Projectile.spriteDirection == 1 ? SpriteEffects.FlipHorizontally : SpriteEffects.FlipHorizontally;
             Texture2D starTexture = ModContent.Request<Texture2D>("GarnsMod/Content/Images/MultiColorStarCenter").Value;
