@@ -17,8 +17,6 @@ namespace GarnsMod.Content.RandomStuff
 {
     internal class TileTest : GlobalTile
     {
-
-        // Pretty sure this isn't called on MultiplayerClient Netmode so I omitted the check. Could be wrong tho :)
         public override bool Drop(int tileX, int tileY, int type)
         {
             // Return true if it isn't shadow orb/crimson heart as we don't want to modify logic for other tile such as life crystal
