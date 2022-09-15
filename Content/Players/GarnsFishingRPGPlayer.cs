@@ -1,4 +1,6 @@
 ﻿using KokoLib;
+using Microsoft.Xna.Framework;
+using System;
 using Terraria;
 using Terraria.ID;
 using Terraria.ModLoader;
@@ -32,9 +34,12 @@ namespace GarnsMod.Content.Players
 
         public override void clientClone(ModPlayer clientClone)
         {
-            GarnsFishingRPGPlayer clone = clientClone as GarnsFishingRPGPlayer;
-            clone.totalFishCaught = totalFishCaught;
-            clone.totalCratesCaught = totalCratesCaught;
+            if (clientClone is not GarnsFishingRPGPlayer player)
+            {
+                return;
+            }
+            player.totalFishCaught = totalFishCaught;
+            player.totalCratesCaught = totalCratesCaught;
         }
 
 
@@ -53,10 +58,17 @@ namespace GarnsMod.Content.Players
         public override void SendClientChanges(ModPlayer clientPlayer)
         {
             // If either totalFishCaught or totalCratesCaught are desynced, they will both be re-synced
-            GarnsFishingRPGPlayer clone = clientPlayer as GarnsFishingRPGPlayer;
-            if (clone.totalFishCaught != totalFishCaught || clone.totalCratesCaught != totalCratesCaught)
+            if (clientPlayer is not GarnsFishingRPGPlayer clone)
             {
-                Net<IRPGPlayerNetHandler>.Proxy.SyncCatchStats(Player, totalFishCaught, totalCratesCaught);
+                return;
+            }
+            if (clone.totalFishCaught != totalFishCaught)
+            {
+                Net<IRPGPlayerNetHandler>.Proxy.SyncTotalFishCaught(Player, totalFishCaught);
+            }
+            if (clone.totalCratesCaught != totalCratesCaught)
+            {
+                Net<IRPGPlayerNetHandler>.Proxy.SyncTotalCratesCaught(Player, totalCratesCaught);
             }
         }
 
@@ -80,7 +92,8 @@ namespace GarnsMod.Content.Players
     public interface IRPGPlayerNetHandler
     {
         void SyncPlayer(Player player, int totalFishCaught, int totalCratesCaught, bool usedFishingPermUpgrade1, bool usedFishingPermUpgrade2);
-        void SyncCatchStats(Player player, int totalFishCaught, int totalCratesCaught);
+        void SyncTotalFishCaught(Player player, int totalFishCaught);
+        void SyncTotalCratesCaught(Player player, int totalCratesCaught);
 
         private class GarnsFishingRPGPlayerHandler : ModHandler<IRPGPlayerNetHandler>, IRPGPlayerNetHandler
         {
@@ -95,15 +108,26 @@ namespace GarnsMod.Content.Players
                 p.usedFishingPermUpgrade2 = usedFishingPermUpgrade2;
             }
 
-            public void SyncCatchStats(Player player, int totalFishCaught, int totalCratesCaught)
+            public static void ServerRelay(Action action)
+            {
+                if (Main.netMode == NetmodeID.Server)
+                {
+                    action();
+                }
+            }
+
+            public void SyncTotalFishCaught(Player player, int totalFishCaught)
             {
                 GarnsFishingRPGPlayer p = player.GetModPlayer<GarnsFishingRPGPlayer>();
                 p.totalFishCaught = totalFishCaught;
-                p.totalCratesCaught = totalCratesCaught;
-                if (Main.netMode == NetmodeID.Server)
-                {
-                    Net<IRPGPlayerNetHandler>.Proxy.SyncCatchStats(player, totalFishCaught, totalCratesCaught);
-                }
+                ServerRelay(() => Net<IRPGPlayerNetHandler>.Proxy.SyncTotalFishCaught(player, totalFishCaught));
+            }
+
+            public void SyncTotalCratesCaught(Player player, int totalCratesCaught)
+            {
+                GarnsFishingRPGPlayer p = player.GetModPlayer<GarnsFishingRPGPlayer>();
+                p.totalFishCaught = totalCratesCaught;
+                ServerRelay(() => Net<IRPGPlayerNetHandler>.Proxy.SyncTotalFishCaught(player, totalCratesCaught));
             }
         }
     }
