@@ -3,55 +3,63 @@ using GarnsMod.Content.Shaders;
 using GarnsMod.Tools;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using ReLogic.Content;
 using System;
 using System.Collections.Generic;
+using System.Drawing.Text;
 using System.IO;
+using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 using Terraria;
 using Terraria.Audio;
 using Terraria.DataStructures;
+using Terraria.GameContent.ItemDropRules;
 using Terraria.ID;
 using Terraria.ModLoader;
+using static Terraria.Graphics.VertexStrip;
+using static tModPorter.ProgressUpdate;
 
 namespace GarnsMod.Content.Projectiles
 {
     internal class NorthernStar : ModProjectile
     {
-        public override string Texture => "GarnsMod/Content/Projectiles/StarBullet";
+        public override string Texture => "GarnsMod/Content/Images/MultiColorStarCenter";
 
         public override void SetStaticDefaults()
         {
-            DisplayName.SetDefault("Northern Star"); // The English name of the projectile
-            ProjectileID.Sets.TrailCacheLength[Projectile.type] = 35; // The length of old position to be recorded
-            ProjectileID.Sets.TrailingMode[Projectile.type] = 3; // The recording mode
+            StarTexture = ModContent.Request<Texture2D>("GarnsMod/Content/Images/MultiColorStarCenter");
+            GrayscaleTexture = ModContent.Request<Texture2D>("GarnsMod/Content/Images/MultiColorStarGrayscale");
+
+            DisplayName.SetDefault("Northern Star");   
+            ProjectileID.Sets.TrailCacheLength[Projectile.type] = 35; 
+            ProjectileID.Sets.TrailingMode[Projectile.type] = 3;
         }
 
         public override void SetDefaults()
         {
             Projectile.usesLocalNPCImmunity = true; // Local immunity means immunity is per projectile inst per player (vs idStatic immunity which is per projectile type per player) (vs normal which is per player)
             Projectile.localNPCHitCooldown = 8;
-  
-            Projectile.width = 22; // The width of projectile hitbox
+            Projectile.width = 11;
             Projectile.aiStyle = 0;
-            Projectile.height = 22; // The height of projectile hitbox
-            Projectile.friendly = true; // Can the projectile deal damage to enemies?
-            Projectile.hostile = false; // Can the projectile deal damage to the player? 
-            Projectile.DamageType = DamageClass.Ranged; // Is the projectile shoot by a ranged weapon?
-            Projectile.penetrate = 5; // How many monsters the projectile can penetrate. (OnTileCollide below also decrements penetrate for bounces as well)
-            Projectile.timeLeft = 1800; // The live time for the projectile (60 = 1 second, so 600 is 10 seconds)
-            Projectile.ignoreWater = true; // Does the projectile's speed be influenced by water?
-            Projectile.tileCollide = true; // Can the projectile collide with tiles?
+            Projectile.height = 11; 
+            Projectile.friendly = true; 
+            Projectile.hostile = false; 
+            Projectile.DamageType = DamageClass.Ranged;
+            Projectile.penetrate = 5; 
+            Projectile.timeLeft = 1800; 
+            Projectile.ignoreWater = true; 
+            Projectile.tileCollide = true;
             Projectile.extraUpdates = 1;
-      
         }
-
-        // Non deterministic data (randomly generated or set by the player who spawned it), needs to be synced
 
         private static readonly int YThreshold = 500;
         private static readonly float YTargetBase = 1500;
+
         private Color StarColor => NorthernStarSword.StarColors[starColorIndex];
 
-        internal byte starColorIndex;  // Set by the Northern Starsword that shot this proj, then synced with NetMessage
+        // Non deterministic data (randomly generated / set by the player who spawned it), needs to be synced 
 
+        internal byte starColorIndex;  // Set by the Northern Starsword that shot this proj, then synced with NetMessage
         private float xTarget; // The exact x point it will home in on constantly (besides when frozen in air, and initially for a second or two if low alt). Set in onSpawn and synced automatically
         private float yTarget; // The y point where it stops falling upwards. Will be somewhere between YTargetBase +/- yThreshold/2. Set in onSpawn and synced auto
 
@@ -80,7 +88,7 @@ namespace GarnsMod.Content.Projectiles
         // Deterministic AI data, doesn't need to be synced
 
         private int numTicks = 0; // How long has this projectile been alive?
-        private bool crashedDown = false; // Did we get to the end of Falling phase and hit the ground yet? crashedDown = true basically means the proj is dead but we keep it alive for the trail
+        private bool technicallyDead = false; // Did we get to the end of Falling phase and hit the ground yet? crashedDown = true basically means the proj is dead but we keep it alive for the trail
         private int fallingFor = 0; // How many ticks since Falling phase started
         private int peakingFor = 0; // How many ticks since Peak phase started
 
@@ -88,26 +96,34 @@ namespace GarnsMod.Content.Projectiles
 
         private enum SwordProjectilePhase : byte { Upwards, Peaking, Falling };
 
+   
         public override void AI()
         {
+            
             numTicks++;
+
+            if (technicallyDead)
+            {
+                Projectile.velocity = new Vector2(0, 0);
+                return;
+            }
 
             float y = Projectile.position.Y;
             float x = Projectile.position.X;
 
+            Vector2 pos = Projectile.Center;
             Vector2 targetPosition = new(xTarget, yTarget);
-            Vector2 targetsToMe = (Projectile.position - targetPosition);
-            Vector2 meToTargets = targetsToMe * -1;
+            Vector2 targetsToMe = (Projectile.Center - targetPosition);
+            Vector2 meToTargets = -targetsToMe;
 
             ref Vector2 velocity = ref Projectile.velocity;
 
-            VectorExtensions.Deconstruct(targetsToMe.Abs(), out float xDiffAbs, out float yDiffAbs);
-            VectorExtensions.Deconstruct(meToTargets.Cardinals(), out float dirToXTarget, out float dirToYTarget);
-            VectorExtensions.Deconstruct(Projectile.velocity.Cardinals(), out float xDir, out float yDir);
-            VectorExtensions.Deconstruct(Projectile.velocity, out float xVel, out float yVel);
-            VectorExtensions.Deconstruct(Projectile.velocity.Abs(), out float xVelAbs, out float yVelAbs);
+            var (xDiffAbs, yDiffAbs) = targetsToMe.Abs();
+            var (dirToXTarget, dirToYTarget) = meToTargets.Cardinals();
+            var (xDir, yDir) = velocity.Cardinals();
+            var (xVelAbs, yVelAbs) = velocity.Abs();
 
-            if (!Main.dedServ && !crashedDown)
+            if (!Main.dedServ && !technicallyDead) 
             {
                 Lighting.AddLight(Projectile.Center, StarColor.ToVector3() * 0.5f);
             }
@@ -118,34 +134,31 @@ namespace GarnsMod.Content.Projectiles
 
                     // Y logic
 
-                    // Cap it from falling upwards faster than 22 pixels/t
-                    if (velocity.Y < -25f)
+                    velocity.SlowYIfFasterThan(25f, 0.1f);
+
+                    if (pos.IsHigherUpThan(400) && velocity.IsGoingTowardsSky()) 
                     {
-                        velocity.Y = -25f;
+                        velocity.SlowY(0.95f);
                     }
 
-                    if (y < 400 && Projectile.velocity.Y < 0) // Slow it down FAST (by 97.5% of its speed per tick) if it is getting very close to the ceiling of the world
+                    // If we are below or y target....
+                    if (pos.IsLowerDownThan(yTarget))
                     {
-                        velocity.Y *= 0.01f;
-                    }
-
-                    // Accelerate towards the sky (some random yTarget very high up) if we are below our y target
-                    if (y >= yTarget)
-                    {
-                        if (numTicks > 10)
+                        if (numTicks > 20) // Accelerate upwards. Don't do this unless it's been at least 20 ticks
                         {
                             velocity.Y -= 0.15f;
                         }
                     }
-                    else // Otherwise see if the projectile is newly spawned. If it is, force it to go up a bit before phase 2 (so it doesn't instantly go into phase 2)
+                    else // Otherwise...
                     {
-                        if (numTicks <= 150) // It MUST wait at least 150 ticks to go into Peaking phase, even if we spawned it above our y target or 'peak'
+                        if (numTicks <= 150) // Go into peaking phase if it's been at least 150 ticks
                         {
-                            velocity.Y -= 0.25f; // Make it accelerate up more rapidly than if they spawned it low down 
+                            velocity.Y -= 0.25f; // Make it accelerate up more rapidly than if they spawned it below the y target
                         }
                         else
                         {
                             currPhase = SwordProjectilePhase.Peaking;
+                            Main.NewText("eek");
                         }
 
                     }
@@ -155,9 +168,9 @@ namespace GarnsMod.Content.Projectiles
                     if (numTicks > 40 || y < yTarget)
                     {
                         // Slow down x as it approaches its target (if it is facing it)
-                        if (xDiffAbs < 100f && (xDir == dirToXTarget))
+                        if (pos.IsXCloserThan(100f, xTarget) && velocity.IsGoingTowardsX(xTarget))
                         {
-                            Projectile.velocity.X *= 0.9f;
+                            velocity.SlowX(0.05f);
                         }
                         else
                         {
@@ -165,11 +178,7 @@ namespace GarnsMod.Content.Projectiles
                         }
 
                         // Cap x speed at 12 to prevent it from accelerating too fast over time then going back and fourth because it goes past its target
-                        if (xVelAbs > 12f)
-                        {
-                            velocity.X *= 0.98f;
-                        }
-
+                        velocity.SlowXIfFasterThan(12f, 0.02f);
                     }
 
                     break;
@@ -180,15 +189,15 @@ namespace GarnsMod.Content.Projectiles
                     // Add a bit of downwards accel...
                     velocity.Y += 0.075f;
 
-                    // ...and also slow down our Y speed by 3% per tick if we are still going up
-                    if (velocity.Y < 0)
+                    // ...and also slow down our Y speed by 5% per tick if we are still going up
+                    if (velocity.IsGoingTowardsSky())
                     {
-                        velocity.Y *= 0.95f;
+                        velocity.SlowY(0.05f);
                     }
 
                     if (peakingFor < 130) // After 130 ticks of peaking, the next phase will happen. Until then, the stars aren't allowed to fall down regardless of the accel we added above
                     {
-                        if (velocity.Y > 0)
+                        if (velocity.IsGoingTowardsHell())
                         {
                             velocity.Y = 0;
                         }
@@ -202,22 +211,19 @@ namespace GarnsMod.Content.Projectiles
                     // x logic
 
                     // Repeatedly slow down x velocity to halt our progression towards the X target for now
-                    velocity.X *= 0.95f;
+                    velocity.SlowX(0.05f);
 
                     break;
                 case SwordProjectilePhase.Falling:
                     fallingFor++;
 
-                    velocity.Y += 0.25f; // When we start dropping add even more downwards accel
+                    velocity.Y += 0.35f; // When we start dropping add even more downwards accel
 
-                    if (velocity.Y > 30f)
-                    {
-                        velocity.Y = 30f;
-                    }
+                    velocity.SlowYIfFasterThan(30f, 0.1f);
 
                     // x logic
 
-                    if (crashedDown)
+                    if (technicallyDead)
                     {
                         velocity.X = 0;
                     }
@@ -226,20 +232,17 @@ namespace GarnsMod.Content.Projectiles
                         if (fallingFor > 60) // Resume our progression towards the x target if we've been falling for at least a second. A bit faster than before but slow at first
                         {
                             // Slow down x as it approaches its target (if it is facing it)
-                            if (xDiffAbs < 100f && (xDir == dirToXTarget))
+                            if (pos.IsXCloserThan(100f, xTarget) && velocity.IsGoingTowardsX(xTarget))
                             {
-                                Projectile.velocity.X *= 0.9f;
+                                velocity.SlowX(0.05f);
                             }
                             else
                             {
-                                velocity.X += 0.225f * dirToXTarget * Terraria.Utils.GetLerpValue(0, 1, (fallingFor - 60 / 60f), true); // Use lerp to make acceleration slow then fast. Rate of change of the rate of change of the rate of change....
+                                velocity.X += 0.225f * dirToXTarget * Utils.GetLerpValue(0, 1, fallingFor / 60f, true); // Use lerp to make acceleration slow then fast. Rate of change of the rate of change of the rate of change....
                             }
 
                             // Cap x speed at 4 here
-                            if (xVelAbs > 6f)
-                            {
-                                velocity.X *= 0.95f;
-                            }
+                            velocity.SlowXIfFasterThan(6f, 0.05f);
                         }
                     }
                     break;
@@ -248,12 +251,6 @@ namespace GarnsMod.Content.Projectiles
 
         public override void ModifyHitNPC(NPC target, ref int damage, ref float knockback, ref bool crit, ref int hitDirection)
         {
-            // Penetrate always goes down by 1 after an npc hit. If we aren't in the 'falling' phase, we lose an additional penetrate point so it is -2
-            if (fallingFor <= 0)
-            {
-                Projectile.penetrate -= 0;
-                Projectile.penetrate = Math.Max(0, Projectile.penetrate);
-            }
             if (fallingFor > 0) // In the falling phase we lose 0 pen (add 1 for net 0), effectively being able to penetrate infinitely
             {
                 damage *= 10;
@@ -263,7 +260,7 @@ namespace GarnsMod.Content.Projectiles
 
         public override bool? CanHitNPC(NPC target)
         {
-            if (crashedDown) // Don't hit NPCs when in the crashedDown (dead) phase
+            if (technicallyDead) // Don't hit NPCs when in the crashedDown (dead) phase
             {
                 return false;
             }
@@ -273,38 +270,46 @@ namespace GarnsMod.Content.Projectiles
 
         public override bool CanHitPvp(Player target)
         {
-            return !crashedDown; // ditto
+            return !technicallyDead; // ditto
+        }
+
+        private void KillIt()
+        {
+            // When we crash down we make the proj invisible for a little instead of deleting it immediately because we want the trail to fade out instead of disappearing
+            // crashedDown = true basically means the projectile is dead but not *actually* dead *yet*
+            technicallyDead = true;
+            Projectile.timeLeft = 100;
+            Collision.HitTiles(Projectile.position + Projectile.velocity, Projectile.velocity, Projectile.width, Projectile.height);
+            SoundEngine.PlaySound(SoundID.Item10, Projectile.position);
+
+            for (int i = 0; i < 15; i++)
+            {
+                Vector2 speed = Main.rand.NextVector2Circular(1f, 1f) * 3f;
+                List<Color> starColors = NorthernStarSword.StarColors;
+                Dust d = Dust.NewDustDirect(Projectile.position, 10, 10, DustID.RainbowTorch, speed.X, speed.Y, 0, starColors[Main.rand.Next(starColors.Count)]);
+                d.noGravity = true;
+                d.scale = 1.25f + Main.rand.NextFloat() * 1.5f;
+            }
         }
 
         public override bool OnTileCollide(Vector2 oldVelocity)
         {
+            if (technicallyDead)
+            {
+                return false;
+            }
+
             if (fallingFor > 0)
             {
-                if (!crashedDown)
-                {
-                    for (int i = 0; i < 15; i++)
-                    {
-                        Vector2 speed = Main.rand.NextVector2Circular(1f, 1f) * 3f;
-                        List<Color> starColors = NorthernStarSword.StarColors;
-                        Dust d = Dust.NewDustDirect(Projectile.position, 10, 10, DustID.RainbowTorch, speed.X, speed.Y, 0, starColors[Main.rand.Next(starColors.Count)]);
-                        d.noGravity = true;
-                        d.scale = 1.25f + Main.rand.NextFloat() * 1.5f;
-                    }
-
-                    // When we crash down we make the proj invisible for a little instead of deleting it immediately because we want the trail to fade out instead of disappearing
-                    // crashedDown = true basically means the projectile is dead but not *actually* dead
-                    crashedDown = true;
-                    Projectile.timeLeft = 100;
-                    Collision.HitTiles(Projectile.position + Projectile.velocity, Projectile.velocity, Projectile.width, Projectile.height);
-                    SoundEngine.PlaySound(SoundID.Item10, Projectile.position);
-                }
+                    KillIt();
             }
             else
             {
                 Projectile.penetrate--;
                 if (Projectile.penetrate <= 0)
                 {
-                    Projectile.Kill();
+                    Projectile.penetrate = 1; // During AI if the penetrate is ever 0 the projectile will insta die. This prevents that because we use our KillIt() method so our trail stays
+                    KillIt();
                 }
                 else
                 {
@@ -327,36 +332,38 @@ namespace GarnsMod.Content.Projectiles
             return false;
         }
 
-        public override bool PreDraw(ref Color lightColor)
-        {     
-            Texture2D bulletTex = ModContent.Request<Texture2D>("GarnsMod/Content/Projectiles/StarBullet").Value;
+        private static Asset<Texture2D> StarTexture;
+        private static Asset<Texture2D> GrayscaleTexture;
 
-            Vector2 origVec1 = new(bulletTex.Width * 0.5f, bulletTex.Height * 0.5f);
-            Vector2 drawPos = Projectile.position + origVec1 - Main.screenPosition;
-            drawPos += new Vector2(0f, Projectile.gfxOffY + 0f);
+        public override bool PreDraw(ref Color lightColor)
+        {
+            // Projectile.position is top left. hitboxOffset ensures that our drawing is always in the center of the hitbox
+            Vector2 hitboxOffset = new(Projectile.width / 2, Projectile.height / 2 + Projectile.gfxOffY);
+            Vector2 drawPos = Projectile.position + hitboxOffset - Main.screenPosition;
 
             ColorGradient grad = NorthernStarSword.NorthStarColorGradients[starColorIndex];
-            float? overrideOpacity = 1f; // 1.5 fire
-            default(GradientTrailDrawer).Draw(Projectile, grad, TrailType.Fire, offset: origVec1, progressModifier: 0, overrideOpacity: overrideOpacity);
-
-            if (!crashedDown)
+            float? overrideOpacity = 1.5f; // 1.5 fire  
+            default(GradientTrailDrawer).Draw(Projectile, grad, TrailType.Fire, offset: hitboxOffset, progressModifier: 0, overrideOpacity: overrideOpacity);
+            
+            if (!technicallyDead)
             {
-                Texture2D starTexture = ModContent.Request<Texture2D>("GarnsMod/Content/Images/MultiColorStarCenter").Value;
-                Texture2D grayscaleTexture = ModContent.Request<Texture2D>("GarnsMod/Content/Images/MultiColorStarGrayscale").Value;
-                Projectile.scale = 0.8f;
+                Texture2D starTexture = StarTexture.Value;
+                Texture2D grayscaleTexture = GrayscaleTexture.Value;
+
                 float starScale = Projectile.scale;
 
                 Main.EntitySpriteDraw(starTexture, drawPos, null, new Color(255, 255, 255, 255), Projectile.rotation, starTexture.Size() / 2, starScale, SpriteEffects.None, 0);
                 Color col = StarColor;
-                col.A = (byte)(col.A / 1.5f);
+             //   col.A = (byte)(col.A / 1.5f);
                 Main.EntitySpriteDraw(grayscaleTexture, drawPos, null, col, Projectile.rotation, grayscaleTexture.Size() / 2, starScale, SpriteEffects.None, 0);
             }
+
             return false;
         }
 
         public override void Kill(int timeLeft)
         {
-            if (!crashedDown)
+            if (!technicallyDead)
             {
                 Collision.HitTiles(Projectile.position + Projectile.velocity, Projectile.velocity, Projectile.width, Projectile.height);
                 SoundEngine.PlaySound(SoundID.Item10, Projectile.position);
