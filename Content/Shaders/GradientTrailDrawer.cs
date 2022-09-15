@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.InteropServices;
 using Terraria;
 using Terraria.Graphics;
@@ -13,7 +14,6 @@ using static tModPorter.ProgressUpdate;
 namespace GarnsMod.Content.Shaders
 { 
     [StructLayout(LayoutKind.Sequential, Size = 1)]
-
     // Instanced per projectile per PreDraw() call
     public struct GradientTrailDrawer
     {
@@ -26,13 +26,13 @@ namespace GarnsMod.Content.Shaders
             miscShaderData.UseOpacity(overrideOpacity ?? trailType.Opacity);
             miscShaderData.Apply();
 
-
             // Progress is a float between 0 and 1 where 0 is the beginning of the strip right behind the projectile and 1 is the end
-            StripColorFunction StripColorFunc = (float progress) => {
-                // For some reason, adding 1 to progress modifier (meaning there is at least a 0.001 change in progress) stops a very very odd and subtle bug with the trail 
+            Color StripColorFunc(float progress)
+            {
+                // For some reason, adding 1 to progress modifier (meaning there is at least a 0.001 change in progress) stops a very very odd and subtle bug with the trail colors
                 float usingProgress = Modulo(progress + (progressModifier + 1) / 1000f, 1.00f);
                 return grad.GetColor(usingProgress);
-            };
+            }
 
             // OldPos is top left. We want the trail to be at the center + any additionaly offset they want. We also need to subtract the screen position to get the relative screen loc
             offset -= Main.screenPosition;
@@ -40,7 +40,6 @@ namespace GarnsMod.Content.Shaders
             vertexStrip.DrawTrail();
             Main.pixelShader.CurrentTechnique.Passes[0].Apply();
         }
-
 
         // C# % works strangely for negative numbers, this makes it work like modulo
         public static float Modulo(float a, float b)
@@ -52,14 +51,14 @@ namespace GarnsMod.Content.Shaders
     internal readonly struct TrailType
     {
         internal static List<TrailType> typeModes = new();
+
         private int Value { get; }
 
         public static int Count => typeModes.Count;
 
         public static readonly TrailType Plain = new("Plain", saturation: 0.0f, opacity: 2.5f, PlainWidthFunction);
         public static readonly TrailType Fire = new("Fire", saturation: -1.25f, opacity: 8.0f, FireWidthFunction);
-        public static readonly TrailType Stream = new("Stream", saturation: 1.5f, opacity: 2.5f, StreamWidthFunction);
-        
+        public static readonly TrailType Stream = new("Stream", saturation: 1.5f, opacity: 4.0f, StreamWidthFunction);
         
         public static readonly TrailType NightglowBG = new("Plain", saturation: 0.0f, opacity: 0.3f, NightGlowBGWidthFunction);
         public static readonly TrailType NightglowFG = new("Plain", saturation: 0.0f, opacity: 1.25f, NightGlowFGWidthFunction);
@@ -107,14 +106,16 @@ namespace GarnsMod.Content.Shaders
         {
             if (progress < 0.25f)
             {
-                return MathHelper.Lerp(0f, 20f, progress * (1.0f / 0.25f));
+                return MathHelper.Lerp(5f, 15f, progress * (1.0f / 0.25f));
             }
             if (progress >= 0.25f && progress < 0.50f)
             {
-                return MathHelper.Lerp(20f, 45f, (progress - 0.25f) * (1.0f / 0.25f));
+                return MathHelper.Lerp(15f, 20f, (progress - 0.25f) * (1.0f / 0.25f));
             }
 
-            return MathHelper.Lerp(45f, 15f, (progress - 0.5f) * (1.0f / 0.5f));
+            return MathHelper.Lerp(20f, 30f, (progress - 0.5f) * (1.0f / 0.5f));
+
+
         }
 
         public static float NightGlowBGWidthFunction(float progress) => MathHelper.Lerp(15f, 120f, progress);
