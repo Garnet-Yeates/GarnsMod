@@ -12,14 +12,14 @@ using static Terraria.Graphics.VertexStrip;
 using static tModPorter.ProgressUpdate;
 
 namespace GarnsMod.Content.Shaders
-{ 
+{
     [StructLayout(LayoutKind.Sequential, Size = 1)]
     // Instanced per projectile per PreDraw() call
     public struct GradientTrailDrawer
     {
         private static readonly VertexStrip vertexStrip = new();
 
-        internal void Draw(Projectile proj, ColorGradient grad, TrailType trailType, Vector2 offset = default, float? overrideSaturation = null, float? overrideOpacity = null, StripHalfWidthFunction overrideWidthFunction = null, int progressModifier = 1)
+        internal void Draw(Projectile proj, ColorGradient grad, TrailType trailType, Vector2 offset = default, float? overrideSaturation = null, float? overrideOpacity = null, StripHalfWidthFunction overrideWidthFunction = null, int progressModifier = 1, bool padding = true)
         {
             MiscShaderData miscShaderData = GameShaders.Misc[$"TrailShader{trailType.ShaderName}"];
             miscShaderData.UseSaturation(overrideSaturation ?? trailType.Saturation);
@@ -36,7 +36,15 @@ namespace GarnsMod.Content.Shaders
 
             // OldPos is top left. We want the trail to be at the center + any additionaly offset they want. We also need to subtract the screen position to get the relative screen loc
             offset -= Main.screenPosition;
-            vertexStrip.PrepareStripWithProceduralPadding(proj.oldPos, proj.oldRot, StripColorFunc, overrideWidthFunction ?? trailType.WidthFunction, offsetForAllPositions: offset, includeBacksides: false);
+            if (padding)
+            {
+                vertexStrip.PrepareStripWithProceduralPadding(proj.oldPos, proj.oldRot, StripColorFunc, overrideWidthFunction ?? trailType.WidthFunction, offsetForAllPositions: offset, includeBacksides: false);
+            }
+            else
+            {
+                vertexStrip.PrepareStrip(proj.oldPos, proj.oldRot, StripColorFunc, overrideWidthFunction ?? trailType.WidthFunction, offsetForAllPositions: offset, includeBacksides: false);
+
+            }
             vertexStrip.DrawTrail();
             Main.pixelShader.CurrentTechnique.Passes[0].Apply();
         }
