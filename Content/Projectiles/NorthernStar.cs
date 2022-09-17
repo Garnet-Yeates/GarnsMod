@@ -46,14 +46,14 @@ namespace GarnsMod.Content.Projectiles
             Projectile.hostile = false; 
             Projectile.DamageType = DamageClass.Ranged;
             Projectile.penetrate = 5; 
-            Projectile.timeLeft = 1800; 
             Projectile.ignoreWater = true; 
             Projectile.tileCollide = true;
             Projectile.extraUpdates = 1;
+            Projectile.timeLeft = 900 * (Projectile.extraUpdates + 1);
+
         }
 
-        private static readonly int YThreshold = 500;
-        private static readonly float YTargetBase = 1500;
+        private static readonly int YThreshold = 250;
 
         private Color StarColor => NorthernStarSword.StarColors[starColorIndex];
 
@@ -66,9 +66,9 @@ namespace GarnsMod.Content.Projectiles
         // Only called on the instance who spawned it, and then NetUpdate is called
         public override void OnSpawn(IEntitySource source)
         {
-            float screenSizeX = Main.ScreenSize.ToVector2().X;
-            xTarget = Projectile.position.X - screenSizeX / 2 + Main.rand.NextFloat(screenSizeX);
-            yTarget = YTargetBase - (YThreshold / 2) + Main.rand.NextFloat(YThreshold);
+            var (screenX, screenY) = Main.ScreenSize.ToVector2();
+            xTarget = Projectile.position.X - screenX / 2 + Main.rand.NextFloat(screenX);
+            yTarget = Projectile.position.Y - screenY / 2 - 600f - Main.rand.NextFloat(YThreshold);
         }
 
         public override void SendExtraAI(BinaryWriter writer)
@@ -109,7 +109,6 @@ namespace GarnsMod.Content.Projectiles
             }
 
             float y = Projectile.position.Y;
-            float x = Projectile.position.X;
 
             Vector2 pos = Projectile.Center;
             Vector2 targetPosition = new(xTarget, yTarget);
@@ -118,10 +117,7 @@ namespace GarnsMod.Content.Projectiles
 
             ref Vector2 velocity = ref Projectile.velocity;
 
-            var (xDiffAbs, yDiffAbs) = targetsToMe.Abs();
             var (dirToXTarget, dirToYTarget) = meToTargets.Cardinals();
-            var (xDir, yDir) = velocity.Cardinals();
-            var (xVelAbs, yVelAbs) = velocity.Abs();
 
             if (!Main.dedServ && !technicallyDead) 
             {
@@ -134,51 +130,43 @@ namespace GarnsMod.Content.Projectiles
 
                     // Y logic
 
-                    velocity.SlowYIfFasterThan(25f, 0.1f);
-
-                    if (pos.IsHigherUpThan(400) && velocity.IsGoingTowardsSky()) 
+                    if (Projectile.IsHigherUpThan(600) && Projectile.IsGoingTowardsSky()) 
                     {
-                        velocity.SlowY(0.95f);
+                        Main.NewText("yellow");
+                        Projectile.SlowY(0.99f);
+                        currPhase = SwordProjectilePhase.Peaking;
                     }
 
                     // If we are below or y target....
-                    if (pos.IsLowerDownThan(yTarget))
+                    if (Projectile.IsLowerDownThan(yTarget))
                     {
-                        if (numTicks > 20) // Accelerate upwards. Don't do this unless it's been at least 20 ticks
-                        {
-                            velocity.Y -= 0.15f;
-                        }
+                        velocity.Y -= 0.15f;
                     }
                     else // Otherwise...
                     {
-                        if (numTicks <= 150) // Go into peaking phase if it's been at least 150 ticks
-                        {
-                            velocity.Y -= 0.25f; // Make it accelerate up more rapidly than if they spawned it below the y target
-                        }
-                        else
-                        {
-                            currPhase = SwordProjectilePhase.Peaking;
-                            Main.NewText("eek");
-                        }
-
+                        currPhase = SwordProjectilePhase.Peaking;
                     }
+
+                    Projectile.SlowYIfFasterThan(25f, 0.1f);
 
                     // X logic
 
-                    if (numTicks > 40 || y < yTarget)
+                    if (numTicks > 50 || Projectile.IsHigherUpThan(yTarget))
                     {
-                        // Slow down x as it approaches its target (if it is facing it)
-                        if (pos.IsXCloserThan(100f, xTarget) && velocity.IsGoingTowardsX(xTarget))
+
+                        // Accelerate x towards target if we aren't going towards it, or we are going towards it but further than 150px away
+                        if (!Projectile.IsGoingTowardsX(xTarget) || Projectile.IsXFurtherThan(150f, xTarget))
                         {
-                            velocity.SlowX(0.05f);
+                            velocity.X += 1.15f * dirToXTarget;
                         }
                         else
                         {
-                            velocity.X += 0.5f * dirToXTarget; // Accelerate x towards x target
+                            Projectile.SlowXIfCloserThan(50f, xTarget, 0.025f, 0.3f);
+
                         }
 
-                        // Cap x speed at 12 to prevent it from accelerating too fast over time then going back and fourth because it goes past its target
-                        velocity.SlowXIfFasterThan(12f, 0.02f);
+                        // In any case, cap our speed at 30f
+                        Projectile.SlowXIfFasterThan(30f, 0.25f);
                     }
 
                     break;
@@ -190,14 +178,14 @@ namespace GarnsMod.Content.Projectiles
                     velocity.Y += 0.075f;
 
                     // ...and also slow down our Y speed by 5% per tick if we are still going up
-                    if (velocity.IsGoingTowardsSky())
+                    if (Projectile.IsGoingTowardsSky())
                     {
-                        velocity.SlowY(0.05f);
+                        Projectile.SlowY(0.045f);
                     }
 
-                    if (peakingFor < 130) // After 130 ticks of peaking, the next phase will happen. Until then, the stars aren't allowed to fall down regardless of the accel we added above
+                    if (peakingFor < 120) // After 130 ticks of peaking, the next phase will happen. Until then, the stars aren't allowed to fall down regardless of the accel we added above
                     {
-                        if (velocity.IsGoingTowardsHell())
+                        if (Projectile.IsGoingTowardsHell())
                         {
                             velocity.Y = 0;
                         }
@@ -211,7 +199,7 @@ namespace GarnsMod.Content.Projectiles
                     // x logic
 
                     // Repeatedly slow down x velocity to halt our progression towards the X target for now
-                    velocity.SlowX(0.05f);
+                    Projectile.SlowX(0.1f);
 
                     break;
                 case SwordProjectilePhase.Falling:
@@ -219,7 +207,7 @@ namespace GarnsMod.Content.Projectiles
 
                     velocity.Y += 0.35f; // When we start dropping add even more downwards accel
 
-                    velocity.SlowYIfFasterThan(30f, 0.1f);
+                    Projectile.SlowYIfFasterThan(30f, 0.1f);
 
                     // x logic
 
@@ -229,20 +217,20 @@ namespace GarnsMod.Content.Projectiles
                     }
                     else
                     {
-                        if (fallingFor > 60) // Resume our progression towards the x target if we've been falling for at least a second. A bit faster than before but slow at first
+                        if (fallingFor > 30) // Resume our progression towards the x target if we've been falling for at least a second. A bit faster than before but slow at first
                         {
                             // Slow down x as it approaches its target (if it is facing it)
-                            if (pos.IsXCloserThan(100f, xTarget) && velocity.IsGoingTowardsX(xTarget))
+                            if (pos.IsXCloserThan(100f, xTarget) && Projectile.IsGoingTowardsX(xTarget))
                             {
-                                velocity.SlowX(0.05f);
+                                Projectile.SlowX(0.05f);
                             }
                             else
                             {
-                                velocity.X += 0.225f * dirToXTarget * Utils.GetLerpValue(0, 1, fallingFor / 60f, true); // Use lerp to make acceleration slow then fast. Rate of change of the rate of change of the rate of change....
+                                velocity.X += 1f * dirToXTarget * Utils.GetLerpValue(0, 1, fallingFor / 60f, true); // Use lerp to make acceleration slow then fast. Rate of change of the rate of change of the rate of change....
                             }
 
                             // Cap x speed at 4 here
-                            velocity.SlowXIfFasterThan(6f, 0.05f);
+                            Projectile.SlowXIfFasterThan(6f, 0.05f);
                         }
                     }
                     break;
@@ -344,7 +332,7 @@ namespace GarnsMod.Content.Projectiles
             ColorGradient grad = NorthernStarSword.NorthStarColorGradients[starColorIndex];
             float? overrideOpacity = 1.5f; // 1.5 fire  
             default(GradientTrailDrawer).Draw(Projectile, grad, TrailType.Fire, offset: hitboxOffset, progressModifier: 0, overrideOpacity: overrideOpacity);
-            
+
             if (!technicallyDead)
             {
                 Texture2D starTexture = StarTexture.Value;
