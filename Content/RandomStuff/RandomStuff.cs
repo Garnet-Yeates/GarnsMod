@@ -48,31 +48,22 @@ namespace GarnsMod.Content.RandomStuff
             if (isCrimsonHeart) // CRIMSON HEART LOGIC
             {
                 // TODO either replace one of the choices, add another choice, or both, or add an additional drop on top of the choice. Or all 3. You see where I'm going with this
-                int choice = Main.rand.Next(5);
-                if (!WorldGen.shadowOrbSmashed)
+                List<IItemDropRule> rulesToTry = new()
                 {
-                    choice = 0; // Always drop Undertaker if it is the first one smashed
-                }
-                switch (choice)
-                {
-                    case 0:
-                        Item.NewItem(WorldGen.GetItemSource_FromTileBreak(x, y), x * 16, y * 16, 32, 32, ItemID.TheUndertaker, 1, noBroadcast: false, -1);
-                        int stack = WorldGen.genRand.Next(100, 101);
-                        Item.NewItem(WorldGen.GetItemSource_FromTileBreak(x, y), x * 16, y * 16, 32, 32, ItemID.MusketBall, stack);
-                        break;
-                    case 1:
-                        Item.NewItem(WorldGen.GetItemSource_FromTileBreak(x, y), x * 16, y * 16, 32, 32, ItemID.CrimsonRod, 1, noBroadcast: false, -1);
-                        break;
-                    case 2:
-                        Item.NewItem(WorldGen.GetItemSource_FromTileBreak(x, y), x * 16, y * 16, 32, 32, ItemID.TheRottedFork, 1, noBroadcast: false, -1);
-                        break;
-                    case 3:
-                        Item.NewItem(WorldGen.GetItemSource_FromTileBreak(x, y), x * 16, y * 16, 32, 32, ItemID.CrimsonHeart, 1, noBroadcast: false, -1);
-                        break;
-                    case 4:
-                        Item.NewItem(WorldGen.GetItemSource_FromTileBreak(x, y), x * 16, y * 16, 32, 32, ItemID.PanicNecklace, 1, noBroadcast: false, -1);
-                        break;
-                }
+                    new CommonDrop(ItemID.CrimtaneOre, 1, 20, 60),
+                    new CoinsRule(Item.sellPrice(0, 0, 80, 0), true),
+                    new OneFromRulesRule
+                    (
+                        chanceDenominator: 1, chanceNumerator: 1,
+                        new CommonDrop(ItemID.SoulofFright, 1, 5, 10),
+                        new CommonDrop(ItemID.SoulofMight, 1, 5, 10),
+                        new CommonDrop(ItemID.SoulofSight, 1, 5, 10),
+                        new CommonDrop(ItemID.SoulofLight, 1, 5, 10),
+                        new CommonDrop(ItemID.SoulofNight, 1, 5, 10),
+                        new CommonDrop(ItemID.SoulofFlight, 1, 5, 10)
+                    )
+                };
+                rulesToTry.ForEach(rule => CustomItemDropResolver.ResolveRule(rule, CustomItemDropResolver.GetDropAttemptInfo(new Rectangle(x * 16, y * 16, 32, 32))));
             }
             else // SHADOW ORB LOGIC
             {
@@ -81,8 +72,8 @@ namespace GarnsMod.Content.RandomStuff
                 // Example of me using this. Make sure it is never called on mp client netmode
                 List<IItemDropRule> rulesToTry = new()
                 {
-                    new CommonDrop(ItemID.DirtBlock, 1, 20, 60),
-                    new CoinsRule(Item.sellPrice(0, 1, 0, 0), true),
+                    new CommonDrop(ItemID.DemoniteOre, 1, 20, 60),
+                    new CoinsRule(Item.sellPrice(0, 0, 80, 0), true),
                     new OneFromRulesRule
                     (
                         chanceDenominator: 1, chanceNumerator: 1,
@@ -95,36 +86,6 @@ namespace GarnsMod.Content.RandomStuff
                     )
                 };
                 rulesToTry.ForEach(rule => CustomItemDropResolver.ResolveRule(rule, CustomItemDropResolver.GetDropAttemptInfo(new Rectangle(x*16, y*16, 32, 32))));
-
-                /*
-                int choice = Main.rand.Next(9);
-
-                if (!WorldGen.shadowOrbSmashed)
-                {
-                    choice = 0; // Always drop musket if it is the first one smashed
-                }
-                switch (choice)
-                {
-                    case 0:
-                        {
-                            Item.NewItem(WorldGen.GetItemSource_FromTileBreak(x, y), x * 16, y * 16, 32, 32, ItemID.Musket, 1, noBroadcast: false, -1);
-                            int stack2 = WorldGen.genRand.Next(100, 101);
-                            Item.NewItem(WorldGen.GetItemSource_FromTileBreak(x, y), x * 16, y * 16, 32, 32, ItemID.MusketBall, stack2);
-                            break;
-                        }
-                    case 1:
-                        Item.NewItem(WorldGen.GetItemSource_FromTileBreak(x, y), x * 16, y * 16, 32, 32, ItemID.Vilethorn, 1, noBroadcast: false, -1);
-                        break;
-                    case 2:
-                        Item.NewItem(WorldGen.GetItemSource_FromTileBreak(x, y), x * 16, y * 16, 32, 32, ItemID.BallOHurt, 1, noBroadcast: false, -1);
-                        break;
-                    case 3:
-                        Item.NewItem(WorldGen.GetItemSource_FromTileBreak(x, y), x * 16, y * 16, 32, 32, ItemID.ShadowOrb, 1, noBroadcast: false, -1);
-                        break;
-                    case 4:
-                        Item.NewItem(WorldGen.GetItemSource_FromTileBreak(x, y), x * 16, y * 16, 32, 32, ItemID.BandofStarpower, 1, noBroadcast: false, -1);
-                        break;
-                }*/
             }
 
             // Has to do with spawing the corresponding boss and putting text in the chat. If you forget this part then the bosses wont spawn
