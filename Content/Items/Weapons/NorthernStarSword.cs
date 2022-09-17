@@ -12,9 +12,14 @@ using Terraria.DataStructures;
 using static GarnsMod.Tools.ColorGradient;
 using Terraria.ID;
 using Terraria.ModLoader;
+using Terraria.GameContent.Creative;
+using Microsoft.Xna.Framework.Graphics;
+using static tModPorter.ProgressUpdate;
+using GarnsMod.Content.Items.Weapons.SwingySwords;
 
 namespace GarnsMod.Content.Items.Weapons
 {
+
     internal class NorthernStarSword : ModItem
     {
         public override void SetStaticDefaults()
@@ -37,7 +42,6 @@ namespace GarnsMod.Content.Items.Weapons
             Item.damage = 120;
             Item.knockBack = 6;
             Item.crit = 6;
-
             Item.value = Item.buyPrice(gold: 5);
             Item.rare = ItemRarityID.Pink;
             Item.UseSound = SoundID.Item1;
@@ -65,7 +69,7 @@ namespace GarnsMod.Content.Items.Weapons
 
         public override bool Shoot(Player player, EntitySource_ItemUse_WithAmmo source, Vector2 position, Vector2 velocity, int type, int damage, float knockback)
         {
-            int amount = 1;
+            int amount = 8;
 
             // Spread starts at MinSpread and scales up to MaxSpread depending on fishing rod level
             float spread = 12;
