@@ -20,6 +20,12 @@ namespace GarnsMod.Tools
             return new(lefterX, higherY, width, height);
         }
 
+        // C# % works strangely for negative numbers, this makes it work like modulo
+        public static float Modulo(float a, float b)
+        {
+            return a - b * (float)Math.Floor(a / b);
+        }
+
     }
 
 }

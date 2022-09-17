@@ -30,7 +30,7 @@ namespace GarnsMod.Content.Shaders
             Color StripColorFunc(float progress)
             {
                 // For some reason, adding 1 to progress modifier (meaning there is at least a 0.001 change in progress) stops a very very odd and subtle bug with the trail colors
-                float usingProgress = Modulo(progress + (progressModifier + 1) / 1000f, 1.00f);
+                float usingProgress = GarnMathHelpers.Modulo(progress + (progressModifier + 1) / 1000f, 1.00f);
                 return grad.GetColor(usingProgress);
             }
 
@@ -47,12 +47,6 @@ namespace GarnsMod.Content.Shaders
             }
             vertexStrip.DrawTrail();
             Main.pixelShader.CurrentTechnique.Passes[0].Apply();
-        }
-
-        // C# % works strangely for negative numbers, this makes it work like modulo
-        public static float Modulo(float a, float b)
-        {
-            return a - b * (float) Math.Floor(a / b);
         }
     }
 
