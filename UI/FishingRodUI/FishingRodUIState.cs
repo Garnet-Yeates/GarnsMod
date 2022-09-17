@@ -33,10 +33,6 @@ namespace GarnsMod.UI.FishingRodUI
             InventoryIndex = inventoryIndex;
         }
 
-        // Main.MouseScreen if the pixel offset from the top right of your screen. No matter what your zoom is this will be the same if your cursor stays in place
-        // For UI drawing, it want's the MouseScreen position AS IF zoom is at 100% (default) so this method finds where MouseScreen would be if we were zoomed out
-          
-
         public override void OnInitialize()
         {
             TrailColorButton = new UIHoverImageButton(SelectedTrailColorMode.TextureAsset, $"Trail Color: {SelectedTrailColorMode.Name}");
