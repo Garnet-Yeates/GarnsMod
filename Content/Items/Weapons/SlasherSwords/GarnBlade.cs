@@ -1,10 +1,4 @@
 ﻿using Microsoft.Xna.Framework;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection.Metadata;
-using System.Text;
-using System.Threading.Tasks;
 using Terraria;
 using Terraria.GameContent.Creative;
 using Terraria.ID;
@@ -52,7 +46,10 @@ namespace GarnsMod.Content.Items.Weapons.SlasherSwords
 
         public bool CanHitNPCYet { get; set; }
 
+        public float HandRotationOffset => -15f;
+
         public ISlasherSword SlasherSword => this;
+
 
         public override bool? CanHitNPC(Player player, NPC target)
         {
@@ -79,8 +76,17 @@ namespace GarnsMod.Content.Items.Weapons.SlasherSwords
             SlasherSword.UseItemHitbox(player, ref hitbox);
         }
 
+        public Vector2 GetItemLocationOffset(Player player)
+        {
+            float angleProgress = SlasherSword.GetAngleProgress(player);
+            Vector2 itemLocationOffset = new(0, MathHelper.Lerp(0, -4f, angleProgress * (1f / 0.25f)));
+            if (angleProgress > 0.25) itemLocationOffset = new(MathHelper.Lerp(0, -6 * player.direction, (angleProgress - 0.25f) * (1f / 0.75f)), -4f);
+
+            return itemLocationOffset;
+        }
+
         #endregion
     }
 }
-        
+
 
