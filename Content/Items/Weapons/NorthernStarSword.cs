@@ -15,7 +15,7 @@ using Terraria.ModLoader;
 using Terraria.GameContent.Creative;
 using Microsoft.Xna.Framework.Graphics;
 using static tModPorter.ProgressUpdate;
-using GarnsMod.Content.Items.Weapons.SwingySwords;
+using GarnsMod.Content.Items.Weapons.SlasherSwords;
 
 namespace GarnsMod.Content.Items.Weapons
 {
