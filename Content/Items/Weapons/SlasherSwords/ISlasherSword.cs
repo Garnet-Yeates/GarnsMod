@@ -36,6 +36,15 @@ namespace GarnsMod.Content.Items.Weapons.SlasherSwords
         /// The higher value of R1,R2 is used for the point where immunity resets and the sword is able to hit a second time (must reach the second peak/vally before being able to hit again)</summary>
         private float ResetImmunityAt => R1 > R2 ? R1 : R2;
 
+        /// <summary>Can be overriden. It is tuned for 'perfect diagonal' swords where the handle is in the bottom left</summary>
+        public virtual float MaxAngleDeg => 120f;
+
+        /// <summary>Can be overriden. It is tuned for 'perfect diagonal' swords where the handle is in the bottom left</summary>
+        public virtual float MinAngleDeg => -25f;
+
+        /// <summary>Hand rotation is normally based on the sword being a perfect diagonal. If the sword sprite is rotated slightly differently it needs to be compensated here</summary>
+        public virtual float HandRotationOffset => 0f;
+
         public float GetAnimationProgress(Player player)
         {
             return 1 - player.itemAnimation / (float)player.itemAnimationMax;
@@ -50,15 +59,8 @@ namespace GarnsMod.Content.Items.Weapons.SlasherSwords
             return (float)((Math.Sin(2 * pi * animationProgress - 2 * pi * Offset) / 2) + 0.5); // Look in desmos with progress as x and offset as a slider between 0-1
         }
 
-        // The point of rotation is not in the bottom left corner so this method hopes to offset the draw position to compensate for this. It is smoothed using interpolation. Makes a big difference
-        public virtual Vector2 GetItemLocationOffset(Player player)
-        {
-            float angleProgress = GetAngleProgress(player);
-            Vector2 itemLocationOffset = new(0, MathHelper.Lerp(0, -4f, angleProgress * (1f / 0.25f)));
-            if (angleProgress > 0.25) itemLocationOffset = new(MathHelper.Lerp(0, -6 * player.direction, (angleProgress - 0.25f) * (1f / 0.75f)), -4f);
-
-            return itemLocationOffset;
-        }
+        /// <summary> The point of rotation is not in the bottom left corner so this method hopes to offset the draw position to compensate for this. It should be smoothed via interpolation 
+        public Vector2 GetItemLocationOffset(Player player);
 
         public void SlasherUseItemFrame(Player player)
         {
@@ -98,8 +100,8 @@ namespace GarnsMod.Content.Items.Weapons.SlasherSwords
         public float GetItemRotation(Player player)
         {
             float angleProgress = GetAngleProgress(player);
-            float startAngle = MathHelper.ToRadians(145f) * player.direction;
-            float endAngle = MathHelper.ToRadians(-10f) * player.direction;
+            float startAngle = MathHelper.ToRadians(MaxAngleDeg) * player.direction;
+            float endAngle = MathHelper.ToRadians(MinAngleDeg) * player.direction;
             float currAngle = Utils.AngleLerp(startAngle, endAngle, angleProgress);
             return currAngle;
         }
@@ -133,9 +135,10 @@ namespace GarnsMod.Content.Items.Weapons.SlasherSwords
         {
             player.itemRotation = GetItemRotation(player);
             player.itemLocation = player.Center + GetItemLocationOffset(player);
+         //   player.itemRotation = 0f;
 
             player.SetCompositeArmBack(true, Player.CompositeArmStretchAmount.None, 0); // 195 for facing normal
-            player.SetCompositeArmFront(true, Player.CompositeArmStretchAmount.Quarter, player.itemRotation + MathHelper.ToRadians(player.direction * 200)); // rotate the arm in a slightly different way because the arm has a different starting angle
+            player.SetCompositeArmFront(true, Player.CompositeArmStretchAmount.Quarter, player.itemRotation + MathHelper.ToRadians(player.direction * (225 + HandRotationOffset))); // rotate the arm in a slightly different way because the arm has a different starting angle
         }
     }
 }
