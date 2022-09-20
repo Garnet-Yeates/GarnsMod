@@ -6,33 +6,63 @@ namespace GarnsMod.Tools
 {
     internal static class VectorExtensions
     {
-        public static Vector2 To(this Vector2 pos1, Vector2 pos2)
+        public static Vector2 To(this Vector2 p1, Vector2 p2)
         {
-            return (pos2 - pos1);
+            return p2 - p1;
         }
 
-        public static Vector2 From(this Vector2 pos1, Vector2 pos2)
+        public static Vector2 From(this Vector2 p1, Vector2 p2)
         {
-            return (pos1 - pos2);
-
+            return p1 - p2;
         }
 
-        public static Vector2 Abs(this Vector2 v1)
+        public static Vector2 CardinalsTo(this Vector2 p1, Vector2 p2)
         {
-            return new(Math.Abs(v1.X), Math.Abs(v1.Y));
+            return (p1 - p2).Cardinals();
+        }
+
+        public static Vector2 Abs(this Vector2 v)
+        {
+            return new(v.AbsX(), v.AbsY());
+        }
+
+        public static float AbsX(this Vector2 v)
+        {
+            return Math.Abs(v.X);
+        }
+
+        public static float AbsY(this Vector2 v)
+        {
+            return Math.Abs(v.Y);
+        }
+
+        public static float CardinalY(this Vector2 v)
+        {
+            return v.Y.Cardinal();
+        }
+
+        public static float CardinalX(this Vector2 v)
+        {
+            return v.X.Cardinal();
         }
 
         /// <summary>Basically converts x and y into 0, 1, or -1 </summary>
-        public static Vector2 Cardinals(this Vector2 v1)
+        public static Vector2 Cardinals(this Vector2 v)
         {
-            return new(v1.X > 0 ? 1 : v1.X == 0 ? 0 : -1, v1.Y > 0 ? 1 : v1.Y == 0 ? 0 : -1);
+            return new(v.CardinalX(), v.CardinalY());
         }
 
-        public static void Deconstruct(this Vector2 vec, out float x, out float y)
+        public static float Cardinal(this float n)
         {
-            x = vec.X;
-            y = vec.Y;
+            return n > 0 ? 1 : n == 0 ? 0 : n;
         }
+
+        public static void Deconstruct(this Vector2 v, out float x, out float y)
+        {
+            x = v.X;
+            y = v.Y;
+        }
+
 
         // Directional Conditionals
 
@@ -46,9 +76,9 @@ namespace GarnsMod.Tools
             return IsGoingTowardsX(e.velocity, e.position, x);
         }
 
-        private static bool IsGoingTowardsX(Vector2 vec, Vector2 pos2, float x)
+        private static bool IsGoingTowardsX(Vector2 myVelocity, Vector2 myPosition, float x)
         {
-            return vec.Cardinals().X == (new Vector2(x, 0) - pos2).Cardinals().X;
+            return myVelocity.CardinalX() == (x - myPosition.X).Cardinal();
         }
 
         public static bool IsGoingTowardsY(this Entity e, Vector2 position)
@@ -56,14 +86,14 @@ namespace GarnsMod.Tools
             return IsGoingTowardsX(e.velocity, e.position, position.Y);
         }
 
-        public static bool IsGoingTowardsY(this Entity e, float x)
+        public static bool IsGoingTowardsY(this Entity e, float y)
         {
-            return IsGoingTowardsY(e.velocity, e.position, x);
+            return IsGoingTowardsY(e.velocity, e.position, y);
         }
 
-        public static bool IsGoingTowardsY(Vector2 vec, Vector2 pos, float y)
+        public static bool IsGoingTowardsY(Vector2 myVelocity, Vector2 myPosition, float y)
         {
-            return vec.Cardinals().Y == (new Vector2(0, y) - pos).Cardinals().Y;
+            return myVelocity.CardinalY() == (y - myPosition.Y).Cardinal();
         }
 
         public static bool IsGoingTowardsSky(this Entity e)
@@ -139,16 +169,6 @@ namespace GarnsMod.Tools
             }
         }
 
-        public static void SlowY(this Entity e, float slowPercent)
-        {
-            e.velocity.SlowY(slowPercent);
-        }
-
-        public static void SlowY(this ref Vector2 vec, float slowPercent)
-        {
-            vec.SlowYIfFasterThan(0f, slowPercent);
-        }
-
         public static void SlowX(this Entity e, float slowPercent)
         {
             e.velocity.SlowX(slowPercent);
@@ -172,6 +192,33 @@ namespace GarnsMod.Tools
             }
         }
 
+        public static void CapXSpeed(this Entity e, float maxAbsSpeed)
+        {
+            e.velocity.CapXSpeed(maxAbsSpeed);
+        }
+
+        public static void CapXSpeed(this ref Vector2 vec, float maxAbsSpeed)
+        {
+            if (vec.X > 0)
+            {
+                vec.X = Math.Min(vec.X, maxAbsSpeed);
+            }
+            else
+            {
+                vec.X = Math.Max(vec.X, -maxAbsSpeed);
+            }
+        }
+
+        public static void SlowY(this Entity e, float slowPercent)
+        {
+            e.velocity.SlowY(slowPercent);
+        }
+
+        public static void SlowY(this ref Vector2 vec, float slowPercent)
+        {
+            vec.SlowYIfFasterThan(0f, slowPercent);
+        }
+
         public static void SlowYIfFasterThan(this Entity e, float topSpeed, float slowPercent)
         {
             e.velocity.SlowYIfFasterThan(topSpeed, slowPercent);
@@ -181,8 +228,25 @@ namespace GarnsMod.Tools
         {
             if (vec.IsYFasterThan(topSpeed))
             {
-                vec.Y *= (1 - slowPercent);
+                vec.Y *= 1 - slowPercent;
             }
+        }
+
+        public static void CapYSpeed(this ref Vector2 vec, float maxSpeed)
+        {
+            if (vec.Y > 0)
+            {
+                vec.Y = Math.Min(vec.Y, maxSpeed);
+            }
+            else
+            {
+                vec.Y = Math.Max(vec.Y, -maxSpeed);
+            }
+        }
+
+        public static void CapYSpeed(this Entity e, float maxAbsSpeed)
+        {
+            e.velocity.CapXSpeed(maxAbsSpeed);
         }
 
         // Positional Conditional
@@ -384,20 +448,19 @@ namespace GarnsMod.Tools
             float ourDistance = pos.GetXDistance(x);
             if (ourDistance < specifiedDistance)
             {
-                if (endSlowPercent is not float endPercent)
+                if (endSlowPercent is float endPercent)
                 {
-                    vel.SlowX(slowPercent);
+                    float distanceProgress = 1 - ourDistance / specifiedDistance;
+                    vel.SlowX(MathHelper.Lerp(slowPercent, endPercent, distanceProgress));
                     return true;
                 }
 
-                float distanceProgress = 1 - ourDistance / specifiedDistance;
-                vel.SlowX(MathHelper.Lerp(slowPercent, endPercent, distanceProgress));
+                vel.SlowX(slowPercent);
                 return true;
             }
 
             return false;
         }
-
 
         public static bool SlowYIfCloserThan(this Entity e, float specifiedDistance, Vector2 otherPos, float slowPercent, float? endSlowPercent = null)
         {
@@ -414,14 +477,14 @@ namespace GarnsMod.Tools
             float ourDistance = pos.GetYDistance(y);
             if (ourDistance < specifiedDistance)
             {
-                if (endSlowPercent is not float endPercent)
+                if (endSlowPercent is float endPercent)
                 {
-                    vel.SlowY(slowPercent);
+                    float distanceProgress = 1 - ourDistance / specifiedDistance;
+                    vel.SlowY(Utils.GetLerpValue(slowPercent, endPercent, distanceProgress, true));
                     return true;
                 }
 
-                float distanceProgress = 1 - ourDistance / specifiedDistance;
-                vel.SlowY(Utils.GetLerpValue(slowPercent, endPercent, distanceProgress, true));
+                vel.SlowY(slowPercent);
                 return true;
             }
 
