@@ -1,15 +1,11 @@
 ﻿using Microsoft.Xna.Framework;
-using System.Collections.Generic;
 using System.IO;
 using Terraria;
 using Terraria.DataStructures;
 using Terraria.ID;
 using Terraria.ModLoader;
-using static GarnsMod.Content.Shaders.GradientTrailDrawer;
 using static GarnsMod.Tools.ColorGradient;
-using static Terraria.ModLoader.PlayerDrawLayer;
 using Microsoft.Xna.Framework.Graphics;
-using Terraria.GameContent;
 using System;
 using static GarnsMod.Content.Items.Tools.GarnsFishingRod;
 using GarnsMod.Content.Shaders;
@@ -27,10 +23,11 @@ namespace GarnsMod.Content.Projectiles
 
         // Useful information that we can deduce from AI/colorIndex. Not saved to the projectile as they are all getters
         private Color FishingLineColor => RainbowColors[fishingLineColorIndex];
-        private bool Chilling => Projectile.ai[1] == 0;
-        private bool Wigglin => Projectile.ai[1] < 0;
-        private bool CapturedItem => Projectile.ai[1] > 0;
-        private bool ReelingIn => Projectile.ai[0] != 0;
+
+        internal bool Chilling => Projectile.ai[1] == 0;
+        internal bool Wigglin => Projectile.ai[1] < 0;
+        internal bool CapturedItem => Projectile.ai[1] > 0;
+        internal bool ReelingIn => Projectile.ai[0] != 0;
 
         public override void SetStaticDefaults()
         {
@@ -104,16 +101,17 @@ namespace GarnsMod.Content.Projectiles
             lineColor = FishingLineColor;
         }
 
-        public int progressModifier = 01;
+        public int progressModifier = 0;
 
         public static readonly Vector2 VanillaDrawOffset = new(15f, 7f);
 
         public override bool PreDraw(ref Color lightColor)
-        {   
+        {
             // Cant make a trail in water if it has recently wiggled. Can always make a trail when dry
             if (!Wigglin && (notWigglingFor > 60 || !Projectile.wet))
             {
                 ColorGradient trailGradient = null;
+                TrailColorMode trailColorMode = this.trailColorMode;
                 if (trailColorMode == TrailColorMode.AvailableColors && fishingRodLevel == 1)
                 {
                     trailColorMode = TrailColorMode.SingleColor;
@@ -122,9 +120,9 @@ namespace GarnsMod.Content.Projectiles
                 {
                     trailGradient = new ColorGradient(new() { Color.Lerp(FishingLineColor, Color.White, 0.15f), FishingLineColor });
                 }
-                else if (trailColorMode == TrailColorMode.AvailableColors) 
+                else if (trailColorMode == TrailColorMode.AvailableColors)
                 {
-                    if (fishingRodLevel >= RainbowColors.Count) 
+                    if (fishingRodLevel >= RainbowColors.Count)
                     {
                         trailGradient = FullRainbowGradients[fishingLineColorIndex];
                         progressModifier += trailTypeMode == TrailTypeMode.Stream ? 15 : -2;
@@ -134,11 +132,8 @@ namespace GarnsMod.Content.Projectiles
                         trailGradient = PartialRainbowGradients[fishingRodLevel - 1][fishingLineColorIndex];
                     }
                 }
-                TrailType type = (TrailType) trailTypeMode.CorrespondingTrailType;
+                TrailType type = trailTypeMode.CorrespondingTrailType;
                 default(GradientTrailDrawer).Draw(Projectile, trailGradient, type, VanillaDrawOffset, progressModifier: progressModifier);
-
-
-
             }
             return false;
         }
@@ -159,7 +154,7 @@ namespace GarnsMod.Content.Projectiles
             float starScale = Projectile.scale * 1.0f;
             Main.EntitySpriteDraw(starTexture, bobberPos, null, new Color(180, 180, 180, 0), 0f, starTexture.Size() / 2, starScale, spriteEffects, 0);
             Color col = FishingLineColor;
-            col.A = (byte) (col.A / 1.5f);
+            col.A = (byte)(col.A / 1.5f);
             Main.EntitySpriteDraw(grayscaleTexture, bobberPos, null, col, 0f, grayscaleTexture.Size() / 2, starScale, spriteEffects, 0);
         }
 

@@ -20,53 +20,57 @@ namespace GarnsMod.Content.Items.Weapons
         public override void SetDefaults()
         {
             // Common Properties
-            Item.width = 62; // Hitbox width of the item.
-            Item.height = 32; // Hitbox height of the item.
+            Item.width = 62;
+            Item.height = 32; 
             Item.scale = 0.75f;
-            Item.rare = ItemRarityID.Green; // The color that the item's name will be in-game.
+            Item.rare = ItemRarityID.Green; 
 
             // Use Properties
-            Item.useTime = BaseUseTime; // The item's use time in ticks (60 ticks == 1 second.)
-            Item.useAnimation = BaseUseAnimation; // The length of the item's use animation in ticks (60 ticks == 1 second.)
+            Item.useTime = BaseUseTime; 
+            Item.useAnimation = BaseUseAnimation; 
             Item.reuseDelay = BaseReuseDelay;
-            Item.useStyle = ItemUseStyleID.Shoot; // How you use the item (swinging, holding out, etc.)
-            Item.autoReuse = true; // Whether or not you can hold click to automatically use it again.
+            Item.useStyle = ItemUseStyleID.Shoot; 
+            Item.autoReuse = true;
 
             // Weapon Properties
-            Item.DamageType = DamageClass.Ranged; // Sets the damage type to ranged.
-            Item.damage = 20; // Sets the item's damage. Note that projectiles shot by this weapon will use its and the used ammunition's damage added together.
-            Item.knockBack = 0f; // Sets the item's knockback. Note that projectiles shot by this weapon will use its and the used ammunition's knockback added together.
-            Item.noMelee = true; // So the item's animation doesn't do damage.
+            Item.DamageType = DamageClass.Ranged; 
+            Item.damage = 20;
+            Item.knockBack = 0f; 
+            Item.noMelee = true; 
 
             // Gun Properties
-            Item.shoot = ProjectileID.PurificationPowder; // For some reason, all the guns in the vanilla source have this.
-            Item.shootSpeed = BaseShootSpeed; // The speed of the projectile (measured in pixels per frame.)
-            Item.useAmmo = AmmoID.Bullet; // The "ammo Id" of the ammo item that this weapon uses. Ammo IDs are magic numbers that usually correspond to the item id of one item that most commonly represent the ammo type.
+            Item.shoot = ProjectileID.PurificationPowder;
+            Item.shootSpeed = BaseShootSpeed; 
+            Item.useAmmo = AmmoID.Bullet; 
         }
 
         // The amount of time it takes to fully charge the weapon, in seconds
-        public static readonly float ChargeTime = 30f; // 25 seconds
+        public const float ChargeTime = 30f; // 25 seconds
 
         public static int ChargeTimeTicks => (int)(ChargeTime * 60);
 
         private float ChargeProgress => currentCharge / (float)ChargeTimeTicks;
 
+        // Goes up every tick the item is being used
         private int currentCharge = 0;
 
-        // If chargeTimeout hits 0, we lose our charge progress
-        private int chargeTimeout = 3;
+        // If chargeTimeout hits 0, we lose our charge progress. Goes down every tick
+        private int chargeTimeout = Grace;
 
-        public static readonly int BaseUseAnimation = 24;
-        public static readonly int ChargedUseAnimation = 24;
+        // This is what charge timeout is set to when you stop using the item. You are given 'grace' ticks to use the item again before it times out
+        private const int Grace = 20;
 
-        public static readonly int BaseUseTime = 8;
-        public static readonly int ChargedUseTime = 5;
+        public const int BaseUseAnimation = 24;
+        public const int ChargedUseAnimation = 24;
 
-        public static readonly int BaseReuseDelay = 24;
-        public static readonly int ChargedReuseDelay = 12;
+        public const int BaseUseTime = 8;
+        public const int ChargedUseTime = 5;
 
-        public static readonly float BaseShootSpeed = 5f;
-        public static readonly float ChargedShootSpeed = 15f;
+        public const int BaseReuseDelay = 24;
+        public const int ChargedReuseDelay = 12;
+
+        public const float BaseShootSpeed = 5f;
+        public const float ChargedShootSpeed = 15f;
 
 
         // This method lets you adjust position of the gun in the player's hands. Play with these values until it looks good with your graphics.
@@ -90,7 +94,6 @@ namespace GarnsMod.Content.Items.Weapons
         {
             if (--chargeTimeout == 0)
             {
-                Main.NewText("Charge lost");
                 currentCharge = 0;
                 Item.useTime = BaseUseTime;
                 Item.reuseDelay = BaseReuseDelay;
@@ -98,7 +101,7 @@ namespace GarnsMod.Content.Items.Weapons
                 Item.useAnimation = BaseUseAnimation;
             }
         }
-
+        
         public override bool? UseItem(Player player)
         {
             // Make this client sided, other players don't need to see these changes
@@ -120,7 +123,7 @@ namespace GarnsMod.Content.Items.Weapons
             // Make this client sided, doesn't need to be synced
             if (Main.myPlayer == player.whoAmI)
             {
-                chargeTimeout = 3;
+                chargeTimeout = Grace;
                 currentCharge++;
                 if (currentCharge > ChargeTimeTicks)
                 {

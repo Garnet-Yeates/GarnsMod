@@ -1,7 +1,9 @@
 ﻿using Microsoft.Xna.Framework;
+using MonoMod.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using Terraria;
@@ -47,7 +49,7 @@ namespace GarnsMod.Content.RandomStuff
             * would ever be needed anyways. Also keep in mind that when using ResolveRule (below) you are not calling it on MP_Client netmode
             * </summary>
             */
-        public static DropAttemptInfo GetDropAttemptInfo(Rectangle? hitbox = null)
+        public static DropAttemptInfo CreateDropAttemptInfo(Rectangle? hitbox = null)
         {
             int itemDummy = ItemID.DirtBlock;
             NPC npcDummy = null;
@@ -58,46 +60,26 @@ namespace GarnsMod.Content.RandomStuff
                     Hitbox = box,
                 };
             }
-            return new() { npc = npcDummy, item = itemDummy, rng = Main.rand, IsExpertMode = Main.expertMode, IsMasterMode = Main.masterMode, IsInSimulation = false, player = Main.LocalPlayer };
+
+            return new DropAttemptInfo
+            { 
+                npc = npcDummy, 
+                item = itemDummy, 
+                rng = Main.rand, 
+                IsExpertMode = Main.expertMode, 
+                IsMasterMode = Main.masterMode, 
+                IsInSimulation = false, 
+                player = Main.LocalPlayer 
+            };
         }
 
-        // Verbatim vanilla code
-        public static ItemDropAttemptResult ResolveRule(IItemDropRule rule, DropAttemptInfo info)
+        public static void ResolveRule(IItemDropRule rule, DropAttemptInfo info)
         {
-            if (!rule.CanDrop(info))
-            {
-                ItemDropAttemptResult itemDropAttemptResult = default(ItemDropAttemptResult);
-                itemDropAttemptResult.State = ItemDropAttemptResultState.DoesntFillConditions;
-                ItemDropAttemptResult itemDropAttemptResult2 = itemDropAttemptResult;
-                ResolveRuleChains(rule, info, itemDropAttemptResult2);
-                return itemDropAttemptResult2;
-            }
-            ItemDropAttemptResult itemDropAttemptResult3 = (rule as INestedItemDropRule)?.TryDroppingItem(info, ResolveRule) ?? rule.TryDroppingItem(info);
-            ResolveRuleChains(rule, info, itemDropAttemptResult3);
-            return itemDropAttemptResult3;
-        }
-
-        // Verbatim vanilla code
-        private static void ResolveRuleChains(IItemDropRule rule, DropAttemptInfo info, ItemDropAttemptResult parentResult)
-        {
-            ResolveRuleChains(ref info, ref parentResult, rule.ChainedRules);
-        }
-
-        // Verbatim vanilla code
-        private static void ResolveRuleChains(ref DropAttemptInfo info, ref ItemDropAttemptResult parentResult, List<IItemDropRuleChainAttempt> ruleChains)
-        {
-            if (ruleChains == null)
-            {
-                return;
-            }
-            for (int i = 0; i < ruleChains.Count; i++)
-            {
-                IItemDropRuleChainAttempt itemDropRuleChainAttempt = ruleChains[i];
-                if (itemDropRuleChainAttempt.CanChainIntoRule(parentResult))
-                {
-                    ResolveRule(itemDropRuleChainAttempt.RuleToChain, info);
-                }
-            }
+            ItemDropResolver resolver = Main.ItemDropSolver;
+            Func<IItemDropRule, DropAttemptInfo, ItemDropAttemptResult> resolve = resolver.GetType()
+                .GetMethod("ResolveRule", BindingFlags.NonPublic | BindingFlags.Instance)
+                .CreateDelegate<Func<IItemDropRule, DropAttemptInfo, ItemDropAttemptResult>>(resolver);
+            resolve(rule, info);
         }
     }
 }

@@ -1,4 +1,5 @@
 ﻿using GarnsMod.Content.Projectiles;
+using GarnsMod.Content.Shaders;
 using GarnsMod.UI.FishingRodUI;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -6,16 +7,13 @@ using ReLogic.Content;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using Terraria;
 using Terraria.DataStructures;
 using Terraria.GameContent.Creative;
-using Terraria.GameContent.ItemDropRules;
 using Terraria.ID;
 using Terraria.ModLoader;
 using Terraria.ModLoader.IO;
 using static GarnsMod.Tools.ColorGradient;
-using static Terraria.GameContent.ItemDropRules.Chains;
 
 namespace GarnsMod.Content.Items.Tools
 {
@@ -31,13 +29,13 @@ namespace GarnsMod.Content.Items.Tools
         internal TrailTypeMode trailTypeMode = TrailTypeMode.Plain;
 
         // Constants
-        public static readonly int MaxLevel = 30;
-        public static readonly int BaseFishingPower = 20;
-        public static readonly int ValuePerFish = 100; // Each fish caught increases rod value by 1 silver
+        public const int MaxLevel = 30;
+        public const int BaseFishingPower = 20;
+        public const int ValuePerFish = 100; // Each fish caught increases rod value by 1 silver
 
-        public static readonly int LineDoesntBreakLevel = 3;
-        public static readonly int CrateChanceLevel = 6;
-        public static readonly int LavaFishingLevel = 9;
+        public const int LineDoesntBreakLevel = 3;
+        public const int CrateChanceLevel = 6;
+        public const int LavaFishingLevel = 9;
 
         // Properties (all based on fields)
         public float ShootSpeedMultiplier => 1 + 1f * ((level - 1.0f) / (MaxLevel - 1.0f)); // ShootSpeed => 1x to 2x
@@ -50,7 +48,7 @@ namespace GarnsMod.Content.Items.Tools
 
         public override void SetStaticDefaults()
         {
-            DisplayName.SetDefault("Garn's Rod");
+            DisplayName.SetDefault("Garn's Rainbow Fishing Rod");
             CreativeItemSacrificesCatalog.Instance.SacrificeCountNeededByItemId[Type] = 1;
         }
 
@@ -72,9 +70,9 @@ namespace GarnsMod.Content.Items.Tools
             writer.Write(level);
             writer.Write(fishTillNextLevel);
             writer.Write(totalFishCaught);
-            writer.Write((int)shootMode);
-            writer.Write((int)trailColorMode);
-            writer.Write((int)trailTypeMode);
+            writer.Write((byte)shootMode);
+            writer.Write((byte)trailColorMode);
+            writer.Write((byte)trailTypeMode);
         }
 
         public override void NetReceive(BinaryReader reader)
@@ -82,9 +80,9 @@ namespace GarnsMod.Content.Items.Tools
             byte level = reader.ReadByte();
             int fishTillNextLevel = reader.ReadInt32();
             int totalFishCaught = reader.ReadInt32();
-            shootMode = reader.ReadInt32();
-            trailColorMode = reader.ReadInt32();
-            trailTypeMode = reader.ReadInt32();
+            shootMode = reader.ReadByte();
+            trailColorMode = reader.ReadByte();
+            trailTypeMode = reader.ReadByte();
             SetStats(level, fishTillNextLevel, totalFishCaught);
         }
 
@@ -210,7 +208,7 @@ namespace GarnsMod.Content.Items.Tools
         // Called on all clients/server every tick that the item is in their hand
         public override void HoldItem(Player player)
         {
-            level = 24;
+            level = 12;
             player.fishingSkill += FishingPowerAdditiveIncrease;
             if (!Main.dedServ)
             {
@@ -381,9 +379,9 @@ namespace GarnsMod.Content.Items.Tools
             tag["level"] = level;
             tag["fishTillNextLevel"] = fishTillNextLevel;
             tag["totalFishCaught"] = totalFishCaught;
-            tag["shootMode"] = (int)shootMode;
-            tag["trailColorMode"] = (int)trailColorMode;
-            tag["trailTypeMode"] = (int)trailTypeMode;
+            tag["shootMode"] = (byte)shootMode;
+            tag["trailColorMode"] = (byte)trailColorMode;
+            tag["trailTypeMode"] = (byte)trailTypeMode;
         }
 
         public override void LoadData(TagCompound tag)
@@ -391,9 +389,9 @@ namespace GarnsMod.Content.Items.Tools
             byte level = tag.Get<byte>("level");
             int fishTillNextLevel = tag.Get<int>("fishTillNextLevel");
             int totalFishCaught = tag.Get<int>("totalFishCaught");
-            shootMode = tag.Get<int>("shootMode");
-            trailColorMode = tag.Get<int>("trailColorMode");
-            trailTypeMode = tag.Get<int>("trailTypeMode");
+            shootMode = tag.Get<byte>("shootMode");
+            trailColorMode = tag.Get<byte>("trailColorMode");
+            trailTypeMode = tag.Get<byte>("trailTypeMode");
             SetStats(level, fishTillNextLevel, totalFishCaught);
         }
         internal readonly struct ShootMode
@@ -409,7 +407,6 @@ namespace GarnsMod.Content.Items.Tools
             internal int Value { get; }
             internal string Name { get; }
             internal Asset<Texture2D> TextureAsset { get; }
-
 
             private ShootMode(string name, Asset<Texture2D> asset)
             {
@@ -465,17 +462,17 @@ namespace GarnsMod.Content.Items.Tools
 
             public static int Count => typeModes.Count;
 
-            public static readonly TrailTypeMode Plain = new("Plain", trailType: 0, ModContent.Request<Texture2D>("GarnsMod/UI/FishingRodUI/TrailType_Plain"));
-            public static readonly TrailTypeMode Fire = new("Fire", trailType: 1, ModContent.Request<Texture2D>("GarnsMod/UI/FishingRodUI/TrailType_Fire"));
-            public static readonly TrailTypeMode Stream = new("Stream", trailType: 2, ModContent.Request<Texture2D>("GarnsMod/UI/FishingRodUI/TrailType_Stream"));
+            public static readonly TrailTypeMode Plain = new("Plain", TrailType.Plain, ModContent.Request<Texture2D>("GarnsMod/UI/FishingRodUI/TrailType_Plain"));
+            public static readonly TrailTypeMode Fire = new("Fire", TrailType.Fire, ModContent.Request<Texture2D>("GarnsMod/UI/FishingRodUI/TrailType_Fire"));
+            public static readonly TrailTypeMode Stream = new("Stream", TrailType.Stream, ModContent.Request<Texture2D>("GarnsMod/UI/FishingRodUI/TrailType_Stream"));
 
             internal Asset<Texture2D> TextureAsset { get; }
             internal string Name { get; }
-            internal byte CorrespondingTrailType { get;  }
+            internal TrailType CorrespondingTrailType { get; }
             private int Value { get; }
 
             // trailType parameter in constructor must be declared as an int (not TrailType.whatever) because it is possible that this gets initialized before TrailType enum
-            private TrailTypeMode(string name, byte trailType, Asset<Texture2D> asset)
+            private TrailTypeMode(string name, TrailType trailType, Asset<Texture2D> asset)
             {
                 Value = typeModes.Count;
                 TextureAsset = asset;

@@ -63,7 +63,7 @@ namespace GarnsMod.Content.RandomStuff
                         new CommonDrop(ItemID.SoulofFlight, 1, 5, 10)
                     )
                 };
-                rulesToTry.ForEach(rule => CustomItemDropResolver.ResolveRule(rule, CustomItemDropResolver.GetDropAttemptInfo(new Rectangle(x * 16, y * 16, 32, 32))));
+                rulesToTry.ForEach(rule => CustomItemDropResolver.ResolveRule(rule, CustomItemDropResolver.CreateDropAttemptInfo(new Rectangle(x * 16, y * 16, 32, 32))));
             }
             else // SHADOW ORB LOGIC
             {
@@ -85,7 +85,7 @@ namespace GarnsMod.Content.RandomStuff
                         new CommonDrop(ItemID.SoulofFlight, 1, 5, 10)
                     )
                 };
-                rulesToTry.ForEach(rule => CustomItemDropResolver.ResolveRule(rule, CustomItemDropResolver.GetDropAttemptInfo(new Rectangle(x*16, y*16, 32, 32))));
+                rulesToTry.ForEach(rule => CustomItemDropResolver.ResolveRule(rule, CustomItemDropResolver.CreateDropAttemptInfo(new Rectangle(x*16, y*16, 32, 32))));
             }
 
             // Has to do with spawing the corresponding boss and putting text in the chat. If you forget this part then the bosses wont spawn

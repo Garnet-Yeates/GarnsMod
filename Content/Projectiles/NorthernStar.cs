@@ -6,18 +6,12 @@ using Microsoft.Xna.Framework.Graphics;
 using ReLogic.Content;
 using System;
 using System.Collections.Generic;
-using System.Drawing.Text;
 using System.IO;
-using System.Linq;
-using System.Security.Cryptography.X509Certificates;
 using Terraria;
 using Terraria.Audio;
 using Terraria.DataStructures;
-using Terraria.GameContent.ItemDropRules;
 using Terraria.ID;
 using Terraria.ModLoader;
-using static Terraria.Graphics.VertexStrip;
-using static tModPorter.ProgressUpdate;
 
 namespace GarnsMod.Content.Projectiles
 {
@@ -30,8 +24,8 @@ namespace GarnsMod.Content.Projectiles
             StarTexture = ModContent.Request<Texture2D>("GarnsMod/Content/Images/MultiColorStarCenter");
             GrayscaleTexture = ModContent.Request<Texture2D>("GarnsMod/Content/Images/MultiColorStarGrayscale");
 
-            DisplayName.SetDefault("Northern Star");   
-            ProjectileID.Sets.TrailCacheLength[Projectile.type] = 35; 
+            DisplayName.SetDefault("Northern Star");
+            ProjectileID.Sets.TrailCacheLength[Projectile.type] = 35;
             ProjectileID.Sets.TrailingMode[Projectile.type] = 3;
         }
 
@@ -41,19 +35,19 @@ namespace GarnsMod.Content.Projectiles
             Projectile.localNPCHitCooldown = 8;
             Projectile.width = 11;
             Projectile.aiStyle = 0;
-            Projectile.height = 11; 
-            Projectile.friendly = true; 
-            Projectile.hostile = false; 
+            Projectile.height = 11;
+            Projectile.friendly = true;
+            Projectile.hostile = false;
             Projectile.DamageType = DamageClass.Ranged;
-            Projectile.penetrate = 5; 
-            Projectile.ignoreWater = true; 
+            Projectile.penetrate = 5;
+            Projectile.ignoreWater = true;
             Projectile.tileCollide = true;
             Projectile.extraUpdates = 1;
             Projectile.timeLeft = 900 * (Projectile.extraUpdates + 1);
 
         }
 
-        private static readonly int YThreshold = 250;
+        private const int YThreshold = 250;
 
         private Color StarColor => NorthernStarSword.StarColors[starColorIndex];
 
@@ -92,14 +86,16 @@ namespace GarnsMod.Content.Projectiles
         private int fallingFor = 0; // How many ticks since Falling phase started
         private int peakingFor = 0; // How many ticks since Peak phase started
 
-        private SwordProjectilePhase currPhase;
+        private NorthernStarPhase currPhase;
 
-        private enum SwordProjectilePhase : byte { Upwards, Peaking, Falling };
+        private enum NorthernStarPhase : byte { Rising, Peaking, Falling };
 
-   
+        private bool Falling => currPhase == NorthernStarPhase.Falling;
+        private bool Peaking => currPhase == NorthernStarPhase.Peaking;
+        private bool Rising => currPhase == NorthernStarPhase.Rising;
+
         public override void AI()
         {
-            
             numTicks++;
 
             if (technicallyDead)
@@ -108,138 +104,131 @@ namespace GarnsMod.Content.Projectiles
                 return;
             }
 
-            float y = Projectile.position.Y;
-
-            Vector2 pos = Projectile.Center;
-            Vector2 targetPosition = new(xTarget, yTarget);
-            Vector2 targetsToMe = (Projectile.Center - targetPosition);
-            Vector2 meToTargets = -targetsToMe;
-
-            ref Vector2 velocity = ref Projectile.velocity;
-
-            var (dirToXTarget, dirToYTarget) = meToTargets.Cardinals();
-
-            if (!Main.dedServ && !technicallyDead) 
+            if (!Main.dedServ && !technicallyDead)
             {
                 Lighting.AddLight(Projectile.Center, StarColor.ToVector3() * 0.5f);
             }
 
             switch (currPhase)
             {
-                case SwordProjectilePhase.Upwards:
-
-                    // Y logic
-
-                    if (Projectile.IsHigherUpThan(600) && Projectile.IsGoingTowardsSky()) 
-                    {
-                        Main.NewText("yellow");
-                        Projectile.SlowY(0.99f);
-                        currPhase = SwordProjectilePhase.Peaking;
-                    }
-
-                    // If we are below or y target....
-                    if (Projectile.IsLowerDownThan(yTarget))
-                    {
-                        velocity.Y -= 0.15f;
-                    }
-                    else // Otherwise...
-                    {
-                        currPhase = SwordProjectilePhase.Peaking;
-                    }
-
-                    Projectile.SlowYIfFasterThan(25f, 0.1f);
-
-                    // X logic
-
-                    if (numTicks > 50 || Projectile.IsHigherUpThan(yTarget))
-                    {
-
-                        // Accelerate x towards target if we aren't going towards it, or we are going towards it but further than 150px away
-                        if (!Projectile.IsGoingTowardsX(xTarget) || Projectile.IsXFurtherThan(150f, xTarget))
-                        {
-                            velocity.X += 1.15f * dirToXTarget;
-                        }
-                        else
-                        {
-                            Projectile.SlowXIfCloserThan(50f, xTarget, 0.025f, 0.3f);
-
-                        }
-
-                        // In any case, cap our speed at 30f
-                        Projectile.SlowXIfFasterThan(30f, 0.25f);
-                    }
-
+                case NorthernStarPhase.Rising:
+                    AI_Rising();
                     break;
-
-                case SwordProjectilePhase.Peaking:
-                    peakingFor++;
-
-                    // Add a bit of downwards accel...
-                    velocity.Y += 0.075f;
-
-                    // ...and also slow down our Y speed by 5% per tick if we are still going up
-                    if (Projectile.IsGoingTowardsSky())
-                    {
-                        Projectile.SlowY(0.045f);
-                    }
-
-                    if (peakingFor < 120) // After 130 ticks of peaking, the next phase will happen. Until then, the stars aren't allowed to fall down regardless of the accel we added above
-                    {
-                        if (Projectile.IsGoingTowardsHell())
-                        {
-                            velocity.Y = 0;
-                        }
-                    }
-                    else // Move onto falling phase
-                    {
-                        currPhase = SwordProjectilePhase.Falling;
-                        Projectile.penetrate = 6; // Give it its pen back, and then some
-                    }
-
-                    // x logic
-
-                    // Repeatedly slow down x velocity to halt our progression towards the X target for now
-                    Projectile.SlowX(0.1f);
-
+                case NorthernStarPhase.Peaking:
+                    AI_Peaking();
                     break;
-                case SwordProjectilePhase.Falling:
-                    fallingFor++;
-
-                    velocity.Y += 0.35f; // When we start dropping add even more downwards accel
-
-                    Projectile.SlowYIfFasterThan(30f, 0.1f);
-
-                    // x logic
-
-                    if (technicallyDead)
-                    {
-                        velocity.X = 0;
-                    }
-                    else
-                    {
-                        if (fallingFor > 30) // Resume our progression towards the x target if we've been falling for at least a second. A bit faster than before but slow at first
-                        {
-                            // Slow down x as it approaches its target (if it is facing it)
-                            if (pos.IsXCloserThan(100f, xTarget) && Projectile.IsGoingTowardsX(xTarget))
-                            {
-                                Projectile.SlowX(0.05f);
-                            }
-                            else
-                            {
-                                velocity.X += 1f * dirToXTarget * Utils.GetLerpValue(0, 1, fallingFor / 60f, true); // Use lerp to make acceleration slow then fast. Rate of change of the rate of change of the rate of change....
-                            }
-
-                            // Cap x speed at 4 here
-                            Projectile.SlowXIfFasterThan(6f, 0.05f);
-                        }
-                    }
+                case NorthernStarPhase.Falling:
+                    AI_Falling();
                     break;
             }
         }
 
+        public void AI_Rising()
+        {
+            Vector2 pos = Projectile.Center;
+            ref Vector2 velocity = ref Projectile.velocity;
+            float dirToXTarget = (xTarget - pos.X).Cardinal();
+
+            // Y logic
+            if (Projectile.IsHigherUpThan(600) && Projectile.IsGoingTowardsSky())
+            {
+                Projectile.SlowY(0.99f);
+                currPhase = NorthernStarPhase.Peaking;
+            }
+
+            // Slowly accelerate towards the sky if we are below our yTarget
+            if (Projectile.IsLowerDownThan(yTarget))
+            {
+                velocity.Y -= 0.15f;
+            }
+            // Otherwise go into phase two
+            else
+            {
+                currPhase = NorthernStarPhase.Peaking;
+            }
+
+            Projectile.CapYSpeed(25f);
+
+            // X logic
+            if (numTicks > 50 || Projectile.IsHigherUpThan(yTarget))
+            {
+
+                // Accelerate x towards target if we aren't going towards it, or we are going towards it but we are further than 150px away
+                if (!Projectile.IsGoingTowardsX(xTarget) || Projectile.IsXFurtherThan(150f, xTarget))
+                {
+                    velocity.X += 1.15f * dirToXTarget;
+                }
+                else
+                {
+                    Projectile.SlowXIfCloserThan(50f, xTarget, 0.025f, 0.25f); // Slow between 2.5% and 25% based on how close we are within 50 units
+                }
+            }
+
+            Projectile.CapXSpeed(30f);
+        }
+
+        public void AI_Peaking()
+        {
+            ref Vector2 velocity = ref Projectile.velocity;
+
+            peakingFor++;
+
+            // Add a bit of downwards accel...
+            velocity.Y += 0.075f;
+
+            // ...and also slow down our Y speed by 5% per tick if we are still going up
+            if (Projectile.IsGoingTowardsSky())
+            {
+                Projectile.SlowY(0.045f);
+            }
+
+            if (peakingFor < 120) // After 130 ticks of peaking, the next phase will happen. Until then, the stars aren't allowed to fall down regardless of the accel we added above
+            {
+                if (Projectile.IsGoingTowardsHell())
+                {
+                    velocity.Y = 0;
+                }
+            }
+            else // Move onto falling phase
+            {
+                currPhase = NorthernStarPhase.Falling;
+                Projectile.penetrate = 6; // Give it its pen back, and then some
+            }
+
+            // Repeatedly slow down x velocity to halt our progression towards the X target for now
+            Projectile.SlowX(0.1f);
+        }
+
+        public void AI_Falling()
+        {
+            Vector2 pos = Projectile.Center;
+            ref Vector2 velocity = ref Projectile.velocity;
+            float dirToXTarget = (xTarget - pos.X).Cardinal();
+
+            fallingFor++;
+            velocity.Y += 0.35f; // When we start dropping add even more downwards accel
+            Projectile.CapYSpeed(30f);
+
+            // x logic
+            if (fallingFor > 30) // Resume our progression towards the x target if we've been falling for at least a second. A bit faster than before but slow at first
+            {
+                // Slow down x as it approaches its target (if it is facing it)
+                if (pos.IsXCloserThan(100f, xTarget) && Projectile.IsGoingTowardsX(xTarget))
+                {
+                    Projectile.SlowX(0.05f);
+                }
+                else
+                {
+                    velocity.X += 1f * dirToXTarget * Utils.GetLerpValue(0, 1, fallingFor / 60f, true); // Use lerp to cap ratio value at 1
+                }
+            }
+
+            Projectile.CapXSpeed(8f);
+        }
+
         public override void ModifyHitNPC(NPC target, ref int damage, ref float knockback, ref bool crit, ref int hitDirection)
         {
-            if (fallingFor > 0) // In the falling phase we lose 0 pen (add 1 for net 0), effectively being able to penetrate infinitely
+            if (Falling) // In the falling phase we lose 0 pen (add 1 for net 0), effectively being able to penetrate infinitely
             {
                 damage *= 10;
                 Projectile.penetrate += 1;
@@ -261,23 +250,9 @@ namespace GarnsMod.Content.Projectiles
             return !technicallyDead; // ditto
         }
 
-        private void KillIt()
+        public override bool TileCollideStyle(ref int width, ref int height, ref bool fallThrough, ref Vector2 hitboxCenterFrac)
         {
-            // When we crash down we make the proj invisible for a little instead of deleting it immediately because we want the trail to fade out instead of disappearing
-            // crashedDown = true basically means the projectile is dead but not *actually* dead *yet*
-            technicallyDead = true;
-            Projectile.timeLeft = 100;
-            Collision.HitTiles(Projectile.position + Projectile.velocity, Projectile.velocity, Projectile.width, Projectile.height);
-            SoundEngine.PlaySound(SoundID.Item10, Projectile.position);
-
-            for (int i = 0; i < 15; i++)
-            {
-                Vector2 speed = Main.rand.NextVector2Circular(1f, 1f) * 3f;
-                List<Color> starColors = NorthernStarSword.StarColors;
-                Dust d = Dust.NewDustDirect(Projectile.position, 10, 10, DustID.RainbowTorch, speed.X, speed.Y, 0, starColors[Main.rand.Next(starColors.Count)]);
-                d.noGravity = true;
-                d.scale = 1.25f + Main.rand.NextFloat() * 1.5f;
-            }
+            return base.TileCollideStyle(ref width, ref height, ref fallThrough, ref hitboxCenterFrac);
         }
 
         public override bool OnTileCollide(Vector2 oldVelocity)
@@ -287,9 +262,9 @@ namespace GarnsMod.Content.Projectiles
                 return false;
             }
 
-            if (fallingFor > 0)
+            if (Falling)
             {
-                    KillIt();
+                KillIt();
             }
             else
             {
@@ -304,13 +279,11 @@ namespace GarnsMod.Content.Projectiles
                     Collision.HitTiles(Projectile.position + Projectile.velocity, Projectile.velocity, Projectile.width, Projectile.height);
                     SoundEngine.PlaySound(SoundID.Item10, Projectile.position);
 
-                    // If the projectile hits the left or right side of the tile, reverse the X velocity
                     if (Math.Abs(Projectile.velocity.X - oldVelocity.X) > float.Epsilon)
                     {
                         Projectile.velocity.X = -oldVelocity.X;
                     }
 
-                    // If the projectile hits the top or bottom side of the tile, reverse the Y velocity
                     if (Math.Abs(Projectile.velocity.Y - oldVelocity.Y) > float.Epsilon)
                     {
                         Projectile.velocity.Y = -oldVelocity.Y;
@@ -342,11 +315,27 @@ namespace GarnsMod.Content.Projectiles
 
                 Main.EntitySpriteDraw(starTexture, drawPos, null, new Color(255, 255, 255, 255), Projectile.rotation, starTexture.Size() / 2, starScale, SpriteEffects.None, 0);
                 Color col = StarColor;
-             //   col.A = (byte)(col.A / 1.5f);
                 Main.EntitySpriteDraw(grayscaleTexture, drawPos, null, col, Projectile.rotation, grayscaleTexture.Size() / 2, starScale, SpriteEffects.None, 0);
             }
-
             return false;
+        }
+
+        // TL;DR we don't want the projectile to die immediately because that would make the trail just instantly disappear
+        private void KillIt()
+        {
+            technicallyDead = true;
+            Projectile.timeLeft = 100;
+            Collision.HitTiles(Projectile.position + Projectile.velocity, Projectile.velocity, Projectile.width, Projectile.height);
+            SoundEngine.PlaySound(SoundID.Item10, Projectile.position);
+
+            for (int i = 0; i < 15; i++)
+            {
+                Vector2 speed = Main.rand.NextVector2Circular(1f, 1f) * 3f;
+                List<Color> starColors = NorthernStarSword.StarColors;
+                Dust d = Dust.NewDustDirect(Projectile.position, 10, 10, DustID.RainbowTorch, speed.X, speed.Y, 0, starColors[Main.rand.Next(starColors.Count)]);
+                d.noGravity = true;
+                d.scale = 1.25f + Main.rand.NextFloat() * 1.5f;
+            }
         }
 
         public override void Kill(int timeLeft)

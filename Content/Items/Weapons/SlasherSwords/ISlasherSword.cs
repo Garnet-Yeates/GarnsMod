@@ -1,6 +1,5 @@
 ﻿using GarnsMod.Tools;
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics.PackedVector;
 using System;
 using Terraria;
 using Terraria.Audio;
@@ -19,7 +18,7 @@ namespace GarnsMod.Content.Items.Weapons.SlasherSwords
         /// <summary>Getter/Setter used solely by this interface (simply implement it, no logic required)</summary>
         public bool CanHitNPCYet { get; set; }
 
-        /// <summary>The offset for the sine function. This changes the angle that the sword starts at and the initial direction (up/down)</summary>
+        /// <summary>The offset for the sine function. This changes the angle that the sword starts at and the initial direction (up/down). It also effects R1 and R2</summary>
         public float Offset { get; }
 
         /// <summary>Represents the local maximum of the graph between 0 and 1</summary>
@@ -80,7 +79,6 @@ namespace GarnsMod.Content.Items.Weapons.SlasherSwords
             {
                 CanHitNPCYet = true;
                 SoundEngine.PlaySound(SoundID.Item1);
-
             }
             else if (CanResetImmunity && progress >= ResetImmunityAt)
             {
@@ -122,7 +120,6 @@ namespace GarnsMod.Content.Items.Weapons.SlasherSwords
 
         public bool CanHitNPC(Player player)
         {
-            // Must be reset on the last animation frame, because CanHitNPC is called before this hook
             if (player.itemAnimation == player.itemAnimationMax)
             {
                 CanHitNPCYet = false;
@@ -137,7 +134,7 @@ namespace GarnsMod.Content.Items.Weapons.SlasherSwords
             player.itemLocation = player.Center + GetItemLocationOffset(player);
          //   player.itemRotation = 0f;
 
-            player.SetCompositeArmBack(true, Player.CompositeArmStretchAmount.None, 0); // 195 for facing normal
+            player.SetCompositeArmBack(true, Player.CompositeArmStretchAmount.ThreeQuarters, 0); // 195 for facing normal
             player.SetCompositeArmFront(true, Player.CompositeArmStretchAmount.Quarter, player.itemRotation + MathHelper.ToRadians(player.direction * (225 + HandRotationOffset))); // rotate the arm in a slightly different way because the arm has a different starting angle
         }
     }

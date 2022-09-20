@@ -1,15 +1,11 @@
 ﻿using GarnsMod.Tools;
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
-using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.InteropServices;
 using Terraria;
 using Terraria.Graphics;
 using Terraria.Graphics.Shaders;
 using static Terraria.Graphics.VertexStrip;
-using static tModPorter.ProgressUpdate;
 
 namespace GarnsMod.Content.Shaders
 {
@@ -116,8 +112,6 @@ namespace GarnsMod.Content.Shaders
             }
 
             return MathHelper.Lerp(20f, 30f, (progress - 0.5f) * (1.0f / 0.5f));
-
-
         }
 
         public static float NightGlowBGWidthFunction(float progress) => MathHelper.Lerp(15f, 120f, progress);

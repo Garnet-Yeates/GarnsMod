@@ -10,7 +10,7 @@ namespace GarnsMod.Content.Items.Weapons.SlasherSwords
     {
         public override void SetStaticDefaults()
         {
-            DisplayName.SetDefault("Garn's Blade");
+            DisplayName.SetDefault("Garn's Rainbow Blade");
 
             CreativeItemSacrificesCatalog.Instance.SacrificeCountNeededByItemId[Type] = 1;
         }
@@ -19,7 +19,7 @@ namespace GarnsMod.Content.Items.Weapons.SlasherSwords
         {
             Item.damage = 40;
             Item.useTime = 100;
-            Item.useAnimation = 30;
+            Item.useAnimation = 26;
             Item.useStyle = ItemUseStyleID.Swing;
             Item.autoReuse = true;
             Item.useTurn = true;
@@ -55,6 +55,11 @@ namespace GarnsMod.Content.Items.Weapons.SlasherSwords
             }
 
             return null;
+        }
+
+        public override bool CanUseItem(Player player)
+        {
+            return base.CanUseItem(player);
         }
 
         public override void UseItemFrame(Player player)
