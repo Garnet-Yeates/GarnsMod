@@ -25,8 +25,7 @@ namespace GarnsMod.Content.Shaders
             // Progress is a float between 0 and 1 where 0 is the beginning of the strip right behind the projectile and 1 is the end
             Color StripColorFunc(float progress)
             {
-                // For some reason, adding 1 to progress modifier (meaning there is at least a 0.001 change in progress) stops a very very odd and subtle bug with the trail colors
-                float usingProgress = GarnMathHelpers.Modulo(progress + (progressModifier + 1) / 1000f, 1.00f);
+                float usingProgress = GarnMathHelpers.Modulo(progress + progressModifier / 1000f, 1.00f);
                 return grad.GetColor(usingProgress);
             }
 

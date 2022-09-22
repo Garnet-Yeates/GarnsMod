@@ -31,15 +31,26 @@ namespace GarnsMod.Tools
 
         private readonly List<Color> colors = new();
 
-        public static readonly Dictionary<int, ColorGradient> FullRainbowGradients = InitRainbowGradients();
+        public static readonly Dictionary<int, ColorGradient> FullRainbowGradientsWithExtraStart = InitFullGradientsWithExtraStart();
+        public static readonly Dictionary<int, ColorGradient> FullRainbowGradients = InitFullGradients();
         public static readonly Dictionary<int, Dictionary<int, ColorGradient>> PartialRainbowGradients = InitPartialGradients();
 
-        public static Dictionary<int, ColorGradient> InitRainbowGradients()
+        public static Dictionary<int, ColorGradient> InitFullGradientsWithExtraStart()
         {
             Dictionary<int, ColorGradient> dict = new();
             for (int i = 0; i < RainbowColors.Count; i++)
             {
                 dict.Add(i, FromCollectionWithStartIndex(RainbowColors, i, extraStart: 3, extraLoops: 1 ));
+            }
+            return dict;
+        }
+
+        public static Dictionary<int, ColorGradient> InitFullGradients()
+        {
+            Dictionary<int, ColorGradient> dict = new();
+            for (int i = 0; i < RainbowColors.Count; i++)
+            {
+                dict.Add(i, FromCollectionWithStartIndex(RainbowColors, i, extraStart: 0, extraLoops: 1));
             }
             return dict;
         }
@@ -140,6 +151,7 @@ namespace GarnsMod.Tools
                 for (int i = colors.Count - 1; i >= 0; i--)
                 {
                     grad.AddColor(colors[i]);
+
                 }
             }
 
@@ -155,7 +167,7 @@ namespace GarnsMod.Tools
                 inc = 1;
                 return;
             }
-            inc = 1f / (n - 1f);
+            inc = (float) Math.Round(1f / (n - 1f), 4);
         }
 
         public Color GetColor(float progress)
