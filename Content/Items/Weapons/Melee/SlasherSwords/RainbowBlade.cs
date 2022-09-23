@@ -1,10 +1,13 @@
-﻿using Microsoft.Xna.Framework;
+﻿using GarnsMod.Content.Projectiles;
+using Microsoft.Xna.Framework;
 using Terraria;
+using Terraria.DataStructures;
 using Terraria.GameContent.Creative;
 using Terraria.ID;
+using static GarnsMod.CodingTools.ColorGradient;
 using Terraria.ModLoader;
 
-namespace GarnsMod.Content.Items.Weapons.SlasherSwords
+namespace GarnsMod.Content.Items.Weapons.Melee.SlasherSwords
 {
     internal class RainbowBlade : ModItem, ISlasherSword
     {
@@ -18,16 +21,19 @@ namespace GarnsMod.Content.Items.Weapons.SlasherSwords
         public override void SetDefaults()
         {
             Item.damage = 40;
-            Item.useTime = 100;
+            Item.useTime = 52;
             Item.useAnimation = 26;
             Item.useStyle = ItemUseStyleID.Swing;
             Item.autoReuse = true;
             Item.useTurn = true;
 
+            Item.shoot = ModContent.ProjectileType<RainbowSpiralStar>();
+
             Item.UseSound = null;
 
             Item.width = 66;
             Item.height = 66;
+            Item.shootSpeed = 20f;
 
             Item.DamageType = DamageClass.Melee;
             Item.knockBack = 6;
@@ -37,9 +43,32 @@ namespace GarnsMod.Content.Items.Weapons.SlasherSwords
             Item.rare = ItemRarityID.Pink;
         }
 
+        public override void MeleeEffects(Player player, Rectangle hitbox)
+        {
+            if (!Main.dedServ)
+            {
+                Color col = Main.hslToRgb(Main.GlobalTimeWrappedHourly % 1f, 1f, 0.5f);
+
+                for (int i = 0; i < 1; i++)
+                {
+                    Dust rainbowDust = Dust.NewDustDirect(hitbox.TopLeft(), hitbox.Width, hitbox.Height, DustID.RainbowTorch, 0f, 0f, 0, col, 0.75f + Main.rand.NextFloat() * 0.5f);
+                    rainbowDust.noGravity = true;
+                }
+                Lighting.AddLight(hitbox.Center(), col.ToVector3());
+            }
+        }
+
+        public override bool Shoot(Player player, EntitySource_ItemUse_WithAmmo source, Vector2 position, Vector2 velocity, int type, int damage, float knockback)
+        {
+            int randomIndex = Main.rand.Next(RainbowColors.Count);
+            Projectile.NewProjectileDirect(source, position, velocity, type, damage, knockback, player.whoAmI, 0.25f, randomIndex);
+            Projectile.NewProjectileDirect(source, position, velocity, type, damage, knockback, player.whoAmI, 0.75f, (randomIndex + 1) % RainbowColors.Count);
+            return false;
+        }
+
         #region SlasherOverrides
 
-        public float Offset => 0.25f;
+        public float Offset => 0f;
 
         public bool CanResetImmunity { get; set; }
 

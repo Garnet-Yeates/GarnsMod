@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace GarnsMod.Tools
+namespace GarnsMod.CodingTools
 {
     internal class GarnMathHelpers
     {

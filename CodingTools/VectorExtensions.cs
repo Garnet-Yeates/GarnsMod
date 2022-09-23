@@ -2,7 +2,7 @@
 using System;
 using Terraria;
 
-namespace GarnsMod.Tools
+namespace GarnsMod.CodingTools
 {
     internal static class VectorExtensions
     {
@@ -46,7 +46,6 @@ namespace GarnsMod.Tools
             return v.X.Cardinal();
         }
 
-        /// <summary>Basically converts x and y into 0, 1, or -1 </summary>
         public static Vector2 Cardinals(this Vector2 v)
         {
             return new(v.CardinalX(), v.CardinalY());
@@ -62,7 +61,6 @@ namespace GarnsMod.Tools
             x = v.X;
             y = v.Y;
         }
-
 
         // Directional Conditionals
 
@@ -188,7 +186,7 @@ namespace GarnsMod.Tools
         {
             if (vec.IsXFasterThan(topSpeed))
             {
-                vec.X *= (1 - slowPercent);
+                vec.X *= 1 - slowPercent;
             }
         }
 

@@ -2,8 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Terraria;
 using Terraria.Chat;
 using Terraria.GameContent.Achievements;
@@ -42,8 +40,8 @@ namespace GarnsMod.Content.RandomStuff
             bool isCrimsonHeart = frameX >= 36;
 
             // This code adjusts the tileX and Y that we broke to make it the top left of the tile
-            int x = ((Main.tile[tileX, tileY].TileFrameX != 0 && Main.tile[tileX, tileY].TileFrameX != 36) ? (tileX - 1) : tileX);
-            int y = ((Main.tile[tileX, tileY].TileFrameY != 0) ? (tileY - 1) : tileY);
+            int x = (Main.tile[tileX, tileY].TileFrameX != 0 && Main.tile[tileX, tileY].TileFrameX != 36) ? (tileX - 1) : tileX;
+            int y = (Main.tile[tileX, tileY].TileFrameY != 0) ? (tileY - 1) : tileY;
 
             if (isCrimsonHeart) // CRIMSON HEART LOGIC
             {

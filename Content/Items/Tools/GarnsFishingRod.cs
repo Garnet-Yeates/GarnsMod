@@ -13,7 +13,7 @@ using Terraria.GameContent.Creative;
 using Terraria.ID;
 using Terraria.ModLoader;
 using Terraria.ModLoader.IO;
-using static GarnsMod.Tools.ColorGradient;
+using static GarnsMod.CodingTools.ColorGradient;
 
 namespace GarnsMod.Content.Items.Tools
 {
@@ -171,11 +171,10 @@ namespace GarnsMod.Content.Items.Tools
         private int colorProgress = 0;
         private readonly int ticksPerColor = 45;
 
-        // Called on all clients/server
-        // For some reason setting accFishingLine to true in HoldItem doesn't make the line invincible. This is a workaround though. However
-        // you must actually be holding it in your hand, not on your cursor
+        // Called on all clients/server ??? is it tho, ima have to check
         public override void UpdateInventory(Player player)
         {
+            // Setting accFishingLine to true in HoldItem doesn't make the line invincible.  This is a workaround. Note that this won't work if it's held on cursor
             if (player.HeldItem.ModItem is GarnsFishingRod rod && rod.level >= LineDoesntBreakLevel)
             {
                 player.accFishingLine = true;
@@ -217,7 +216,7 @@ namespace GarnsMod.Content.Items.Tools
             }
         }
 
-        // Called when the player right clicks. Normally used to dynamically decide if the item's alt function can be used, but I use this hook to change the shootmode
+        // Called when the player right clicks. Normally used to dynamically decide if the item's alt function can be used, but I use this hook to open UI
         public override bool AltFunctionUse(Player player)
         {
             FishingRodUISystem system = ModContent.GetInstance<FishingRodUISystem>();
@@ -232,13 +231,11 @@ namespace GarnsMod.Content.Items.Tools
             return false;
         }
 
-        // Called on just the client that is shooting
         public override void ModifyShootStats(Player player, ref Vector2 position, ref Vector2 velocity, ref int type, ref int damage, ref float knockback)
         {
             velocity *= ShootSpeedMultiplier;
         }
 
-        // Called on just the client that shot it
         public override bool Shoot(Player player, EntitySource_ItemUse_WithAmmo source, Vector2 position, Vector2 velocity, int type, int damage, float knockback)
         {
             // Could be eventually set to a server-sided config called 'Broken'/'Unbalanced'. I made this just for fun
@@ -400,9 +397,9 @@ namespace GarnsMod.Content.Items.Tools
 
             public static int Count => shootModes.Count;
 
-            public static readonly ShootMode Line = new("Line", ModContent.Request<Texture2D>("GarnsMod/UI/FishingRodUI/ShootMode_Line"));
-            public static readonly ShootMode Cone = new("Cone", ModContent.Request<Texture2D>("GarnsMod/UI/FishingRodUI/ShootMode_Cone"));
-            public static readonly ShootMode Auto = new("Auto", ModContent.Request<Texture2D>("GarnsMod/UI/FishingRodUI/ShootMode_Auto"));
+            public static readonly ShootMode Line = new("Line", ModContent.Request<Texture2D>($"{nameof(GarnsMod)}/UI/FishingRodUI/ShootMode_Line"));
+            public static readonly ShootMode Cone = new("Cone", ModContent.Request<Texture2D>($"{nameof(GarnsMod)}/UI/FishingRodUI/ShootMode_Cone"));
+            public static readonly ShootMode Auto = new("Auto", ModContent.Request<Texture2D>($"{nameof(GarnsMod)}/UI/FishingRodUI/ShootMode_Auto"));
 
             internal int Value { get; }
             internal string Name { get; }
@@ -431,8 +428,8 @@ namespace GarnsMod.Content.Items.Tools
 
             public static int Count => colorModes.Count;
 
-            public static readonly TrailColorMode SingleColor = new("Single Color", ModContent.Request<Texture2D>("GarnsMod/UI/FishingRodUI/TrailColor_Single"));
-            public static readonly TrailColorMode AvailableColors = new("Available Colors", ModContent.Request<Texture2D>("GarnsMod/UI/FishingRodUI/TrailColor_Available"));
+            public static readonly TrailColorMode SingleColor = new("Single Color", ModContent.Request<Texture2D>($"{nameof(GarnsMod)}/UI/FishingRodUI/TrailColor_Single"));
+            public static readonly TrailColorMode AvailableColors = new("Available Colors", ModContent.Request<Texture2D>($"{nameof(GarnsMod)}/UI/FishingRodUI/TrailColor_Available"));
 
             internal int Value { get; }
             internal string Name { get; }
@@ -462,9 +459,9 @@ namespace GarnsMod.Content.Items.Tools
 
             public static int Count => typeModes.Count;
 
-            public static readonly TrailTypeMode Plain = new("Plain", TrailType.Plain, ModContent.Request<Texture2D>("GarnsMod/UI/FishingRodUI/TrailType_Plain"));
-            public static readonly TrailTypeMode Fire = new("Fire", TrailType.Fire, ModContent.Request<Texture2D>("GarnsMod/UI/FishingRodUI/TrailType_Fire"));
-            public static readonly TrailTypeMode Stream = new("Stream", TrailType.Stream, ModContent.Request<Texture2D>("GarnsMod/UI/FishingRodUI/TrailType_Stream"));
+            public static readonly TrailTypeMode Plain = new("Plain", TrailType.Plain, ModContent.Request<Texture2D>($"{nameof(GarnsMod)}/UI/FishingRodUI/TrailType_Plain"));
+            public static readonly TrailTypeMode Fire = new("Fire", TrailType.Fire, ModContent.Request<Texture2D>($"{nameof(GarnsMod)}/UI/FishingRodUI/TrailType_Fire"));
+            public static readonly TrailTypeMode Stream = new("Stream", TrailType.Stream, ModContent.Request<Texture2D>($"{nameof(GarnsMod)}/UI/FishingRodUI/TrailType_Stream"));
 
             internal Asset<Texture2D> TextureAsset { get; }
             internal string Name { get; }

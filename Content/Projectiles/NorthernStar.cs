@@ -1,6 +1,6 @@
-﻿using GarnsMod.Content.Items.Weapons;
+﻿using GarnsMod.Content.Items.Weapons.Melee;
 using GarnsMod.Content.Shaders;
-using GarnsMod.Tools;
+using GarnsMod.CodingTools;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using ReLogic.Content;
@@ -17,12 +17,12 @@ namespace GarnsMod.Content.Projectiles
 {
     internal class NorthernStar : ModProjectile
     {
-        public override string Texture => "GarnsMod/Content/Images/MultiColorStarCenter";
+        public override string Texture => $"{nameof(GarnsMod)}/Content/Images/MultiColorStarCenter";
 
         public override void SetStaticDefaults()
         {
-            StarTexture = ModContent.Request<Texture2D>("GarnsMod/Content/Images/MultiColorStarCenter");
-            GrayscaleTexture = ModContent.Request<Texture2D>("GarnsMod/Content/Images/MultiColorStarGrayscale");
+            StarTexture = ModContent.Request<Texture2D>($"{nameof(GarnsMod)}/Content/Images/MultiColorStarCenter");
+            GrayscaleTexture = ModContent.Request<Texture2D>($"{nameof(GarnsMod)}/Content/Images/MultiColorStarGrayscale");
 
             DisplayName.SetDefault("Northern Star");
             ProjectileID.Sets.TrailCacheLength[Projectile.type] = 35;
@@ -44,7 +44,6 @@ namespace GarnsMod.Content.Projectiles
             Projectile.tileCollide = true;
             Projectile.extraUpdates = 1;
             Projectile.timeLeft = 900 * (Projectile.extraUpdates + 1);
-
         }
 
         private const int YThreshold = 250;
@@ -248,11 +247,6 @@ namespace GarnsMod.Content.Projectiles
         public override bool CanHitPvp(Player target)
         {
             return !technicallyDead; // ditto
-        }
-
-        public override bool TileCollideStyle(ref int width, ref int height, ref bool fallThrough, ref Vector2 hitboxCenterFrac)
-        {
-            return base.TileCollideStyle(ref width, ref height, ref fallThrough, ref hitboxCenterFrac);
         }
 
         public override bool OnTileCollide(Vector2 oldVelocity)

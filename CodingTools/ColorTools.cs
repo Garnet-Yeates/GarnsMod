@@ -1,12 +1,10 @@
 ﻿using Microsoft.Xna.Framework;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Terraria;
+using GarnsMod.CodingTools;
+using System.ComponentModel.DataAnnotations;
 
-namespace GarnsMod.Tools
+namespace GarnsMod.CodingTools
 {
     public class ColorGradient
     {
@@ -31,26 +29,20 @@ namespace GarnsMod.Tools
 
         private readonly List<Color> colors = new();
 
-        public static readonly Dictionary<int, ColorGradient> FullRainbowGradientsWithExtraStart = InitFullGradientsWithExtraStart();
-        public static readonly Dictionary<int, ColorGradient> FullRainbowGradients = InitFullGradients();
+        // key = offset for these four
+        public static readonly Dictionary<int, ColorGradient> FullRainbowGradients = GetRainbowGradientWithOffsetDict(0, 1, false);
+
+        public static readonly Dictionary<int, ColorGradient> FullRainbowGradientsWithExtraStart = GetRainbowGradientWithOffsetDict(3, 1, false);
+
+        // first key is subset, second key is offset
         public static readonly Dictionary<int, Dictionary<int, ColorGradient>> PartialRainbowGradients = InitPartialGradients();
 
-        public static Dictionary<int, ColorGradient> InitFullGradientsWithExtraStart()
+        public static Dictionary<int, ColorGradient> GetRainbowGradientWithOffsetDict(int extraStart = 0, int extraLoops = 0, bool reverse = false)
         {
             Dictionary<int, ColorGradient> dict = new();
             for (int i = 0; i < RainbowColors.Count; i++)
             {
-                dict.Add(i, FromCollectionWithStartIndex(RainbowColors, i, extraStart: 3, extraLoops: 1 ));
-            }
-            return dict;
-        }
-
-        public static Dictionary<int, ColorGradient> InitFullGradients()
-        {
-            Dictionary<int, ColorGradient> dict = new();
-            for (int i = 0; i < RainbowColors.Count; i++)
-            {
-                dict.Add(i, FromCollectionWithStartIndex(RainbowColors, i, extraStart: 0, extraLoops: 1));
+                dict.Add(i, FromCollectionWithStartIndex(RainbowColors, i, extraStart: extraStart, extraLoops: extraLoops, reverse: reverse ));
             }
             return dict;
         }
@@ -106,7 +98,7 @@ namespace GarnsMod.Tools
             }
         }
 
-        public static ColorGradient FromCollectionWithStartIndex(List<Color> colors, int startIndex, int extraStart = 0, int extraLoops = 0)
+        public static ColorGradient FromCollectionWithStartIndex(List<Color> colors, int startIndex, int extraStart = 0, int extraLoops = 0, bool reverse = false)
         {
             ColorGradient grad = new();
             for (int i = 0; i < extraStart; i++)
@@ -114,10 +106,21 @@ namespace GarnsMod.Tools
                 grad.AddColor(colors[startIndex]);
             }
             int length = colors.Count;
-            for (int currIndex = startIndex, i = 0; i < length + extraLoops; currIndex = (currIndex + 1) % length, i++)
+            if (reverse)
             {
-                grad.AddColor(colors[currIndex]);
+                for (int currIndex = startIndex, i = length + extraLoops - 1; i >= 0; currIndex = (int) GarnMathHelpers.Modulo(currIndex - 1, length), i--)
+                {
+                    grad.AddColor(colors[currIndex]);
+                }
             }
+            else
+            {
+                for (int currIndex = startIndex, i = 0; i < length + extraLoops; currIndex = (currIndex + 1) % length, i++)
+                {
+                    grad.AddColor(colors[currIndex]);
+                }
+            }
+
             return grad;
         }
 

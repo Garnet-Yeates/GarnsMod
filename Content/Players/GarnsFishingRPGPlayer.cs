@@ -105,6 +105,7 @@ namespace GarnsMod.Content.Players
                 p.totalCratesCaught = totalCratesCaught;
                 p.usedFishingPermUpgrade1 = usedFishingPermUpgrade1;
                 p.usedFishingPermUpgrade2 = usedFishingPermUpgrade2;
+                ModPacket pack = Mod.GetPacket();
             }
 
             public static void ServerRelay(Action action)

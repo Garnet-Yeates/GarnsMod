@@ -4,7 +4,7 @@ using Terraria.GameContent.Creative;
 using Terraria.ID;
 using Terraria.ModLoader;
 
-namespace GarnsMod.Content.Items.Weapons.SlasherSwords
+namespace GarnsMod.Content.Items.Weapons.Melee.SlasherSwords
 {
     internal class GarnBlade : ModItem, ISlasherSword
     {
@@ -14,7 +14,7 @@ namespace GarnsMod.Content.Items.Weapons.SlasherSwords
 
             CreativeItemSacrificesCatalog.Instance.SacrificeCountNeededByItemId[Type] = 1;
         }
-        public override string Texture => "GarnsMod/Content/Items/Weapons/NorthernStarSword";
+        public override string Texture => $"{nameof(GarnsMod)}/Content/Items/Weapons/Melee/NorthernStarSword";
 
         public override void SetDefaults()
         {
@@ -49,7 +49,6 @@ namespace GarnsMod.Content.Items.Weapons.SlasherSwords
         public float HandRotationOffset => -15f;
 
         public ISlasherSword SlasherSword => this;
-
 
         public override bool? CanHitNPC(Player player, NPC target)
         {

@@ -4,12 +4,12 @@ using Terraria;
 using Terraria.DataStructures;
 using Terraria.ID;
 using Terraria.ModLoader;
-using static GarnsMod.Tools.ColorGradient;
+using static GarnsMod.CodingTools.ColorGradient;
 using Microsoft.Xna.Framework.Graphics;
 using System;
 using static GarnsMod.Content.Items.Tools.GarnsFishingRod;
 using GarnsMod.Content.Shaders;
-using GarnsMod.Tools;
+using GarnsMod.CodingTools;
 
 namespace GarnsMod.Content.Projectiles
 {
@@ -82,10 +82,8 @@ namespace GarnsMod.Content.Projectiles
 
                 if (CapturedItem)
                 {
-                    Vector2 speed = Main.rand.NextVector2Circular(1f, 1f);
-                    Dust d = Dust.NewDustPerfect(Projectile.position + VanillaDrawOffset, DustID.RainbowTorch, new(0, 0), 0, FishingLineColor);
-                    d.noGravity = true;
-                    d.scale = 1f;
+                    Dust d = Dust.NewDustPerfect(Projectile.position + VanillaDrawOffset, DustID.RainbowTorch, new(0, 0), 0, FishingLineColor, 1f);
+                    d.noGravity = false;
                 }
             }
 
@@ -124,7 +122,7 @@ namespace GarnsMod.Content.Projectiles
                 {
                     if (fishingRodLevel >= RainbowColors.Count)
                     {
-                        trailGradient = FullRainbowGradients[fishingLineColorIndex];
+                        trailGradient = FullRainbowGradientsWithExtraStart[fishingLineColorIndex];
                         progressModifier += trailTypeMode == TrailTypeMode.Stream ? 15 : -2;
                     }
                     else
@@ -148,8 +146,8 @@ namespace GarnsMod.Content.Projectiles
             bobberPos += VanillaDrawOffset;
 
             SpriteEffects spriteEffects = Projectile.spriteDirection == 1 ? SpriteEffects.FlipHorizontally : SpriteEffects.FlipHorizontally;
-            Texture2D starTexture = ModContent.Request<Texture2D>("GarnsMod/Content/Images/MultiColorStarCenter").Value;
-            Texture2D grayscaleTexture = ModContent.Request<Texture2D>("GarnsMod/Content/Images/MultiColorStarGrayscale").Value;
+            Texture2D starTexture = ModContent.Request<Texture2D>($"{nameof(GarnsMod)}/Content/Images/MultiColorStarCenter").Value;
+            Texture2D grayscaleTexture = ModContent.Request<Texture2D>($"{nameof(GarnsMod)}/Content/Images/MultiColorStarGrayscale").Value;
 
             float starScale = Projectile.scale * 1.0f;
             Main.EntitySpriteDraw(starTexture, bobberPos, null, new Color(180, 180, 180, 0), 0f, starTexture.Size() / 2, starScale, spriteEffects, 0);

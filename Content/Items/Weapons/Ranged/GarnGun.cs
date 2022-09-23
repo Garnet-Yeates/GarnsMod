@@ -6,7 +6,7 @@ using Terraria.GameContent.Creative;
 using Terraria.ID;
 using Terraria.ModLoader;
 
-namespace GarnsMod.Content.Items.Weapons
+namespace GarnsMod.Content.Items.Weapons.Ranged
 {
     public class GarnGun : ModItem
     {
@@ -21,27 +21,27 @@ namespace GarnsMod.Content.Items.Weapons
         {
             // Common Properties
             Item.width = 62;
-            Item.height = 32; 
+            Item.height = 32;
             Item.scale = 0.75f;
-            Item.rare = ItemRarityID.Green; 
+            Item.rare = ItemRarityID.Green;
 
             // Use Properties
-            Item.useTime = BaseUseTime; 
-            Item.useAnimation = BaseUseAnimation; 
+            Item.useTime = BaseUseTime;
+            Item.useAnimation = BaseUseAnimation;
             Item.reuseDelay = BaseReuseDelay;
-            Item.useStyle = ItemUseStyleID.Shoot; 
+            Item.useStyle = ItemUseStyleID.Shoot;
             Item.autoReuse = true;
 
             // Weapon Properties
-            Item.DamageType = DamageClass.Ranged; 
+            Item.DamageType = DamageClass.Ranged;
             Item.damage = 20;
-            Item.knockBack = 0f; 
-            Item.noMelee = true; 
+            Item.knockBack = 0f;
+            Item.noMelee = true;
 
             // Gun Properties
             Item.shoot = ProjectileID.PurificationPowder;
-            Item.shootSpeed = BaseShootSpeed; 
-            Item.useAmmo = AmmoID.Bullet; 
+            Item.shootSpeed = BaseShootSpeed;
+            Item.useAmmo = AmmoID.Bullet;
         }
 
         // The amount of time it takes to fully charge the weapon, in seconds
@@ -81,12 +81,13 @@ namespace GarnsMod.Content.Items.Weapons
 
         public override void ModifyShootStats(Player player, ref Vector2 position, ref Vector2 velocity, ref int type, ref int damage, ref float knockback)
         {
-         //   type = ProjectileID.Cultist;
+            //   type = ProjectileID.Cultist;
             position = Main.MouseWorld;
         }
 
         public override bool Shoot(Player player, EntitySource_ItemUse_WithAmmo source, Vector2 position, Vector2 velocity, int type, int damage, float knockback)
         {
+            Item.shootSpeed = 1;
             return true;
         }
 
@@ -101,7 +102,7 @@ namespace GarnsMod.Content.Items.Weapons
                 Item.useAnimation = BaseUseAnimation;
             }
         }
-        
+
         public override bool? UseItem(Player player)
         {
             // Make this client sided, other players don't need to see these changes

@@ -6,7 +6,7 @@ using Terraria.ModLoader;
 using Terraria.UI;
 using GarnsMod.Content.Items.Tools;
 using static GarnsMod.Content.Items.Tools.GarnsFishingRod;
-using GarnsMod.Tools;
+using GarnsMod.CodingTools;
 using Terraria.ModLoader.UI.Elements;
 using Terraria.GameContent.UI.Elements;
 
@@ -26,7 +26,7 @@ namespace GarnsMod.UI.FishingRodUI
 
         public FishingRodUIState(ShootMode shootMode, TrailColorMode trailColorMode, TrailTypeMode trailTypeMode, int inventoryIndex)
         {
-            Origin = MainHelpers.MouseScreenWithoutZoom();
+            Origin = GarnTools.MouseScreenForUI();
             SelectedShootMode = shootMode;
             SelectedTrailColorMode = trailColorMode;
             SelectedTrailTypeMode = trailTypeMode;

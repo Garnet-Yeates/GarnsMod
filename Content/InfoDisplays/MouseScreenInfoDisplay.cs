@@ -8,7 +8,7 @@ namespace GarnsMod.Content.InfoDisplays
     // Take a look at the ExampleInfoDisplayPlayer at the end of the file to see how to use it
     class MouseScreenInfoDisplay : InfoDisplay
     {
-        public override string Texture => "GarnsMod/Content/InfoDisplays/DefaultInfoDisplay";
+        public override string Texture => $"{nameof(GarnsMod)}/Content/InfoDisplays/DefaultInfoDisplay";
 
         public override void SetStaticDefaults()
         {

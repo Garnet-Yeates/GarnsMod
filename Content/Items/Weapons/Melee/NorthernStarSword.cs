@@ -1,25 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
 using GarnsMod.Content.Projectiles;
-using GarnsMod.Tools;
-using log4net.Core;
+using GarnsMod.CodingTools;
 using Microsoft.Xna.Framework;
 using Terraria;
 using Terraria.DataStructures;
-using static GarnsMod.Tools.ColorGradient;
+using static GarnsMod.CodingTools.ColorGradient;
 using Terraria.ID;
 using Terraria.ModLoader;
-using Terraria.GameContent.Creative;
-using Microsoft.Xna.Framework.Graphics;
-using static tModPorter.ProgressUpdate;
-using GarnsMod.Content.Items.Weapons.SlasherSwords;
 
-namespace GarnsMod.Content.Items.Weapons
+namespace GarnsMod.Content.Items.Weapons.Melee
 {
-
     internal class NorthernStarSword : ModItem
     {
         public override void SetStaticDefaults()
@@ -69,13 +59,12 @@ namespace GarnsMod.Content.Items.Weapons
 
         public override bool Shoot(Player player, EntitySource_ItemUse_WithAmmo source, Vector2 position, Vector2 velocity, int type, int damage, float knockback)
         {
-            int amount = 8;
+            int amount = 1;
 
             // Spread starts at MinSpread and scales up to MaxSpread depending on fishing rod level
-            float spread = 12;
+            float spread = 0;
 
             Vector2 current = velocity.RotatedBy(MathHelper.ToRadians(spread / 2));
-
             float increment = MathHelper.ToRadians(-spread / (amount - 1));
 
             for (int i = 0; i < amount; ++i)
@@ -83,15 +72,17 @@ namespace GarnsMod.Content.Items.Weapons
                 // Generate new bobbers
                 Vector2 vel = current;
 
-                NorthernStar p = (NorthernStar) Projectile.NewProjectileDirect(source, position, vel, type, damage, knockback, player.whoAmI).ModProjectile;
-                p.starColorIndex = currentColor;
-                NetMessage.SendData(MessageID.SyncProjectile, -1, -1, null, p.Projectile.whoAmI);
+                Projectile.NewProjectileDirect(source, position, vel, ModContent.ProjectileType<RainbowSpiralStar>(), damage, knockback, player.whoAmI, 0.0f, 0);
+                Projectile.NewProjectileDirect(source, position, vel, ModContent.ProjectileType<RainbowSpiralStar>(), damage, knockback, player.whoAmI, 0.5f, 2);
+
+                //     NorthernStar p = (NorthernStar) Projectile.NewProjectileDirect(source, position, vel, type, damage, knockback, player.whoAmI).ModProjectile;
+                //     p.starColorIndex = currentColor;
+                //     NetMessage.SendData(MessageID.SyncProjectile, -1, -1, null, p.Projectile.whoAmI);
 
                 current = current.RotatedBy(increment);
-
             }
 
-            currentColor = (byte) ((currentColor + 1) % StarColors.Count);
+            currentColor = (byte)((currentColor + 1) % StarColors.Count);
 
             return false;
         }

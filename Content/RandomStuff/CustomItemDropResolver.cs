@@ -1,11 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
 using MonoMod.Utils;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 using Terraria;
 using Terraria.GameContent.ItemDropRules;
 using Terraria.ID;

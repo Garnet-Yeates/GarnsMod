@@ -1,11 +1,13 @@
-﻿using GarnsMod.Tools;
+﻿using GarnsMod.CodingTools;
 using Microsoft.Xna.Framework;
 using System;
 using Terraria;
 using Terraria.Audio;
+using Terraria.GameInput;
 using Terraria.ID;
+using Terraria.ModLoader;
 
-namespace GarnsMod.Content.Items.Weapons.SlasherSwords
+namespace GarnsMod.Content.Items.Weapons.Melee.SlasherSwords
 {
     public interface ISlasherSword
     {
@@ -132,7 +134,6 @@ namespace GarnsMod.Content.Items.Weapons.SlasherSwords
         {
             player.itemRotation = GetItemRotation(player);
             player.itemLocation = player.Center + GetItemLocationOffset(player);
-         //   player.itemRotation = 0f;
 
             player.SetCompositeArmBack(true, Player.CompositeArmStretchAmount.ThreeQuarters, 0); // 195 for facing normal
             player.SetCompositeArmFront(true, Player.CompositeArmStretchAmount.Quarter, player.itemRotation + MathHelper.ToRadians(player.direction * (225 + HandRotationOffset))); // rotate the arm in a slightly different way because the arm has a different starting angle

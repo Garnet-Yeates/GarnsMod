@@ -1,5 +1,5 @@
 ﻿using GarnsMod.Content.Players;
-using GarnsMod.Tools;
+using GarnsMod.CodingTools;
 using Terraria;
 using Terraria.ModLoader;
 
@@ -9,7 +9,7 @@ namespace GarnsMod.Content.InfoDisplays
     // Take a look at the ExampleInfoDisplayPlayer at the end of the file to see how to use it
     class MouseWorldNoZoomInfoDisplay : InfoDisplay
     {
-        public override string Texture => "GarnsMod/Content/InfoDisplays/DefaultInfoDisplay";
+        public override string Texture => $"{nameof(GarnsMod)}/Content/InfoDisplays/DefaultInfoDisplay";
 
         public override void SetStaticDefaults()
         {
@@ -26,7 +26,7 @@ namespace GarnsMod.Content.InfoDisplays
         // Here we can change the value that will be displayed in the game
         public override string DisplayValue()
         {
-            var mouseWorld = MainHelpers.MouseWorldWithoutZoom();
+            var mouseWorld = GarnTools.MouseWorldWithoutZoom();
             return $"WorldNoZoom: {(int)mouseWorld.X} {(int)mouseWorld.Y}";
         }
     }
