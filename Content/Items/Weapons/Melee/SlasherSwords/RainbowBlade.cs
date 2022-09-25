@@ -6,6 +6,7 @@ using Terraria.GameContent.Creative;
 using Terraria.ID;
 using static GarnsMod.CodingTools.ColorGradient;
 using Terraria.ModLoader;
+using System;
 
 namespace GarnsMod.Content.Items.Weapons.Melee.SlasherSwords
 {
@@ -20,27 +21,23 @@ namespace GarnsMod.Content.Items.Weapons.Melee.SlasherSwords
 
         public override void SetDefaults()
         {
-            Item.damage = 40;
+            Item.damage = 200;
             Item.useTime = 52;
             Item.useAnimation = 26;
             Item.useStyle = ItemUseStyleID.Swing;
             Item.autoReuse = true;
-            Item.useTurn = true;
-
-            Item.shoot = ModContent.ProjectileType<RainbowSpiralStar>();
-
+            Item.useTurn = false;
             Item.UseSound = null;
-
             Item.width = 66;
             Item.height = 66;
             Item.shootSpeed = 20f;
-
+            Item.shoot = ModContent.ProjectileType<RainbowSpiralStar>();
             Item.DamageType = DamageClass.Melee;
             Item.knockBack = 6;
             Item.crit = 12;
-
             Item.value = Item.buyPrice(gold: 10);
             Item.rare = ItemRarityID.Pink;
+            Item.scale = 1.25f;
         }
 
         public override void MeleeEffects(Player player, Rectangle hitbox)
@@ -49,13 +46,24 @@ namespace GarnsMod.Content.Items.Weapons.Melee.SlasherSwords
             {
                 Color col = Main.hslToRgb(Main.GlobalTimeWrappedHourly % 1f, 1f, 0.5f);
 
-                for (int i = 0; i < 1; i++)
+                float absProg = Math.Abs(SlasherSword.GetAngleProgress(player));
+                if (absProg >= 0.3 && absProg <= 0.7)
                 {
-                    Dust rainbowDust = Dust.NewDustDirect(hitbox.TopLeft(), hitbox.Width, hitbox.Height, DustID.RainbowTorch, 0f, 0f, 0, col, 0.75f + Main.rand.NextFloat() * 0.5f);
-                    rainbowDust.noGravity = true;
+                    for (int i = 0; i < 3; i++)
+                    {
+                        Dust rainbowDust = Dust.NewDustDirect(hitbox.TopLeft(), hitbox.Width, hitbox.Height, DustID.RainbowTorch, 0f, 0f, 0, col, 0.9f + Main.rand.NextFloat() * 0.5f);
+                        rainbowDust.noGravity = true;
+                    }
+
+                    Lighting.AddLight(hitbox.Center(), col.ToVector3());
+                    Lighting.AddLight(player.Center, col.ToVector3());
                 }
-                Lighting.AddLight(hitbox.Center(), col.ToVector3());
             }
+        }
+
+        public override void ModifyShootStats(Player player, ref Vector2 position, ref Vector2 velocity, ref int type, ref int damage, ref float knockback)
+        {
+            position += velocity.SafeNormalize(default) * 40; // Make it spawn a bit further ahead
         }
 
         public override bool Shoot(Player player, EntitySource_ItemUse_WithAmmo source, Vector2 position, Vector2 velocity, int type, int damage, float knockback)
@@ -109,7 +117,6 @@ namespace GarnsMod.Content.Items.Weapons.Melee.SlasherSwords
         public Vector2 GetItemLocationOffset(Player player)
         {
             float xOff, yOff, angleProgress = SlasherSword.GetAngleProgress(player);
-
             if (angleProgress < 0.25f)
             {
                 xOff = MathHelper.Lerp(-6, -3, angleProgress * (1f / 0.25f));

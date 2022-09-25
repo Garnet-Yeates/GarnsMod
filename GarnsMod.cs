@@ -11,11 +11,6 @@ namespace GarnsMod
         public override void Load()
         {
             Ref<Effect> vertexPixelShaderRef = Main.VertexPixelShaderRef;
-            // Fire is like Rainbow rod but the tail end of it is like magic missile (plain middle, firey tail)
-            GameShaders.Misc["TrailShaderFire"] = new MiscShaderData(vertexPixelShaderRef, "MagicMissile").UseProjectionMatrix(doUse: true);
-            GameShaders.Misc["TrailShaderFire"].UseImage0("Images/Extra_" + (short)195);
-            GameShaders.Misc["TrailShaderFire"].UseImage1("Images/Extra_" + (short)197);
-            GameShaders.Misc["TrailShaderFire"].UseImage2("Images/Extra_" + (short)193);
 
             // Stream uses same shaders as Rainbow Rod (plain middle, streamy end)
             GameShaders.Misc["TrailShaderStream"] = new MiscShaderData(vertexPixelShaderRef, "MagicMissile").UseProjectionMatrix(doUse: true);
@@ -23,11 +18,17 @@ namespace GarnsMod
             GameShaders.Misc["TrailShaderStream"].UseImage1("Images/Extra_" + (short)197);
             GameShaders.Misc["TrailShaderStream"].UseImage2("Images/Extra_" + (short)196);
 
+            // Fire is like Rainbow rod but the tail end of it is like magic missile (plain middle, firey tail)
+            GameShaders.Misc["TrailShaderFire"] = new MiscShaderData(vertexPixelShaderRef, "MagicMissile").UseProjectionMatrix(doUse: true);
+            GameShaders.Misc["TrailShaderFire"].UseImage0("Images/Extra_" + (short)195);
+            GameShaders.Misc["TrailShaderFire"].UseImage1("Images/Extra_" + (short)197);
+            GameShaders.Misc["TrailShaderFire"].UseImage2("Images/Extra_" + (short)193);
+
             // Stream2 uses same shaders as Magic Missile (jagged middle, firey tail)
-            GameShaders.Misc["TrailShaderStream2"] = new MiscShaderData(vertexPixelShaderRef, "MagicMissile").UseProjectionMatrix(doUse: true);
-            GameShaders.Misc["TrailShaderStream2"].UseImage0("Images/Extra_" + (short)192);
-            GameShaders.Misc["TrailShaderStream2"].UseImage1("Images/Extra_" + (short)194);
-            GameShaders.Misc["TrailShaderStream2"].UseImage2("Images/Extra_" + (short)193);
+            GameShaders.Misc["TrailShaderMissile"] = new MiscShaderData(vertexPixelShaderRef, "MagicMissile").UseProjectionMatrix(doUse: true);
+            GameShaders.Misc["TrailShaderMissile"].UseImage0("Images/Extra_" + (short)192);
+            GameShaders.Misc["TrailShaderMissile"].UseImage1("Images/Extra_" + (short)194);
+            GameShaders.Misc["TrailShaderMissile"].UseImage2("Images/Extra_" + (short)193);
 
             // Plain is like Rainbow Rod but the tail is the same as the middle (plain middle, plain end)
             GameShaders.Misc["TrailShaderPlain"] = new MiscShaderData(vertexPixelShaderRef, "MagicMissile").UseProjectionMatrix(doUse: true);

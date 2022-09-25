@@ -72,12 +72,13 @@ namespace GarnsMod.Content.Items.Weapons.Melee
                 // Generate new bobbers
                 Vector2 vel = current;
 
-                Projectile.NewProjectileDirect(source, position, vel, ModContent.ProjectileType<RainbowSpiralStar>(), damage, knockback, player.whoAmI, 0.0f, 0);
-                Projectile.NewProjectileDirect(source, position, vel, ModContent.ProjectileType<RainbowSpiralStar>(), damage, knockback, player.whoAmI, 0.5f, 2);
+                NorthernStar p = (NorthernStar) Projectile.NewProjectileDirect(source, position, vel, type, damage, knockback, player.whoAmI).ModProjectile;
+                p.starColorIndex = currentColor;
 
-                //     NorthernStar p = (NorthernStar) Projectile.NewProjectileDirect(source, position, vel, type, damage, knockback, player.whoAmI).ModProjectile;
-                //     p.starColorIndex = currentColor;
-                //     NetMessage.SendData(MessageID.SyncProjectile, -1, -1, null, p.Projectile.whoAmI);
+                if (Main.netMode == NetmodeID.MultiplayerClient)
+                {
+                    NetMessage.SendData(MessageID.SyncProjectile, -1, -1, null, p.Projectile.whoAmI);
+                }
 
                 current = current.RotatedBy(increment);
             }

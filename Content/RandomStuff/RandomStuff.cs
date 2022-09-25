@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework;
+﻿using Humanizer;
+using Microsoft.Xna.Framework;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -83,7 +84,7 @@ namespace GarnsMod.Content.RandomStuff
                         new CommonDrop(ItemID.SoulofFlight, 1, 5, 10)
                     )
                 };
-                rulesToTry.ForEach(rule => CustomItemDropResolver.ResolveRule(rule, CustomItemDropResolver.CreateDropAttemptInfo(new Rectangle(x*16, y*16, 32, 32))));
+                rulesToTry.ForEach(rule => CustomItemDropResolver.ResolveRule(rule, CustomItemDropResolver.CreateDropAttemptInfo(new Rectangle(x * 16, y * 16, 32, 32))));
             }
 
             // Has to do with spawing the corresponding boss and putting text in the chat. If you forget this part then the bosses wont spawn
@@ -143,6 +144,57 @@ namespace GarnsMod.Content.RandomStuff
     {
         public override void ModifyNPCLoot(NPC npc, NPCLoot npcLoot)
         {
+            if (npc.type == NPCID.Skeleton)
+            {
+                // Goal: employ defensive programming and try to remove the item chained to the first chained item and re-attaching later chains. Also any tries to work with other mods that may make modifications to Skeleton
+                // loot without crashing the game by searching for the rules instead of assuming where their indexes are inside the nested ChainedRules arrays. Note that this does not ensure
+                // compatability, it rather ensures that the game doesn't crash from us assuming that the rules are untouched
+                foreach (IItemDropRule rule in npcLoot.Get())
+                {
+                    // If some other mod didn't remove the original (root) rule that the other rules (including bonesword) are chained onto... (if this doesn't run, it is likely that BoneSword is already removed, but not guaranteed)
+                    if (rule is CommonDrop ancientIronDrop && ancientIronDrop.itemId == ItemID.AncientIronHelmet)
+                    {
+                        IItemDropRule ancientGoldDrop = null;
+
+                        foreach (IItemDropRuleChainAttempt chainAttempt in ancientIronDrop.ChainedRules)
+                            if (chainAttempt.RuleToChain is CommonDrop chainedCommon1 && chainedCommon1.itemId == ItemID.AncientGoldHelmet)
+                                ancientGoldDrop = chainedCommon1;
+
+                        // If some other mod didn't remove the first chained rule.... (if this if doesnt run, it is very likely that BoneSword is already removed but not guaranteed)
+                        if (ancientGoldDrop is not null)
+                        {
+                            // boneSwordChainedRule is the rule that should contain the BoneSword..
+                            IItemDropRule boneSwordRule = null;
+
+                            // ..but we are going to remove it from ancientGoldDrop chain and re-attach its own later chains back onto ancientGoldDrop, essentially removing the middle 'link' in the 3 chains 
+                            IItemDropRuleChainAttempt toRemoveFromChainedCommon1 = null;
+
+                            foreach (IItemDropRuleChainAttempt chainAttempt in ancientGoldDrop.ChainedRules)
+                            {
+                                if (chainAttempt.RuleToChain is CommonDrop chainedCommon2 && chainedCommon2.itemId == ItemID.BoneSword)
+                                {
+                                    boneSwordRule = chainedCommon2;
+                                    toRemoveFromChainedCommon1 = chainAttempt;
+                                }
+                            }
+
+                            if (boneSwordRule is not null)
+                            {
+                                // We want to move boneSwordRule's chains to ancientGoldDrop or else we will be 'over-deleting' loot
+                                List<IItemDropRuleChainAttempt> toAddToChainCommon1 = boneSwordRule.ChainedRules;
+
+                                // Remove boneSwordRule from being chained to ancientGoldDrop
+                                ancientGoldDrop.ChainedRules.Remove(toRemoveFromChainedCommon1);
+
+                                // And then chain everything that was chained to boneSwordRule onto ancientGoldDrop. If we forget this, some loot will be lost. (with just your mod enabled,
+                                // the skull drop will be lost). With other mods enabled, if they chained stuff onto the boneSwordRule, those chains would also be lost
+                                ancientGoldDrop.ChainedRules.AddRange(toAddToChainCommon1);
+                            }
+                        }
+                    }
+                }
+            }
+
             if (npc.type == NPCID.IceMimic)
             {
                 foreach (var rule in npcLoot.Get())
@@ -165,5 +217,5 @@ namespace GarnsMod.Content.RandomStuff
     }
 
 
-    
+
 }

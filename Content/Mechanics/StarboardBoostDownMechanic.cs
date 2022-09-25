@@ -18,7 +18,7 @@ namespace GarnsMod.Content.Mechanics
             {
                 if (Player.controlDown && !Player.controlJump)
                 {
-                    Player.velocity += new Vector2(0, 1f);
+                    Player.velocity += new Vector2(0, 1.5f);
                 }
             }
         }

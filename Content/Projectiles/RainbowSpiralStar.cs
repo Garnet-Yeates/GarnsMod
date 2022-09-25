@@ -1,12 +1,10 @@
-﻿using GarnsMod.Content.Items.Weapons;
-using GarnsMod.Content.Shaders;
+﻿using GarnsMod.Content.Shaders;
 using GarnsMod.CodingTools;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using ReLogic.Content;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using Terraria;
 using Terraria.Audio;
 using Terraria.DataStructures;
@@ -45,11 +43,7 @@ namespace GarnsMod.Content.Projectiles
             Projectile.timeLeft = 500;
         }
 
-        private Vector2 wouldBePosition;
-        private ColorGradient colorGradient;
-
-        private int colorTicks = 0;
-        private int numTicks = 0;
+        public static readonly Dictionary<int, ColorGradient> RainbowSpiralStarGradients = ColorGradient.GetRainbowGradientWithOffsetDict(extraStart: 1, extraLoops: 1, reverse: true);
 
         private float SineOffset
         {
@@ -62,20 +56,27 @@ namespace GarnsMod.Content.Projectiles
             get => (int)Projectile.ai[1];
             set => Projectile.ai[1] = value;
         }
+
+
+        private Vector2 wouldBePosition;
+        private ColorGradient colorGradient;
+
+        private int colorTicks = 0;
+        private int numTicks = 0;
+
         private Color CurrentColor => colorGradient.GetColor(ColorProgress);
 
         private float ColorProgress => GarnMathHelpers.Modulo(-colorTicks * 2.3f / 1000f, 1f);
 
-        public static readonly Dictionary<int, ColorGradient> RainbowSpiralStarGradients = ColorGradient.GetRainbowGradientWithOffsetDict(extraStart: 1, extraLoops: 1, reverse: true);
+        private Vector2 UpperBound => Projectile.velocity.RotatedBy(-MathHelper.PiOver2);
+
+        private Vector2 LowerBound => Projectile.velocity.RotatedBy(MathHelper.PiOver2);
 
         public override void OnSpawn(IEntitySource source)
         {
             wouldBePosition = Projectile.position;
             colorGradient = RainbowSpiralStarGradients[GradientIndex];
         }
-
-        private Vector2 UpperBound => Projectile.velocity.RotatedBy(-MathHelper.PiOver2);
-        private Vector2 LowerBound => Projectile.velocity.RotatedBy(MathHelper.PiOver2);
 
         public override void AI()
         {
@@ -92,11 +93,11 @@ namespace GarnsMod.Content.Projectiles
 
         private void UpdatePosition()
         {
-            const float ampMax = 1.5f;
+            const float ampMax = 1.25f;
             const float ampTime = 30; // It takes 30 ticks for amp to grow to the max
             float currAmp = MathHelper.Lerp(0, ampMax, Math.Min(1, numTicks / ampTime));
 
-            const float frequencyMult = 8f;
+            const float frequencyMult = 6.5f;
 
             // numTicks divided by 20 is our x on the graph. Every 20 ticks, x goes up by 1
             float x = numTicks / 20f;
@@ -133,7 +134,7 @@ namespace GarnsMod.Content.Projectiles
             Vector2 hitboxOffset = new(Projectile.width / 2, Projectile.height / 2 + Projectile.gfxOffY);
             Vector2 drawPos = Projectile.position + hitboxOffset - Main.screenPosition;
 
-            default(GradientTrailDrawer).Draw(Projectile, colorGradient, TrailType.Stream2, offset: hitboxOffset, overrideOpacity: 6f, overrideSaturation: 0f, progressModifier: (int) (-colorTicks * 2.5)); ;
+            default(GradientTrailDrawer).Draw(Projectile, colorGradient, TrailType.Missile, offset: hitboxOffset, overrideOpacity: 6f, overrideSaturation: 0f, progressModifier: (int) (-colorTicks * 2.5)); ;
 
             Texture2D starTexture = StarTexture.Value;
             Texture2D grayscaleTexture = GrayscaleTexture.Value;
@@ -159,6 +160,5 @@ namespace GarnsMod.Content.Projectiles
                 d.scale = 1.25f + Main.rand.NextFloat() * 1.5f;
             }
         }
-
     }
 }

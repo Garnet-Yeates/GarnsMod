@@ -42,7 +42,6 @@ namespace GarnsMod.Content.Shaders
             else
             {
                 vertexStrip.PrepareStrip(proj.oldPos, proj.oldRot, StripColorFunc, overrideWidthFunction ?? trailType.WidthFunction, offsetForAllPositions: offset, includeBacksides: false);
-
             }
             vertexStrip.DrawTrail();
             Main.pixelShader.CurrentTechnique.Passes[0].Apply();
@@ -60,7 +59,7 @@ namespace GarnsMod.Content.Shaders
         public static readonly TrailType Plain = new("Plain", saturation: 0.0f, opacity: 2.5f, widthFunc: PlainWidthFunction);
         public static readonly TrailType Fire = new("Fire", saturation: -1.25f, opacity: 8.0f, widthFunc: FireWidthFunction);
         public static readonly TrailType Stream = new("Stream", saturation: 1.5f, opacity: 4.0f, widthFunc: StreamWidthFunction);
-        public static readonly TrailType Stream2 = new("Stream2", saturation: 0f, opacity: 6.0f, widthFunc: Stream2WidthFunction, alphaModifier: 0.45f);
+        public static readonly TrailType Missile = new("Missile", saturation: 0f, opacity: 6.0f, widthFunc: Stream2WidthFunction, alphaModifier: 0.45f);
         
         internal string ShaderName { get; }
         internal float Saturation { get; }

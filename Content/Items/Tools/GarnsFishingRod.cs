@@ -114,8 +114,12 @@ namespace GarnsMod.Content.Items.Tools
                     inventoryIndex = i;
                 }
             }
-            // SyncEquipment is similar to SyncItem but it is for items that are inside a player's inventory as opposed to out in the world
-            NetMessage.SendData(MessageID.SyncEquipment, -1, -1, null, Main.myPlayer, inventoryIndex, Item.prefix);
+
+            if (Main.netMode == NetmodeID.MultiplayerClient)
+            {
+                // SyncEquipment is similar to SyncItem but it is for items that are inside a player's inventory as opposed to out in the world
+                NetMessage.SendData(MessageID.SyncEquipment, -1, -1, null, Main.myPlayer, inventoryIndex, Item.prefix);
+            }
         }
 
         // Only called on the client that caught the fish (via FishingRodPlayer.ModifyCaughtFish())
@@ -278,7 +282,11 @@ namespace GarnsMod.Content.Items.Tools
             newBobber.fishingRodLevel = level;
             newBobber.trailColorMode = trailColorMode;
             newBobber.trailTypeMode = trailTypeMode;
-            NetMessage.SendData(MessageID.SyncProjectile, -1, -1, null, newBobber.Projectile.whoAmI);
+
+            if (Main.netMode == NetmodeID.MultiplayerClient)
+            {
+                NetMessage.SendData(MessageID.SyncProjectile, -1, -1, null, newBobber.Projectile.whoAmI);
+            }
         }
 
         private void ShootLine(Vector2 position, Vector2 velocity, EntitySource_ItemUse_WithAmmo source, Player player, int type, int bonus)
