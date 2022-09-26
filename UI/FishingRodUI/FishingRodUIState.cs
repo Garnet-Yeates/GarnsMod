@@ -17,7 +17,6 @@ namespace GarnsMod.UI.FishingRodUI
         private UIHoverImageButton TrailColorButton;
         private UIHoverImageButton TrailTypeButton;
         private UIHoverImageButton ShootModeButton;
-
         public Vector2 Origin { get; private set; }
         public int InventoryIndex { get; private set; }
         public TrailColorMode SelectedTrailColorMode { get; private set; }
@@ -60,7 +59,7 @@ namespace GarnsMod.UI.FishingRodUI
         {
             SoundEngine.PlaySound(SoundID.Item10);
             SelectedTrailColorMode = ((int)SelectedTrailColorMode + 1) % TrailColorMode.Count;
-            if (Main.player[Main.myPlayer].HeldItem.ModItem is GarnsFishingRod rod)
+            if (Main.LocalPlayer.HeldItem.ModItem is GarnsFishingRod rod)
             {
                 rod.trailColorMode = SelectedTrailColorMode;
             }
@@ -71,7 +70,7 @@ namespace GarnsMod.UI.FishingRodUI
         {
             SoundEngine.PlaySound(SoundID.Item10);
             SelectedTrailTypeMode = ((int)SelectedTrailTypeMode + 1) % TrailTypeMode.Count;
-            if (Main.player[Main.myPlayer].HeldItem.ModItem is GarnsFishingRod rod)
+            if (Main.LocalPlayer.HeldItem.ModItem is GarnsFishingRod rod)
             {
                 rod.trailTypeMode = SelectedTrailTypeMode;
             }
@@ -82,7 +81,7 @@ namespace GarnsMod.UI.FishingRodUI
         {
             SoundEngine.PlaySound(SoundID.Item10);
             SelectedShootMode = ((int)SelectedShootMode + 1) % ShootMode.Count;
-            if (Main.player[Main.myPlayer].HeldItem.ModItem is GarnsFishingRod rod)
+            if (Main.LocalPlayer.HeldItem.ModItem is GarnsFishingRod rod)
             {
                 rod.shootMode = SelectedShootMode;
             }

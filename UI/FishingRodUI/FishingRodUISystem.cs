@@ -39,8 +39,7 @@ namespace GarnsMod.UI.FishingRodUI
         {
             SoundEngine.PlaySound(SoundID.MenuOpen);
             FishingRodUIState ui = new(shootMode, trailColorMode, trailTypeMode, inventoryIndex);
-       //     ui.Activate(); might not be needed
-            _fishingRodInterface.SetState(ui);
+            _fishingRodInterface.SetState(ui); // setState calls Activate() on ui
         }
 
         public void CloseFishingRodUI()
