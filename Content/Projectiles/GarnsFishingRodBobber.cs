@@ -93,6 +93,12 @@ namespace GarnsMod.Content.Projectiles
             }
         }
 
+        public override void PostAI()
+        {
+            Projectile.rotation = Projectile.velocity.ToRotation();
+        }
+
+
         public override void ModifyFishingLine(ref Vector2 lineOriginOffset, ref Color lineColor)
         {
             lineOriginOffset = new Vector2(47, -30);
@@ -156,7 +162,6 @@ namespace GarnsMod.Content.Projectiles
             Main.EntitySpriteDraw(grayscaleTexture, bobberPos, null, col, 0f, grayscaleTexture.Size() / 2, starScale, spriteEffects, 0);
         }
 
-        // Used for syncing. Called immediately after OnSpawn() as well as whenever MessageID.SyncProjectile is called (such as when .netupdate is called inside of AI())
         public override void SendExtraAI(BinaryWriter writer)
         {
             writer.Write(fishingLineColorIndex);

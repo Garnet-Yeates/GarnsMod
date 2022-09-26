@@ -19,15 +19,6 @@ namespace GarnsMod.Content.Items.Tools
 {
     public class GarnsFishingRod : ModItem
     {
-        // Fields
-        internal byte level = 1;
-        internal int fishTillNextLevel = GetFishNeededAtLevel(1);
-        internal int totalFishCaught = 0;
-
-        internal ShootMode shootMode = ShootMode.Cone;
-        internal TrailColorMode trailColorMode = TrailColorMode.SingleColor;
-        internal TrailTypeMode trailTypeMode = TrailTypeMode.Plain;
-
         // Constants
         public const int MaxLevel = 30;
         public const int BaseFishingPower = 20;
@@ -36,6 +27,15 @@ namespace GarnsMod.Content.Items.Tools
         public const int LineDoesntBreakLevel = 3;
         public const int CrateChanceLevel = 6;
         public const int LavaFishingLevel = 9;
+
+        // Fields
+        internal byte level = 1;
+        internal int fishTillNextLevel = GetFishNeededAtLevel(1);
+        internal int totalFishCaught = 0;
+
+        internal ShootMode shootMode = ShootMode.Cone;
+        internal TrailColorMode trailColorMode = TrailColorMode.SingleColor;
+        internal TrailTypeMode trailTypeMode = TrailTypeMode.Plain;
 
         // Properties (all based on fields)
         public float ShootSpeedMultiplier => 1 + 1f * ((level - 1.0f) / (MaxLevel - 1.0f)); // ShootSpeed => 1x to 2x
