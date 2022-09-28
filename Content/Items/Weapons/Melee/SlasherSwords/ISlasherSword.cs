@@ -77,7 +77,7 @@ namespace GarnsMod.Content.Items.Weapons.Melee.SlasherSwords
         {
             float progress = GetAnimationProgress(player);
 
-            if (progress >= CanHitNPCAt && !CanHitNPCYet) // Can't be called on the last animation frame since that's where we MUST reset CanHitNPCYet
+            if (progress >= CanHitNPCAt && !CanHitNPCYet) 
             {
                 CanHitNPCYet = true;
                 SoundEngine.PlaySound(SoundID.Item1);
@@ -110,8 +110,7 @@ namespace GarnsMod.Content.Items.Weapons.Melee.SlasherSwords
         {
             int width = (int) (Item.width * Item.scale);
             int height = (int) (Item.height * Item.scale);
-
-            Vector2 vecToOtherCorner = new(width * player.direction, -height);
+            Vector2 vecToOtherCorner = new(width*1.1f * player.direction, -height*1.1f);
 
             Vector2 itemLoc = player.Center + new Vector2(player.direction * -2, -6);
             float rot = GetItemRotation(player);
@@ -119,7 +118,23 @@ namespace GarnsMod.Content.Items.Weapons.Melee.SlasherSwords
             hitbox = GarnMathHelpers.RectFrom2Points(itemLoc, itemLoc + vecToOtherCorner.RotatedBy(rot));
 
             // Both hitbox width and height can never be less than half of the item width
-            hitbox.Width = Math.Max(width / 2, hitbox.Width);
+            int diff = (int)(0.5f * width - hitbox.Width);
+
+            if (diff > 0)
+            {
+                if (player.direction == 1)
+                {
+                    hitbox.Width += diff;
+                }
+                else
+                {
+                    hitbox = GarnMathHelpers.RectFrom2Points(new Vector2(hitbox.TopLeft().X - diff, hitbox.TopLeft().Y), hitbox.BottomRight());
+                }
+            }
+            else
+            {
+
+            }
             hitbox.Height = Math.Max(height / 2, hitbox.Height);
         }
 

@@ -11,7 +11,7 @@ namespace GarnsMod.Content.RandomStuff
     // This is vanilla code copied verbatim so that we can just call ResolveRule recursive logic on any rules/chains that we create
     internal class CustomItemDropResolver
     {
-        /* This is simply here to show how vanilla does it. Normally TryDropping is called on a DropAttempt info when an NPC dies or a bag is opened.
+        /* This is simply here to show how vanilla does it. Normally ItemDropDataBase.TryDropping is called on a DropAttempt info when an NPC dies or a bag is opened.
             * How this works is that the DropAttemptInfo either has an NPC set or an item set (depending on if an NPC died or a bagwas opened). It will look
             * thru the rules database to find out what rules to use for the given NPC or item (npc takes prio),
             * then call ResolveRule() on them. What I really care about is the ResolveRule function as well as its helper functions. Simply creating a rule and 

@@ -59,10 +59,10 @@ namespace GarnsMod.Content.Items.Weapons.Melee
 
         public override bool Shoot(Player player, EntitySource_ItemUse_WithAmmo source, Vector2 position, Vector2 velocity, int type, int damage, float knockback)
         {
-            int amount = 1;
+            int amount = 8;
 
             // Spread starts at MinSpread and scales up to MaxSpread depending on fishing rod level
-            float spread = 0;
+            float spread = 12;
 
             Vector2 current = velocity.RotatedBy(MathHelper.ToRadians(spread / 2));
             float increment = MathHelper.ToRadians(-spread / (amount - 1));

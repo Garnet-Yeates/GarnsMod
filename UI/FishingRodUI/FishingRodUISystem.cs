@@ -18,8 +18,8 @@ namespace GarnsMod.UI.FishingRodUI
 {
     internal class FishingRodUISystem : ModSystem
     {
-        private FishingRodUIState FishingRodUI => _fishingRodInterface is null ? null : (FishingRodUIState) _fishingRodInterface.CurrentState;
-        
+        private FishingRodUIState FishingRodUI => _fishingRodInterface is null ? null : (FishingRodUIState)_fishingRodInterface.CurrentState;
+
         public bool IsFishingRodUIOpen => FishingRodUI is not null;
 
         private UserInterface _fishingRodInterface;
@@ -46,27 +46,25 @@ namespace GarnsMod.UI.FishingRodUI
             _fishingRodInterface.SetState(null);
         }
 
-        public override void UpdateUI(GameTime gameTime)
-        {
-            _fishingRodInterface?.Update(gameTime);
-        }
-
         public override void ModifyInterfaceLayers(List<GameInterfaceLayer> layers)
         {
             int mouseTextIndex = layers.FindIndex(layer => layer.Name.Equals("Vanilla: Mouse Text"));
             if (mouseTextIndex != -1)
             {
-                layers.Insert(mouseTextIndex, new LegacyGameInterfaceLayer(
-                    $"{nameof(GarnsMod)}: Fishing Rod UI",
-                    delegate
-                    {
-                        _fishingRodInterface.Draw(Main.spriteBatch, new GameTime());
-                        return true;
-                    },
-                    InterfaceScaleType.UI)
-                );
+                layers.Insert(mouseTextIndex, new LegacyGameInterfaceLayer($"{nameof(GarnsMod)}: Fishing Rod UI", DrawFishingRodInterface, InterfaceScaleType.UI));
             }
         }
 
+        // Helper method so ModifyinterfaceLayers isn't as cluttered
+        private bool DrawFishingRodInterface()
+        {
+            _fishingRodInterface.Draw(Main.spriteBatch, new GameTime());
+            return true;
+        }
+
+        public override void UpdateUI(GameTime gameTime)
+        {
+            _fishingRodInterface?.Update(gameTime);
+        }
     }
 }

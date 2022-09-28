@@ -37,7 +37,5 @@ namespace GarnsMod.UI
                 Main.LocalPlayer.mouseInterface = true;
             }
         }
-
-
     }
 }

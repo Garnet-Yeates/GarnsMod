@@ -175,9 +175,10 @@ namespace GarnsMod.Content.Items.Tools
         private int colorProgress = 0;
         private readonly int ticksPerColor = 45;
 
-        // Called on all clients/server ??? is it tho, ima have to check
+        // Called on all clients/server 
         public override void UpdateInventory(Player player)
         {
+
             // Setting accFishingLine to true in HoldItem doesn't make the line invincible.  This is a workaround. Note that this won't work if it's held on cursor
             if (player.HeldItem.ModItem is GarnsFishingRod rod && rod.level >= LineDoesntBreakLevel)
             {

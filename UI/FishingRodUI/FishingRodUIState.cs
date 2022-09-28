@@ -17,6 +17,7 @@ namespace GarnsMod.UI.FishingRodUI
         private UIHoverImageButton TrailColorButton;
         private UIHoverImageButton TrailTypeButton;
         private UIHoverImageButton ShootModeButton;
+
         public Vector2 Origin { get; private set; }
         public int InventoryIndex { get; private set; }
         public TrailColorMode SelectedTrailColorMode { get; private set; }

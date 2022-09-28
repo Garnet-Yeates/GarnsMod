@@ -16,10 +16,17 @@ namespace GarnsMod.Content.Mechanics
         {
             if (Player.wings == StarboardWingID)
             {
-                if (Player.controlDown && !Player.controlJump)
+                int x = (int)Player.Center.X / 16;
+                int y = (int)Player.Center.Y / 16 + 2;
+
+                if (Main.tile[x - 1, y].TileType == 0 && Main.tile[x, y].TileType == 0 && Main.tile[x + 1, y].TileType == 0)
                 {
-                    Player.velocity += new Vector2(0, 1.5f);
+                    if (Player.TryingToHoverDown && !Player.controlJump)
+                    {
+                        Player.velocity += new Vector2(0, 2f);
+                    }
                 }
+
             }
         }
     }
