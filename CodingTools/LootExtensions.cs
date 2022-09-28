@@ -20,7 +20,7 @@ namespace GarnsMod.CodingTools
 
             foreach (IItemDropRule rootRule in loot.Get())
             {
-                if (RecursiveRemoveMain(loot, predicate, rootRule, reattachChains, stopAtFirst))
+                if (RecursiveRemove(loot, predicate, rootRule, reattachChains, stopAtFirst))
                 {
                     removedAny = true;
 
@@ -41,7 +41,19 @@ namespace GarnsMod.CodingTools
         /// </summary>
         public static bool RecursiveRemoveChildren(this IItemDropRule rootRule, Predicate<IItemDropRule> shouldRemove, bool reattachChains = false, bool stopAtFirst = true)
         {
-            return RecursiveRemoveMain(null, shouldRemove, rootRule, reattachChains, stopAtFirst);
+            return RecursiveRemove(null, shouldRemove, rootRule, reattachChains, stopAtFirst);
+        }
+        public static bool RecursiveRemove(ILoot loot, Predicate<IItemDropRule> shouldRemove, IItemDropRule rootRule, bool reattachChains = false, bool stopAtFirst = true)
+        {
+            bool wasInuse = DictionaryInUse;
+            DictionaryInUse = true;
+            bool result = RecursiveRemoveMain(loot, shouldRemove, rootRule, reattachChains, stopAtFirst);
+            if (!wasInuse)
+            {
+                DictionaryInUse = false;
+                ParentDictionary.Clear();
+            }
+            return result;
         }
 
         // parentRule is null => implies we are on the first iteration
@@ -107,12 +119,18 @@ namespace GarnsMod.CodingTools
             }
         }
 
+
+        public static bool Has<T>(this ILoot loot, Predicate<T> query) where T : IItemDropRule
+        {
+            return loot.Find(query) is not null;
+        }
+
         /// <summary>Recursively loops through this ILoot instance and looks for the first IItemDropRule of type T that matches the given predicate</summary>
         public static T Find<T>(this ILoot loot, Predicate<T> query) where T : IItemDropRule
         {
             foreach (IItemDropRule rootRule in loot.Get())
             {
-                if (RecursiveFindMain(query, rootRule) is T result)
+                if (RecursiveFind(rootRule, query) is T result)
                 {
                     return result;
                 }
@@ -121,10 +139,28 @@ namespace GarnsMod.CodingTools
             return default;
         }
 
+        public static bool HasChild<T>(this IItemDropRule root, Predicate<T> query) where T : IItemDropRule
+        {
+            return root.FindChild(query) is not null;
+        }
+
         /// <summary>Recursively loops through the children (rules that are chained onto this rule) of this rule and looks for the first IItemDropRule of type T that matches the given predicate</summary>
         public static T FindChild<T>(this IItemDropRule root, Predicate<T> query) where T : IItemDropRule
         {
-            return RecursiveFindMain(query, root);
+            return RecursiveFind(root, query);
+        }
+
+        public static T RecursiveFind<T>(IItemDropRule root, Predicate<T> query) where T : IItemDropRule
+        {
+            bool wasInUse = DictionaryInUse;
+            DictionaryInUse = true;
+            T result = RecursiveFindMain(query, root);
+            if (!wasInUse)
+            {
+                DictionaryInUse = false;
+                ParentDictionary.Clear();
+            }
+            return result;
         }
 
         /// <summary>
@@ -154,6 +190,11 @@ namespace GarnsMod.CodingTools
             }
         }
 
+        public static void Clear(this ILoot loot)
+        {
+            loot.RemoveWhere(_ => true);
+        }
+
         /// <summary>
         /// Used to temporarily store data about which IItemDropRule is the "parent" of another IItemDropRule, as well as storing the ChainAttempt 
         /// An IItemDropRule is considered a "child" to another IItemDropRule if the parent's ChainedRules array contains an IItemDropRuleChainAttempt
@@ -172,6 +213,8 @@ namespace GarnsMod.CodingTools
         /// </summary> 
         private static Dictionary<IItemDropRule, ParentWithChain> ParentDictionary = new();
 
+        private static bool DictionaryInUse = false;
+
         private static IItemDropRule RegisterParent(this IItemDropRule rule, IItemDropRule parent, IItemDropRuleChainAttempt chainAttempt)
         {
             ParentDictionary[rule] = new ParentWithChain { Parent = parent, ChainAttempt = chainAttempt };
@@ -180,17 +223,22 @@ namespace GarnsMod.CodingTools
 
         /// <summary>
         /// Only should be used in the context of RecursiveRemove calls, as it uses a Dictionary to find the parent, and the dictionary is only populated
-        /// (accurate) during these calls. Mainly used inside Predicates of RecursiveRemove as a means of being more exact about what
+        /// (accurate) during these calls and is cleared after. Mainly used inside Predicates of RecursiveRemove as a means of being more exact about what
         /// rule we are removing
         /// </summary>
         public static IItemDropRule ParentRule(this IItemDropRule rule)
         {
+            if (!DictionaryInUse)
+            {
+                throw new Exception("IItemDropRule.ParentRule() can only be used in the context of predicates within RecursiveFind, RecursiveFindChild, RecursiveRemoveWhere, or RecursiveRemoveChildren");
+            }
+
             return ParentDictionary.TryGetValue(rule, out ParentWithChain parentWithChain) ? parentWithChain.Parent : null;
         }
 
         /// <summary>
         /// Only should be used in the context of RecursiveRemove calls, as it uses a Dictionary to find the parent, and the dictionary is only populated
-        /// (accurate) during these calls. Mainly used inside Predicates of RecursiveRemove as a means of being more exact about what
+        /// (accurate) during these calls and is cleared after. Mainly used inside Predicates of RecursiveRemove as a means of being more exact about what
         /// rule we are removing
         /// </summary>
         public static IItemDropRule ParentRule(this IItemDropRule rule, int amount = 1)
