@@ -1,7 +1,9 @@
-﻿using Humanizer;
+﻿using GarnsMod.CodingTools;
+using Humanizer;
 using Microsoft.Xna.Framework;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using Terraria;
 using Terraria.Chat;
@@ -140,82 +142,139 @@ namespace GarnsMod.Content.RandomStuff
         }
     }
 
-    class MyNPCLoot : GlobalNPC
+
+    class NPCLootExtensionTest : GlobalNPC
     {
         public override void ModifyNPCLoot(NPC npc, NPCLoot npcLoot)
         {
-            if (npc.type == NPCID.Skeleton)
+            // Skeleton: Remove BoneSword drop rule from being chained onto AncientGold drop rule, which is chained onto AncientIron drop rule
+            if (npc.type == NPCID.Skeleton && false)
             {
-                // Goal: employ defensive programming and try to remove the item chained to the first chained item and re-attaching later chains. Also any tries to work with other mods that may make modifications to Skeleton
-                // loot without crashing the game by searching for the rules instead of assuming where their indexes are inside the nested ChainedRules arrays. Note that this does not ensure
-                // compatability, it rather ensures that the game doesn't crash from us assuming that the rules are untouched
                 foreach (IItemDropRule rule in npcLoot.Get())
                 {
-                    // If some other mod didn't remove the original (root) rule that the other rules (including bonesword) are chained onto... (if this doesn't run, it is likely that BoneSword is already removed, but not guaranteed)
                     if (rule is CommonDrop ancientIronDrop && ancientIronDrop.itemId == ItemID.AncientIronHelmet)
                     {
-                        IItemDropRule ancientGoldDrop = null;
-
-                        foreach (IItemDropRuleChainAttempt chainAttempt in ancientIronDrop.ChainedRules)
-                            if (chainAttempt.RuleToChain is CommonDrop chainedCommon1 && chainedCommon1.itemId == ItemID.AncientGoldHelmet)
-                                ancientGoldDrop = chainedCommon1;
-
-                        // If some other mod didn't remove the first chained rule.... (if this if doesnt run, it is very likely that BoneSword is already removed but not guaranteed)
-                        if (ancientGoldDrop is not null)
+                        foreach (IItemDropRuleChainAttempt chainFromAncientIron in ancientIronDrop.ChainedRules)
                         {
-                            // boneSwordChainedRule is the rule that should contain the BoneSword..
-                            IItemDropRule boneSwordRule = null;
-
-                            // ..but we are going to remove it from ancientGoldDrop chain and re-attach its own later chains back onto ancientGoldDrop, essentially removing the middle 'link' in the 3 chains 
-                            IItemDropRuleChainAttempt toRemoveFromChainedCommon1 = null;
-
-                            foreach (IItemDropRuleChainAttempt chainAttempt in ancientGoldDrop.ChainedRules)
+                            if (chainFromAncientIron.RuleToChain is CommonDrop ancientGoldDrop && ancientGoldDrop.itemId == ItemID.AncientGoldHelmet)
                             {
-                                if (chainAttempt.RuleToChain is CommonDrop chainedCommon2 && chainedCommon2.itemId == ItemID.BoneSword)
+                                foreach (IItemDropRuleChainAttempt chainFromAncientGold in new List<IItemDropRuleChainAttempt>(ancientGoldDrop.ChainedRules))
                                 {
-                                    boneSwordRule = chainedCommon2;
-                                    toRemoveFromChainedCommon1 = chainAttempt;
+                                    if (chainFromAncientGold.RuleToChain is CommonDrop boneSwordRule && boneSwordRule.itemId == ItemID.BoneSword)
+                                    {
+                                        // Remove boneSwordRule from being chained to ancientGoldDrop
+                                        ancientGoldDrop.ChainedRules.Remove(chainFromAncientGold);
+
+                                        // And then chain everything that was chained to boneSwordRule onto ancientGoldDrop. If we forget this, some loot will be lost. (with just your mod enabled,
+                                        // the skull drop will be lost). With other mods enabled, if they chained stuff onto the boneSwordRule, those chains would also be lost
+                                        ancientGoldDrop.ChainedRules.AddRange(boneSwordRule.ChainedRules);
+                                    }
                                 }
-                            }
-
-                            if (boneSwordRule is not null)
-                            {
-                                // We want to move boneSwordRule's chains to ancientGoldDrop or else we will be 'over-deleting' loot
-                                List<IItemDropRuleChainAttempt> toAddToChainCommon1 = boneSwordRule.ChainedRules;
-
-                                // Remove boneSwordRule from being chained to ancientGoldDrop
-                                ancientGoldDrop.ChainedRules.Remove(toRemoveFromChainedCommon1);
-
-                                // And then chain everything that was chained to boneSwordRule onto ancientGoldDrop. If we forget this, some loot will be lost. (with just your mod enabled,
-                                // the skull drop will be lost). With other mods enabled, if they chained stuff onto the boneSwordRule, those chains would also be lost
-                                ancientGoldDrop.ChainedRules.AddRange(toAddToChainCommon1);
                             }
                         }
                     }
                 }
             }
 
-            if (npc.type == NPCID.IceMimic)
+            // OR (any of these 3, preferably the first). Normally I would always use the first. I repeated this one in 3 different styles to show
+            // how you can use ParentRule() (or not use it) to be more specific / less specific about which rule to remove)
+
+            // Most specific, safest
+            // Any BoneSword CommonDrop that is chained onto any AncientGoldHelemet CommonDrop that is chained onto any AncientIronDrop will be removed
+            if (npc.type == NPCID.Skeleton)
+            {
+                npcLoot.RecursiveRemoveWhere(
+                    rule =>
+                        rule.ParentRule(2) is CommonDrop ancientIronDrop && ancientIronDrop.itemId == ItemID.AncientIronHelmet &&
+                        rule.ParentRule(1) is CommonDrop ancientGoldDrop && ancientGoldDrop.itemId == ItemID.AncientGoldHelmet &&
+                        rule is CommonDrop boneSwordRule && boneSwordRule.itemId == ItemID.BoneSword,
+                    reattachChains: true
+                );
+            }
+
+            // Slightly specific, slightly Less Safe
+            // Any BoneSword CommonDrop chained onto any AncientGoldHelemet CommonDrop will be removed
+            if (npc.type == NPCID.Skeleton && false)
+            {
+                npcLoot.RecursiveRemoveWhere(
+                    rule =>
+                        rule.ParentRule(1) is CommonDrop ancientGoldDrop && ancientGoldDrop.itemId == ItemID.AncientGoldHelmet &&
+                        rule is CommonDrop boneSwordRule && boneSwordRule.itemId == ItemID.BoneSword,
+                    reattachChains: true
+                );
+            }
+
+            // Even Less Safe (any BoneSword in the loot will be removed)
+            if (npc.type == NPCID.Skeleton && false)
+            {
+                npcLoot.RecursiveRemoveWhere(
+                    rule => rule is CommonDrop boneSwordRule && boneSwordRule.itemId == ItemID.BoneSword,
+                    reattachChains: true
+                );
+            }
+
+            // Skeletron Boss: Remove SkeletronHand drop rule from being chained onto SkeletronMaskRule
+            if (npc.type == NPCID.SkeletronHead && false)
+            {
+                foreach (IItemDropRule rule in npcLoot.Get())
+                {
+                    if (rule is ItemDropWithConditionRule skeletronMaskRule && skeletronMaskRule.itemId == ItemID.SkeletronMask && skeletronMaskRule.condition is Conditions.NotExpert)
+                    {
+                        foreach (IItemDropRuleChainAttempt maskChain in skeletronMaskRule.ChainedRules)
+                        {
+                            if (maskChain.RuleToChain is CommonDrop skeletronHandRule && skeletronHandRule.itemId == ItemID.SkeletronHand)
+                            {
+                                foreach (IItemDropRuleChainAttempt handChain in new List<IItemDropRuleChainAttempt>(skeletronHandRule.ChainedRules))
+                                {
+                                    if (handChain.RuleToChain is CommonDrop bookOfSkullsDrop && bookOfSkullsDrop.itemId == ItemID.BookofSkulls)
+                                    {
+                                        skeletronHandRule.ChainedRules.Remove(handChain);
+                                        skeletronHandRule.ChainedRules.AddRange(bookOfSkullsDrop.ChainedRules);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // OR with my extensions
+
+            if (npc.type == NPCID.SkeletronHead)
+            {
+                npcLoot.RecursiveRemoveWhere(
+                    rule =>
+                        rule.ParentRule(1) is ItemDropWithConditionRule skeletronMaskRule && skeletronMaskRule.itemId == ItemID.SkeletronMask && skeletronMaskRule.condition is Conditions.NotExpert &&
+                        rule is CommonDrop skeletronHandRule && skeletronHandRule.itemId == ItemID.SkeletronHand,
+                    reattachChains: true
+                );
+            }
+
+            // Remove FrostBrand from Ice Mimic options
+            if (npc.type == NPCID.IceMimic && false)
             {
                 foreach (var rule in npcLoot.Get())
                 {
-                    if (rule is CommonDrop commonDrop)
+                    if (rule is CommonDrop cd && cd.itemId == ItemID.ToySled)
                     {
-                        foreach (var chainedRule in commonDrop.ChainedRules)
+                        foreach (var chainedRule in cd.ChainedRules)
                         {
                             if (chainedRule is TryIfFailedRandomRoll tryIfFailedRoll && tryIfFailedRoll.RuleToChain is OneFromOptionsDropRule ofoDrop && ofoDrop.dropIds.Contains(ItemID.Frostbrand))
                             {
-                                List<int> dropIds = ofoDrop.dropIds.ToList();
-                                dropIds.Remove(ItemID.Frostbrand);
-                                ofoDrop.dropIds = dropIds.ToArray();
+                                ofoDrop.dropIds = ofoDrop.dropIds.ToList().Where(itemId => itemId != ItemID.Frostbrand).ToArray();
                             }
                         }
                     }
                 }
             }
+
+            // OR with my extensions
+
+            if (npc.type == NPCID.IceMimic)
+            {
+                OneFromOptionsDropRule iceMimicOptions = npcLoot.Find<OneFromOptionsDropRule>(rule => rule.ParentRule(1) is CommonDrop cd && cd.itemId == ItemID.ToySled);
+                iceMimicOptions.dropIds = iceMimicOptions.dropIds.ToList().Where(itemId => itemId != ItemID.Frostbrand).ToArray();
+            }
         }
     }
-
-
-
 }
