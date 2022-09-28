@@ -53,7 +53,7 @@ namespace GarnsMod.CodingTools
 
         public static float Cardinal(this float n)
         {
-            return n > 0 ? 1 : n == 0 ? 0 : n;
+            return n > 0 ? 1 : n == 0 ? 0 : -1;
         }
 
         public static void Deconstruct(this Vector2 v, out float x, out float y)
