@@ -22,22 +22,23 @@ namespace GarnsMod.Content.Items.Weapons.Melee.SlasherSwords
         public override void SetDefaults()
         {
             Item.damage = 200;
-            Item.useTime = 52;
-            Item.useAnimation = 26;
+            Item.useTime = 22;
+            Item.useAnimation = 22; 
             Item.useStyle = ItemUseStyleID.Swing;
             Item.autoReuse = true;
             Item.useTurn = false;
+            
             Item.UseSound = null;
             Item.width = 66;
             Item.height = 66;
-            Item.shootSpeed = 20f;
+            Item.shootSpeed = 18f;
             Item.shoot = ModContent.ProjectileType<RainbowSpiralStar>();
             Item.DamageType = DamageClass.Melee;
             Item.knockBack = 6;
             Item.crit = 12;
             Item.value = Item.buyPrice(gold: 10);
             Item.rare = ItemRarityID.Pink;
-            Item.scale = 1.25f;
+            Item.scale = 1.35f;
         }
 
         public override void MeleeEffects(Player player, Rectangle hitbox)
@@ -63,11 +64,15 @@ namespace GarnsMod.Content.Items.Weapons.Melee.SlasherSwords
 
         public override void ModifyShootStats(Player player, ref Vector2 position, ref Vector2 velocity, ref int type, ref int damage, ref float knockback)
         {
-            position += velocity.SafeNormalize(default) * 40; // Make it spawn a bit further ahead
+            position += velocity.SafeNormalize(default) * 20; // Make it spawn a bit further ahead
+            velocity *= player.GetAttackSpeed(DamageClass.Melee)*1.25f;
+
         }
 
         public override bool Shoot(Player player, EntitySource_ItemUse_WithAmmo source, Vector2 position, Vector2 velocity, int type, int damage, float knockback)
         {
+            Item.UseSound = SoundID.DD2_BetsyFireballShot;
+
             int randomIndex = Main.rand.Next(RainbowColors.Count);
             Projectile.NewProjectileDirect(source, position, velocity, type, damage, knockback, player.whoAmI, 0.25f, randomIndex);
             Projectile.NewProjectileDirect(source, position, velocity, type, damage, knockback, player.whoAmI, 0.75f, (randomIndex + 1) % RainbowColors.Count);
@@ -76,7 +81,7 @@ namespace GarnsMod.Content.Items.Weapons.Melee.SlasherSwords
 
         #region SlasherOverrides
 
-        public float Offset => 0f;
+        public float Offset => 0.25f;
 
         public bool CanResetImmunity { get; set; }
 
