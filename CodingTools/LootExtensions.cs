@@ -43,6 +43,13 @@ namespace GarnsMod.CodingTools
         {
             return RecursiveRemove(null, shouldRemove, rootRule, reattachChains, stopAtFirst);
         }
+
+        /// <summary>
+        /// Main entry point into RecursiveRemoveMain. RecursiveRemoveMain should only ever be called by this method or itself. This method marks the dictionary as in use and will clear
+        /// it and unmark after (unless some other call earlier on the method call stack was using it first, in which case it will let that method unmark and clear it [this is so that you
+        /// can use RecursiveRemoveMain within RecursiveFind predicates without causing issues with the dictionary being modified during the predicates]) Note: can't think of many use cases
+        /// for having RecursiveRemove within RecursiveFind predicates, but there are definitely some. It would be more common to use RecursiveFind within RecursiveRemove
+        /// </summary>
         public static bool RecursiveRemove(ILoot loot, Predicate<IItemDropRule> shouldRemove, IItemDropRule rootRule, bool reattachChains = false, bool stopAtFirst = true)
         {
             bool wasInuse = DictionaryInUse;
@@ -120,12 +127,19 @@ namespace GarnsMod.CodingTools
         }
 
 
+        /// <summary>
+        /// Recursively loops through this ILoot instance looking for any rule of type T that matches the given predicate, returning it. If no match is found, it will
+        /// recursively loop through the children of that child and try to find one, so on and so forth
+        /// </summary>
         public static bool Has<T>(this ILoot loot, Predicate<T> query) where T : IItemDropRule
         {
             return loot.Find(query) is not null;
         }
 
-        /// <summary>Recursively loops through this ILoot instance and looks for the first IItemDropRule of type T that matches the given predicate</summary>
+        /// <summary>
+        /// Recursively loops through this ILoot instance and looks for the first IItemDropRule of type T that matches the given predicate. If no match is found, it will
+        /// recursively loop through the children of that child and try to find one, so on and so forth
+        /// </summary>
         public static T Find<T>(this ILoot loot, Predicate<T> query) where T : IItemDropRule
         {
             foreach (IItemDropRule rootRule in loot.Get())
@@ -139,22 +153,52 @@ namespace GarnsMod.CodingTools
             return default;
         }
 
+        /// <summary>
+        /// Recursively loops through the children (IItemDropRules that are chained onto this rule) of this rule and sees if any are of type T that matches the given predicate. If no match is
+        /// found, it will recursively loop through the children of that child and try to find one, so on and so forth
+        /// </summary>
         public static bool HasChild<T>(this IItemDropRule root, Predicate<T> query) where T : IItemDropRule
         {
             return root.FindChild(query) is not null;
         }
 
-        /// <summary>Recursively loops through the children (rules that are chained onto this rule) of this rule and looks for the first IItemDropRule of type T that matches the given predicate</summary>
+        /// <summary>
+        /// Recursively loops through the children (IItemDropRules that are chained onto this rule) of this rule and sees if any are of type T that matches the given predicate. If no match is
+        /// found, it will recursively loop through the children of that child and try to find one, so on and so forth
+        /// </summary>
+        public static bool HasChild<T>(this IItemDropRule root, int nthChild, Predicate<T> query) where T : IItemDropRule
+        {
+            return root.FindChild(nthChild, query) is not null;
+        }
+
+        /// <summary>
+        /// Recursively loops through the children (IItemDropRules that are chained onto this rule) of this rule and looks for the first of type T that matches the given predicate. If no match is
+        /// found, it will then recursively loop through the children of that child and try to find one, so on and so forth
+        /// </summary>
         public static T FindChild<T>(this IItemDropRule root, Predicate<T> query) where T : IItemDropRule
         {
             return RecursiveFind(root, query);
         }
 
-        public static T RecursiveFind<T>(IItemDropRule root, Predicate<T> query) where T : IItemDropRule
+        /// <summary>
+        /// Recursively loops through the children (IItemDropRules that are chained onto this rule) of this rule and looks for the first of type T that matches the given predicate. If no match is
+        /// found, it will then recursively loop through the children of that child and try to find one, so on and so forth
+        /// </summary>
+        public static T FindChild<T>(this IItemDropRule root, int nthChild, Predicate<T> query) where T : IItemDropRule
+        {
+            return RecursiveFind(root, query, nthChild);
+        }
+
+        /// <summary>
+        /// Main entry point into RecursiveFindMain. RecursiveFindMain should only ever be called by this method or itself. This method marks the dictionary as in use and will clear
+        /// it and unmark after (unless some other call earlier on the method call stack was using it first, in which case it will let that method unmark and clear it [this is so that you
+        /// can use RecursiveFind within RecursiveRemoveWhere predicates without causing issues with the dictionary being modified during the predicates])
+        /// </summary>
+        public static T RecursiveFind<T>(IItemDropRule root, Predicate<T> query, int? nthChild = null) where T : IItemDropRule
         {
             bool wasInUse = DictionaryInUse;
             DictionaryInUse = true;
-            T result = RecursiveFindMain(query, root);
+            T result = RecursiveFindMain(query, root, root, nthChild);
             if (!wasInUse)
             {
                 DictionaryInUse = false;
@@ -167,9 +211,10 @@ namespace GarnsMod.CodingTools
         /// Checks if currRule is of type T and matches the given predicate. If it does it will be returned. If not, it will recursively call this method
         /// again on the children of currRule
         /// </summary>
-        private static T RecursiveFindMain<T>(Predicate<T> query, IItemDropRule currRule) where T : IItemDropRule
+        private static T RecursiveFindMain<T>(Predicate<T> query, IItemDropRule rootRule, IItemDropRule currRule, int? nthChild = null) where T : IItemDropRule
         {
-            if (currRule is T castedRule && query(castedRule))
+            // Could not have rootRule param and ParentRule(n) check and instead we could have n param that starts at 0 and goes up on each recursion for efficiency
+            if (currRule != rootRule && currRule is T castedRule && query(castedRule) && (nthChild is not int n || castedRule.ParentRule(n) == rootRule))
             {
                 return castedRule;
             }
@@ -180,7 +225,7 @@ namespace GarnsMod.CodingTools
                     IItemDropRule child = chainAttempt.RuleToChain;
                     child.RegisterParent(currRule, chainAttempt);
 
-                    if (RecursiveFindMain(query, child) is T result)
+                    if (RecursiveFindMain(query, rootRule, currRule: child, nthChild) is T result)
                     {
                         return result;
                     }
@@ -230,7 +275,7 @@ namespace GarnsMod.CodingTools
         {
             if (!DictionaryInUse)
             {
-                throw new Exception("IItemDropRule.ParentRule() can only be used in the context of predicates within RecursiveFind, RecursiveFindChild, RecursiveRemoveWhere, or RecursiveRemoveChildren");
+                throw new Exception("IItemDropRule.ParentRule() can only be used in the context of predicates within RecursiveFind (Find<T>, Has<T>, FindChild<T>, HasChild<T>) or RecursiveRemove (RecursiveRemoveWhere, RecursiveRemoveChildren)");
             }
 
             return ParentDictionary.TryGetValue(rule, out ParentWithChain parentWithChain) ? parentWithChain.Parent : null;
