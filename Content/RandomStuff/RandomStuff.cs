@@ -147,133 +147,140 @@ namespace GarnsMod.Content.RandomStuff
     {
         public override void ModifyNPCLoot(NPC npc, NPCLoot npcLoot)
         {
-            // Skeleton: Remove BoneSword drop rule from being chained onto AncientGold drop rule, which is chained onto AncientIron drop rule
-            if (npc.type == NPCID.Skeleton && false)
-            {
-                foreach (IItemDropRule rule in npcLoot.Get())
-                {
-                    if (rule is CommonDrop ancientIronDrop && ancientIronDrop.itemId == ItemID.AncientIronHelmet)
-                    {
-                        foreach (IItemDropRuleChainAttempt chainFromAncientIron in ancientIronDrop.ChainedRules)
-                        {
-                            if (chainFromAncientIron.RuleToChain is CommonDrop ancientGoldDrop && ancientGoldDrop.itemId == ItemID.AncientGoldHelmet)
-                            {
-                                foreach (IItemDropRuleChainAttempt chainFromAncientGold in new List<IItemDropRuleChainAttempt>(ancientGoldDrop.ChainedRules))
-                                {
-                                    if (chainFromAncientGold.RuleToChain is CommonDrop boneSwordRule && boneSwordRule.itemId == ItemID.BoneSword)
-                                    {
-                                        // Remove boneSwordRule from being chained to ancientGoldDrop
-                                        ancientGoldDrop.ChainedRules.Remove(chainFromAncientGold);
-
-                                        // And then chain everything that was chained to boneSwordRule onto ancientGoldDrop. If we forget this, some loot will be lost. (with just your mod enabled,
-                                        // the skull drop will be lost). With other mods enabled, if they chained stuff onto the boneSwordRule, those chains would also be lost
-                                        ancientGoldDrop.ChainedRules.AddRange(boneSwordRule.ChainedRules);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            // OR (any of these 3, preferably the first). Normally I would always use the first. I repeated this one in 3 different styles to show
-            // how you can use ParentRule() (or not use it) to be more specific / less specific about which rule to remove)
-
-            // Most specific, safest
-            // Any BoneSword CommonDrop that is chained onto any AncientGoldHelemet CommonDrop that is chained onto any AncientIronDrop will be removed
+            // Goal: Remove BoneSword CommonDrop from being chained onto AncientGoldHelmet CommonDrop, which is chained onto AncientIron CommonDrop
+            // Constraints:
+            //     The BoneSword drop must a CommonDrop chained to its parent via a TryIfFailedRandomRoll chain. Its itemId must be BoneSword
+            //     The BoneSword's immediate parent (parent 1) must be a CommonDrop chained to its parent via TryIfFailedRandomRoll, and it must drop AncientGoldHelmet
+            //     The BoneSword's second parent (parent 2) (aka parent 1's immediate parent) must be a CommonDrop that drops AncientIronHelmet (no chain constraint!!)
+            // Chains will be re-attached so further loot (Skull drop) is not lost
             if (npc.type == NPCID.Skeleton)
             {
-                npcLoot.RecursiveRemoveWhere(
-                    rule =>
-                        rule.ParentRule(2) is CommonDrop ancientIronDrop && ancientIronDrop.itemId == ItemID.AncientIronHelmet &&
-                        rule.ParentRule(1) is CommonDrop ancientGoldDrop && ancientGoldDrop.itemId == ItemID.AncientGoldHelmet &&
-                        rule is CommonDrop boneSwordRule && boneSwordRule.itemId == ItemID.BoneSword,
+                npcLoot.RemoveWhere<TryIfFailedRandomRoll, CommonDrop>(
+                    boneSwordDrop =>
+                        boneSwordDrop.itemId == ItemID.BoneSword &&
+                        boneSwordDrop.HasParentRuleWhere<TryIfFailedRandomRoll, CommonDrop>(ancientGoldDrop => ancientGoldDrop.itemId == ItemID.AncientGoldHelmet, nthParent: 1) &&
+                        boneSwordDrop.HasParentRuleWhere<CommonDrop>(ancientIronDrop => ancientIronDrop.itemId == ItemID.AncientIronHelmet, nthParent: 2),
                     reattachChains: true
                 );
             }
 
-            // Slightly specific, slightly Less Safe
-            // Any BoneSword CommonDrop chained onto any AncientGoldHelemet CommonDrop will be removed
-            if (npc.type == NPCID.Skeleton && false)
-            {
-                npcLoot.RecursiveRemoveWhere(
-                    rule =>
-                        rule.ParentRule(1) is CommonDrop ancientGoldDrop && ancientGoldDrop.itemId == ItemID.AncientGoldHelmet &&
-                        rule is CommonDrop boneSwordRule && boneSwordRule.itemId == ItemID.BoneSword,
-                    reattachChains: true
-                );
-            }
-
-            // Even Less Safe (any BoneSword in the loot will be removed)
-            if (npc.type == NPCID.Skeleton && false)
-            {
-                npcLoot.RecursiveRemoveWhere(
-                    rule => rule is CommonDrop boneSwordRule && boneSwordRule.itemId == ItemID.BoneSword,
-                    reattachChains: true
-                );
-            }
-
-            // Skeletron Boss: Remove SkeletronHand drop rule from being chained onto SkeletronMaskRule
-            if (npc.type == NPCID.SkeletronHead && false)
-            {
-                foreach (IItemDropRule rule in npcLoot.Get())
-                {
-                    if (rule is ItemDropWithConditionRule skeletronMaskRule && skeletronMaskRule.itemId == ItemID.SkeletronMask && skeletronMaskRule.condition is Conditions.NotExpert)
-                    {
-                        foreach (IItemDropRuleChainAttempt maskChain in skeletronMaskRule.ChainedRules)
-                        {
-                            if (maskChain.RuleToChain is CommonDrop skeletronHandRule && skeletronHandRule.itemId == ItemID.SkeletronHand)
-                            {
-                                foreach (IItemDropRuleChainAttempt handChain in new List<IItemDropRuleChainAttempt>(skeletronHandRule.ChainedRules))
-                                {
-                                    if (handChain.RuleToChain is CommonDrop bookOfSkullsDrop && bookOfSkullsDrop.itemId == ItemID.BookofSkulls)
-                                    {
-                                        skeletronHandRule.ChainedRules.Remove(handChain);
-                                        skeletronHandRule.ChainedRules.AddRange(bookOfSkullsDrop.ChainedRules);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            // OR with my extensions
-
+            // Skeletron Boss: Remove book of skulls drop rule from being failure chained onto SkeletronHandRule, which is failure chained onto SkeletronMaskRule 
             if (npc.type == NPCID.SkeletronHead)
             {
-                npcLoot.RecursiveRemoveWhere(
-                    rule =>
-                        rule.ParentRule(1) is ItemDropWithConditionRule skeletronMaskRule && skeletronMaskRule.itemId == ItemID.SkeletronMask && skeletronMaskRule.condition is Conditions.NotExpert &&
-                        rule is CommonDrop skeletronHandRule && skeletronHandRule.itemId == ItemID.SkeletronHand,
+                npcLoot.RemoveWhere<CommonDrop>(
+                    bookOfSkullsDrop =>
+                        bookOfSkullsDrop.itemId == ItemID.BookofSkulls &&
+                        bookOfSkullsDrop.HasParentRuleWhere<TryIfFailedRandomRoll, CommonDrop>(skeletronHandRule => skeletronHandRule.itemId == ItemID.SkeletronHand, nthParent: 1) &&
+                        bookOfSkullsDrop.HasParentRuleWhere<CommonDrop>(skeletronMaskRule => skeletronMaskRule.itemId == ItemID.SkeletronMask, nthParent: 2),
                     reattachChains: true
                 );
             }
 
+
+
             // Remove FrostBrand from Ice Mimic options
-            if (npc.type == NPCID.IceMimic && false)
-            {
-                foreach (var rule in npcLoot.Get())
-                {
-                    if (rule is CommonDrop cd && cd.itemId == ItemID.ToySled)
-                    {
-                        foreach (var chainedRule in cd.ChainedRules)
-                        {
-                            if (chainedRule is TryIfFailedRandomRoll tryIfFailedRoll && tryIfFailedRoll.RuleToChain is OneFromOptionsDropRule ofoDrop && ofoDrop.dropIds.Contains(ItemID.Frostbrand))
-                            {
-                                ofoDrop.dropIds = ofoDrop.dropIds.ToList().Where(itemId => itemId != ItemID.Frostbrand).ToArray();
-                            }
-                        }
-                    }
-                }
-            }
-
-            // OR with my extensions
-
             if (npc.type == NPCID.IceMimic)
             {
-                OneFromOptionsDropRule iceMimicOptions = npcLoot.Find<OneFromOptionsDropRule>(rule => rule.ParentRule(1) is CommonDrop cd && cd.itemId == ItemID.ToySled);
-                iceMimicOptions.dropIds = iceMimicOptions.dropIds.ToList().Where(itemId => itemId != ItemID.Frostbrand).ToArray();
+                OneFromOptionsDropRule iceMimicOptions = npcLoot.FindRuleWhere<TryIfFailedRandomRoll, OneFromOptionsDropRule>(
+                    rule => rule.HasParentRuleWhere<CommonDrop>(toySledDrop => toySledDrop.itemId == ItemID.ToySled, nthParent: 1)
+                );
+                iceMimicOptions.dropIds = iceMimicOptions.dropIds.Where(itemId => itemId != ItemID.Frostbrand).ToArray();
+            }
+
+
+            // TONS OF EXAMPLES OF USING THE EXTENSIONS IN HERE
+
+            if (npc.type == NPCID.GreenSlime)
+            {
+                // FIRST BRANCH
+                // Hellstone chained onto Obsidian chained onto Gold chained onto Silver chained onto Iron chained onto Copper
+                npcLoot.Add(ItemDropRule.Common(ItemID.CopperOre, 2))
+                    .OnSuccess(ItemDropRule.Common(ItemID.IronOre, 2))
+                        .OnSuccess(ItemDropRule.Common(ItemID.SilverOre, 2))
+                            .OnSuccess(ItemDropRule.Common(ItemID.GoldOre, 2))
+                                .OnSuccess(ItemDropRule.Common(ItemID.Obsidian, 2))
+                                    .OnSuccess(ItemDropRule.Common(ItemID.Hellstone, 2));
+
+                // SECOND BRANCH
+                // Silver chained onto Gold chained onto Silver chained onto Iron chained onto Silver chained onto Copper
+                npcLoot.Add(ItemDropRule.Common(ItemID.CopperOre, 4, 2, 2))
+                    .OnFailedRoll(ItemDropRule.Common(ItemID.SilverOre, 4, 2, 2))
+                        .OnFailedRoll(ItemDropRule.Common(ItemID.IronOre, 4, 2, 2))
+                            .OnFailedRoll(ItemDropRule.Common(ItemID.SilverOre, 4, 2, 2))
+                                .OnFailedRoll(ItemDropRule.Common(ItemID.GoldOre, 4, 2, 2))
+                                    .OnFailedRoll(ItemDropRule.Common(ItemID.SilverOre, 4, 2, 2));
+
+
+                // Remove all CommonDrop(Silver) in the loot tree
+                if (false)
+                {
+                    npcLoot.RemoveWhere<CommonDrop>(
+                        silverDrop => silverDrop.itemId == ItemID.SilverOre,
+                        stopAtFirst: false,
+                        reattachChains: true
+                    );
+                }
+
+                // Remove all CommonDrop(Silver) that is chained to IronOre
+                if (false)
+                {
+                    npcLoot.RemoveWhere<CommonDrop>(
+                        silverDrop =>
+                            silverDrop.itemId == ItemID.SilverOre &&
+                            silverDrop.HasParentRuleWhere<CommonDrop>(ironDrop => ironDrop.itemId == ItemID.IronOre, nthParent: 1),
+                        stopAtFirst: false,
+                        reattachChains: true
+                    ); ;
+                }
+
+                // Remove all CommonDrop(Silver) that is chained to IronOre via TryIfSucceeded chain
+                if (false)
+                {
+                    npcLoot.RemoveWhere<TryIfSucceeded, CommonDrop>(
+                        silverDrop =>
+                            silverDrop.itemId == ItemID.SilverOre &&
+                            silverDrop.HasParentRuleWhere<CommonDrop>(ironDrop => ironDrop.itemId == ItemID.IronOre, nthParent: 1),
+                        stopAtFirst: false,
+                        reattachChains: true
+                    );
+                }
+
+
+                // Remove all CommonDrop(Silver) that is chained to IronOre. The IronOre must be chained to its parent via a TryIfFailedRandomRoll chain
+                if (false)
+                {
+                    npcLoot.RemoveWhere<CommonDrop>(
+                        silverDrop =>
+                            silverDrop.itemId == ItemID.SilverOre &&
+                            silverDrop.HasParentRuleWhere<TryIfFailedRandomRoll, CommonDrop>(ironDrop => ironDrop.itemId == ItemID.IronOre, nthParent: 1),
+                        stopAtFirst: false,
+                        reattachChains: true
+                    );
+                }
+
+                // THIS ONE SHOWS JUST HOW SPECIFIC YOU CAN GET. THIS MATCHES THE EXACT GEOMETRY OF THE FIRST BRANCH. ***Checking the children isn't rlly necessary***
+
+                // Change false to true to test
+                // Removes the first SilverOre CommonDrop who is chained from its parent via a TryIfFailedRandomRoll, whose parent is an IronOre CommonDrop chained via a TryIfFailedRandomRoll, whose parent is a CopperOre CommonDrop
+                // the SilverOre CommonDrop must also have a GoldOre CommonDrop in its ChainedRules chained by TryIfFailedRandomRoll, that has an ObsidianOre CommonDrop in its ChainedRules chained by TryIfFailedRandomRoll,
+                // that has a HellstoneOre CommonDrop in its ChainedRules chained by TryIfFailedRandomRoll. Super specific.
+                // Chains will be reattached after removing, meaning that the GoldOre CommonDrop will now be chained onto the parent of the removed CommonDrop
+                // if it exists (in this case IronOre)
+                if (false)
+                {
+                    npcLoot.RemoveWhere<TryIfFailedRandomRoll, CommonDrop>(
+                        cd =>
+                            cd.HasParentRuleWhere<CommonDrop>(copperDrop => copperDrop.itemId == ItemID.CopperOre, nthParent: 2) &&
+                            cd.HasParentRuleWhere<TryIfFailedRandomRoll, CommonDrop>(ironDrop => ironDrop.itemId == ItemID.IronOre, nthParent: 1) &&
+                            cd.itemId == ItemID.SilverOre &&
+                            cd.HasChildWhere<TryIfFailedRandomRoll, CommonDrop>(goldDrop => goldDrop.itemId == ItemID.GoldOre, nthChild: 1) &&
+                            cd.HasChildWhere<TryIfFailedRandomRoll, CommonDrop>(obsidianDrop => obsidianDrop.itemId == ItemID.Obsidian, nthChild: 2) &&
+                            cd.HasChildWhere<TryIfFailedRandomRoll, CommonDrop>(hellstoneDrop => hellstoneDrop.itemId == ItemID.Hellstone, nthChild: 3),
+                        reattachChains: true, // if this was false, Gold, Obsidian, and Hellstone drops would be lost too
+                        stopAtFirst: true // stopAtFirst is true by default, just showing it here so you knowit exists
+                    ); ;
+                }
+                
             }
         }
     }
