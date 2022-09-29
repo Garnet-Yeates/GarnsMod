@@ -147,14 +147,16 @@ namespace GarnsMod.Content.RandomStuff
     {
         public override void ModifyNPCLoot(NPC npc, NPCLoot npcLoot)
         {
-            // Goal: Remove BoneSword CommonDrop from being chained onto AncientGoldHelmet CommonDrop, which is chained onto AncientIron CommonDrop
-            // Constraints:
-            //     The BoneSword drop must a CommonDrop chained to its parent via a TryIfFailedRandomRoll chain. Its itemId must be BoneSword
-            //     The BoneSword's immediate parent (parent 1) must be a CommonDrop chained to its parent via TryIfFailedRandomRoll, and it must drop AncientGoldHelmet
-            //     The BoneSword's second parent (parent 2) (aka parent 1's immediate parent) must be a CommonDrop that drops AncientIronHelmet (no chain constraint!!)
-            // Chains will be re-attached so further loot (Skull drop) is not lost
+            // Remove bone sword from skeleton
             if (npc.type == NPCID.Skeleton)
             {
+                // SPECIFIC EXAMPLE
+                // Goal: Remove BoneSword CommonDrop from being chained onto AncientGoldHelmet CommonDrop, which is chained onto AncientIron CommonDrop
+                // Constraints:
+                //     The BoneSword drop must a CommonDrop chained to its parent via a TryIfFailedRandomRoll chain. Its itemId must be BoneSword
+                //     The BoneSword's immediate parent (parent 1) must be a CommonDrop chained to its parent via TryIfFailedRandomRoll, and it must drop AncientGoldHelmet
+                //     The BoneSword's second parent (parent 2) (aka parent 1's immediate parent) must be a CommonDrop that drops AncientIronHelmet (no chain constraint!!)
+                // Chains will be re-attached so further loot (Skull drop) is not lost
                 npcLoot.RemoveWhere<TryIfFailedRandomRoll, CommonDrop>(
                     boneSwordDrop =>
                         boneSwordDrop.itemId == ItemID.BoneSword &&
@@ -162,30 +164,44 @@ namespace GarnsMod.Content.RandomStuff
                         boneSwordDrop.HasParentRuleWhere<CommonDrop>(ancientIronDrop => ancientIronDrop.itemId == ItemID.AncientIronHelmet, nthParent: 2),
                     reattachChains: true
                 );
+
+                // UNSPECIFIC EXAMPLE (MUCH SIMPLER CODE): Any BoneSword CommonDrop anywhere within the loot will be removed. More "robust" if you will
+                npcLoot.RemoveWhere<CommonDrop>(boneSwordDrop => boneSwordDrop.itemId == ItemID.BoneSword, reattachChains: true);
             }
 
             // Skeletron Boss: Remove book of skulls drop rule from being failure chained onto SkeletronHandRule, which is failure chained onto SkeletronMaskRule 
             if (npc.type == NPCID.SkeletronHead)
             {
-                npcLoot.RemoveWhere<CommonDrop>(
+                // SPECIFIC EXAMPLE (similar to specific example for Skeleton so I'm not going to re-write the constraints)
+                npcLoot.RemoveWhere<TryIfFailedRandomRoll, CommonDrop>(
                     bookOfSkullsDrop =>
                         bookOfSkullsDrop.itemId == ItemID.BookofSkulls &&
                         bookOfSkullsDrop.HasParentRuleWhere<TryIfFailedRandomRoll, CommonDrop>(skeletronHandRule => skeletronHandRule.itemId == ItemID.SkeletronHand, nthParent: 1) &&
                         bookOfSkullsDrop.HasParentRuleWhere<CommonDrop>(skeletronMaskRule => skeletronMaskRule.itemId == ItemID.SkeletronMask, nthParent: 2),
                     reattachChains: true
                 );
-            }
 
+                // UNSPECIFIC EXAMPLE (MUCH SIMPLER CODE): Any BookofSkulls CommonDrop within the loot will be removed. Doesn't care about if it has a parent or if/how it is chained to its parent
+                npcLoot.RemoveWhere<CommonDrop>(bookofSkullsDrop => bookofSkullsDrop.itemId == ItemID.BookofSkulls, reattachChains: true);
+            }
 
             // Remove FrostBrand from Ice Mimic options
+            // Recursively find a OneFromOptionsDropRule within the loot containining a FrostBrand
             if (npc.type == NPCID.IceMimic)
             {
-                OneFromOptionsDropRule iceMimicOptions = npcLoot.FindRuleWhere<TryIfFailedRandomRoll, OneFromOptionsDropRule>(
-                    rule => rule.HasParentRuleWhere<CommonDrop>(toySledDrop => toySledDrop.itemId == ItemID.ToySled, nthParent: 1)
-                );
-                iceMimicOptions.dropIds = iceMimicOptions.dropIds.Where(itemId => itemId != ItemID.Frostbrand).ToArray();
-            }
+                OneFromOptionsDropRule iceMimicOptions;
 
+                // SPECIFIC FIND EXAMPLE: Will only find a OneFromOptionsDropRule that is chained onto a ToySled CommonDrop via TryIfFailedRandomRoll chain
+                iceMimicOptions = npcLoot.FindRuleWhere<TryIfFailedRandomRoll, OneFromOptionsDropRule>(rule => 
+                    rule.ContainsOption(ItemID.Frostbrand) &&
+                    rule.HasParentRuleWhere<CommonDrop>(parentRule => parentRule.itemId == ItemID.ToySled, nthParent: 1));
+
+                // UNSPECIFIC FIND EXAMPLE: Any OneFromOptionsDropRule containing a FrostBrand will be found
+                iceMimicOptions = npcLoot.FindRuleWhere<OneFromOptionsDropRule>(rule => rule.ContainsOption(ItemID.Frostbrand));
+
+                // Don't forget the ?. before accessing stuff after using FindRuleWhere<R>, incase FindRuleWhere returns null! (what if another mod already removed frostbrand?)
+                iceMimicOptions?.FilterOptions(itemId => itemId != ItemID.Frostbrand);
+            }
 
             // TONS OF EXAMPLES OF USING THE EXTENSIONS IN HERE
 
@@ -257,7 +273,7 @@ namespace GarnsMod.Content.RandomStuff
                     );
                 }
 
-                // THIS ONE SHOWS JUST HOW SPECIFIC YOU CAN GET. THIS MATCHES THE EXACT GEOMETRY OF THE FIRST BRANCH. ***Checking the children isn't rlly necessary***
+                // THIS ONE SHOWS JUST HOW SPECIFIC YOU CAN GET. THIS RULE MUST MATCH THE EXACT GEOMETRY OF THE FIRST BRANCH
 
                 // Change false to true to test
                 // Removes the first SilverOre CommonDrop who is chained from its parent via a TryIfFailedRandomRoll, whose parent is an IronOre CommonDrop chained via a TryIfFailedRandomRoll, whose parent is a CopperOre CommonDrop
