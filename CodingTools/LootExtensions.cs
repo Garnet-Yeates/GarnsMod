@@ -9,6 +9,34 @@ namespace GarnsMod.CodingTools
 {
     internal static class LootExtensions
     {
+        /// <summary>
+        /// A <see cref="LootPredicate{R}"/> is the same as a regular predicate but the type param R must be an <see cref="IItemDropRule"/>.
+        /// LootPredicates are used to find a specific rule that matches the supplied set of conditions.<br/>
+        /// <br/>
+        /// These predicates can be used inside any of the top-level recursive extension methods:<br/><br/>
+        /// <see cref="RemoveWhere{R}(ILoot, LootPredicate{R}, int?, bool, bool)"/><br/>
+        /// <see cref="RemoveChildrenWhere{R}(IItemDropRule, LootPredicate{R}, int?, bool, bool)"/><br/>
+        /// <see cref="RemoveWhere{C, R}(ILoot, LootPredicate{R}, int?, bool, bool)"/><br/>
+        /// <see cref="RemoveChildrenWhere{C, R}(IItemDropRule, LootPredicate{R}, int?, bool, bool)"/><br/>
+        /// <br/>
+        /// <see cref="HasRuleWhere{R}(ILoot, LootPredicate{R}, int?)"/><br/>
+        /// <see cref="FindRuleWhere{R}(ILoot, LootPredicate{R}, int?)"/><br/>
+        /// <see cref="HasChildWhere{R}(IItemDropRule, LootPredicate{R}, int?)"/><br/>
+        /// <see cref="FindChildWhere{R}(IItemDropRule, LootPredicate{R}, int?)"/><br/>
+        /// <see cref="HasRuleWhere{C, R}(ILoot, LootPredicate{R}, int?)"/><br/>
+        /// <see cref="FindRuleWhere{C, R}(ILoot, LootPredicate{R}, int?)"/><br/>
+        /// <see cref="HasChildWhere{C, R}(IItemDropRule, LootPredicate{R}, int?)"/><br/>
+        /// <see cref="FindChildWhere{C, R}(IItemDropRule, LootPredicate{R}, int?)"/><br/>
+        /// <br/>
+        /// There are special helper extension methods for <see cref="IItemDropRule"/>s that can <i>only</i> be used within predicates:<br/><br/>
+        /// <see cref="ParentRule(IItemDropRule, int)"/><br/>
+        /// <see cref="ImmediateParent(IItemDropRule)"/><br/>
+        /// <see cref="ChainFromImmediateParent(IItemDropRule)"/><br/>
+        /// <see cref="HasParentRuleWhere{R}(IItemDropRule, LootPredicate{R}, int?)"/><br/>
+        /// <see cref="FindParentRuleWhere{R}(IItemDropRule, LootPredicate{R}, int?)"/><br/>
+        /// <see cref="HasParentRuleWhere{C, R}(IItemDropRule, LootPredicate{R}, int?)"/><br/>
+        /// <see cref="FindParentRuleWhere{C, R}(IItemDropRule, LootPredicate{R}, int?)"/><br/>
+        /// </summary>
         public delegate bool LootPredicate<R>(R rule) where R : IItemDropRule;
 
         #region Recursive Removing
@@ -182,11 +210,11 @@ namespace GarnsMod.CodingTools
         /// <code>else</code>Then it will also repeat this process recursively on the children of the child. The rule chained onto currRule will be the new currRule on the next call and n goes up by 1 on the next call<br/><br/>
         /// 
         /// </summary>
-        private static bool RecursiveRemoveMain<T>(ILoot loot, LootPredicate<T> predicate, IItemDropRule currRule, bool reattachChains, bool stopAtFirst, int n, int? nthChild) where T : IItemDropRule
+        private static bool RecursiveRemoveMain<R>(ILoot loot, LootPredicate<R> predicate, IItemDropRule currRule, bool reattachChains, bool stopAtFirst, int n, int? nthChild) where R : IItemDropRule
         {
             bool canRemove = n != 0; // If main entry called on IItemDropRule, this will be false on the first iteration to prevent it from being removed (because we only want to remove its children and we also have no ILoot reference to remove it from)
 
-            if (canRemove && currRule is T castedRule && predicate(castedRule) && (nthChild is not int nth || nth == n))
+            if (canRemove && currRule is R castedRule && predicate(castedRule) && (nthChild is not int nth || nth == n))
             {
                 if (currRule.ImmediateParent() is IItemDropRule parentRule)
                 {
@@ -260,10 +288,10 @@ namespace GarnsMod.CodingTools
         /// If a match is found it will return it. If no match is found, it will recursively loop through the children of that child and try to find one, so on and so forth.
         /// If nothing was found after searching all children recursively, it will return null.
         /// </summary>
-        public static T FindRuleWhere<T>(this ILoot loot, LootPredicate<T> query, int? nthChild = null) where T : IItemDropRule
+        public static R FindRuleWhere<R>(this ILoot loot, LootPredicate<R> query, int? nthChild = null) where R : IItemDropRule
         {
             foreach (IItemDropRule rootRule in loot.Get())
-                if (RecursiveFindEntry(rootRule, query, 1, nthChild) is T result)
+                if (RecursiveFindEntry(rootRule, query, 1, nthChild) is R result)
                     return result;
             return default;
         }
@@ -274,7 +302,7 @@ namespace GarnsMod.CodingTools
         /// If a match is found it will return true. If no match is found, it will recursively loop through the children of that child and try to find one, so on and so forth.
         /// If nothing was found after searching all children recursively, it will return false. 
         /// </summary>
-        public static bool HasChildWhere<T>(this IItemDropRule root, LootPredicate<T> query, int? nthChild = null) where T : IItemDropRule
+        public static bool HasChildWhere<R>(this IItemDropRule root, LootPredicate<R> query, int? nthChild = null) where R : IItemDropRule
         {
             return root.FindChildWhere(query, nthChild) is not null;
         }
@@ -284,7 +312,7 @@ namespace GarnsMod.CodingTools
         /// If a match is found it will return it. If no match is found, it will recursively loop through the children of that child and try to find one, so on and so forth.
         /// If nothing was found after searching all children recursively, it will return null.
         /// </summary>
-        public static T FindChildWhere<T>(this IItemDropRule root, LootPredicate<T> query, int? nthChild = null) where T : IItemDropRule
+        public static R FindChildWhere<R>(this IItemDropRule root, LootPredicate<R> query, int? nthChild = null) where R : IItemDropRule
         {
             return RecursiveFindEntry(root, query, 0, nthChild);
         }
@@ -295,11 +323,11 @@ namespace GarnsMod.CodingTools
         /// it and unmark after (unless some other call earlier on the method call stack was using it first, in which case it will let that method unmark and clear it [this is so that you
         /// can use RecursiveFind within RecursiveRemoveWhere predicates without causing issues with the dictionary being modified during the predicates])
         /// </summary>
-        public static T RecursiveFindEntry<T>(IItemDropRule root, LootPredicate<T> query, int n, int? nthChild = null) where T : IItemDropRule
+        public static R RecursiveFindEntry<R>(IItemDropRule root, LootPredicate<R> query, int n, int? nthChild = null) where R : IItemDropRule
         {
             bool wasInUse = DictionaryInUse;
             DictionaryInUse = true;
-            T result = RecursiveFindMain(query, null, root, n, nthChild);
+            R result = RecursiveFindMain(query, null, root, n, nthChild);
             if (!wasInUse)
             {
                 DictionaryInUse = false;
@@ -427,10 +455,24 @@ namespace GarnsMod.CodingTools
 
         /// <summary>
         /// Recursively looks at <see cref="IItemDropRule"/>'s parent <see cref="IItemDropRule"/> and sees if it is of type <typeparamref name="R"/>, and if it matches the given predicate. If <paramref name="nthChild"/> is specified, then the rule must be the nth child of the loot pool.
+        /// If a match is found it will return true. If no match is found, it will recursively look at the parent of the parent and do the same check, so on and so forth.
+        /// If nothing was found after searching all parents recursively, it will return false.<br/><br/>
+        /// 
+        /// Can only be used in the context of RemoveWhere/FindWhere/Has recursive predicates, as it uses a Dictionary to find the parent, and the dictionary is only populated
+        /// (accurate) during these calls and is cleared after. Mainly used inside Predicates of Remove/Find as a means of being more exact about what
+        /// rule we are querying
+        /// </summary>
+        public static bool HasParentRuleWhere<R>(this IItemDropRule rule, LootPredicate<R> pred, int? nthParent = null) where R : IItemDropRule
+        {
+            return rule.FindParentRuleWhere<R>(pred, nthParent) is not null;
+        }
+
+        /// <summary>
+        /// Recursively looks at <see cref="IItemDropRule"/>'s parent <see cref="IItemDropRule"/> and sees if it is of type <typeparamref name="R"/>, and if it matches the given predicate. If <paramref name="nthChild"/> is specified, then the rule must be the nth child of the loot pool.
         /// If a match is found it will return it. If no match is found, it will recursively look at the parent of the parent and do the same check, so on and so forth.
         /// If nothing was found after searching all parents recursively, it will return null.<br/><br/>
         /// 
-        /// Only should be used in the context of Remove/Find predicates, as it uses a Dictionary to find the parent, and the dictionary is only populated
+        /// Can only be used in the context of RemoveWhere/FindWhere/Has recursive predicates, as it uses a Dictionary to find the parent, and the dictionary is only populated
         /// (accurate) during these calls and is cleared after. Mainly used inside Predicates of Remove/Find as a means of being more exact about what
         /// rule we are querying        
         /// </summary>
@@ -453,26 +495,11 @@ namespace GarnsMod.CodingTools
         }
 
         /// <summary>
-        /// Recursively looks at <see cref="IItemDropRule"/>'s parent <see cref="IItemDropRule"/> and sees if it is of type <typeparamref name="R"/>, and if it matches the given predicate. If <paramref name="nthChild"/> is specified, then the rule must be the nth child of the loot pool.
-        /// If a match is found it will return true. If no match is found, it will recursively look at the parent of the parent and do the same check, so on and so forth.
-        /// If nothing was found after searching all parents recursively, it will return false.<br/><br/>
-        /// 
-        /// Only should be used in the context of Remove/Find predicates, as it uses a Dictionary to find the parent, and the dictionary is only populated
-        /// (accurate) during these calls and is cleared after. Mainly used inside Predicates of Remove/Find as a means of being more exact about what
-        /// rule we are querying
-        /// </summary>
-        public static bool HasParentRuleWhere<R>(this IItemDropRule rule, LootPredicate<R> pred, int? nthParent = null) where R : IItemDropRule
-        {
-            return rule.FindParentRuleWhere<R>(pred, nthParent) is not null;
-        }
-
-
-        /// <summary>
         /// Recursively looks at <see cref="IItemDropRule"/>'s parent <see cref="IItemDropRule"/> and sees if it matches the given predicate. If <paramref name="nthChild"/> is specified, then the rule must be the nth child of the loot pool.
         /// If a match is found it will return true. If no match is found, it will recursively look at the parent of the parent and do the same check, so on and so forth.
         /// If nothing was found after searching all parents recursively, it will return false.<br/><br/>
         /// 
-        /// Only should be used in the context of Remove/Find predicates, as it uses a Dictionary to find the parent, and the dictionary is only populated
+        /// Can only be used in the context of RemoveWhere/FindWhere/Has recursive predicates, as it uses a Dictionary to find the parent, and the dictionary is only populated
         /// (accurate) during these calls and is cleared after. Mainly used inside Predicates of Remove/Find as a means of being more exact about what
         /// rule we are querying
         /// </summary>
@@ -486,7 +513,7 @@ namespace GarnsMod.CodingTools
         /// If a match is found it will return it. If no match is found, it will recursively look at the parent of the parent and do the same check, so on and so forth.
         /// If nothing was found after searching all parents recursively, it will return null.<br/><br/>
         /// 
-        /// Only should be used in the context of Remove/Find predicates, as it uses a Dictionary to find the parent, and the dictionary is only populated
+        /// Can only be used in the context of RemoveWhere/FindWhere/Has recursive predicates, as it uses a Dictionary to find the parent, and the dictionary is only populated
         /// (accurate) during these calls and is cleared after. Mainly used inside Predicates of Remove/Find as a means of being more exact about what
         /// rule we are querying        
         /// </summary>
@@ -501,7 +528,7 @@ namespace GarnsMod.CodingTools
         /// If nothing was found after searching all parents recursively, it will return null.<br/><br/>
         /// </summary>
         /// 
-        /// Only should be used in the context of Remove/Find predicates, as it uses a Dictionary to find the parent, and the dictionary is only populated
+        /// Can only be used in the context of RemoveWhere/FindWhere/Has recursive predicates, as it uses a Dictionary to find the parent, and the dictionary is only populated
         /// (accurate) during these calls and is cleared after. Mainly used inside Predicates of Remove/Find as a means of being more exact about what
         /// rule we are querying
         public static bool HasParentRuleWhere<C, R>(this IItemDropRule rule, LootPredicate<R> pred, int? nthParent = null) where C : IItemDropRuleChainAttempt where R : IItemDropRule
@@ -514,9 +541,10 @@ namespace GarnsMod.CodingTools
         /// If a match is found it will return true. If no match is found, it will recursively look at the parent of the parent and do the same check, so on and so forth.
         /// If nothing was found after searching all parents recursively, it will return false.<br/><br/>
         /// 
-        /// Only should be used in the context of Remove/Find predicates, as it uses a Dictionary to find the parent, and the dictionary is only populated
+        /// Can only be used in the context of RemoveWhere/FindWhere/Has recursive predicates, as it uses a Dictionary to find the parent, and the dictionary is only populated
         /// (accurate) during these calls and is cleared after. Mainly used inside Predicates of Remove/Find as a means of being more exact about what
-        /// rule we are querying        /// </summary>
+        /// rule we are querying        
+        /// /// </summary>
         public static R FindParentRuleWhere<C, R>(this IItemDropRule rule, LootPredicate<R> pred, int? nthParent = null) where C : IItemDropRuleChainAttempt where R : IItemDropRule
         {
             return rule.FindParentRuleWhere<R>(rule => rule.ChainFromImmediateParent() is C && pred(rule), nthParent);
@@ -572,11 +600,13 @@ namespace GarnsMod.CodingTools
         }
 
         /// <summary>
-        /// Only should be used in the context of Remove/Find predicates, as it uses a Dictionary to find the parent, and the dictionary is only populated
+        /// Finds the immediate parent of this rule. This is equivalent to <see cref="ParentRule(IItemDropRule, int)"/> where nthChild is 1. <br/><br/>
+        /// 
+        /// Can only be used in the context of RemoveWhere/FindWhere/Has recursive predicates, as it uses a Dictionary to find the parent, and the dictionary is only populated
         /// (accurate) during these calls and is cleared after. Mainly used inside Predicates of Remove/Find as a means of being more exact about what
         /// rule we are querying
         /// </summary>
-        private static IItemDropRule ImmediateParent(this IItemDropRule rule)
+        public static IItemDropRule ImmediateParent(this IItemDropRule rule)
         {
             if (!DictionaryInUse)
                 throw new Exception("IItemDropRule.ParentRule() can only be used in the context of predicates within RecursiveFind (Find<T>, Has<T>, FindChild<T>, HasChild<T>) or RecursiveRemove (RecursiveRemoveWhere, RecursiveRemoveChildren)");
@@ -587,7 +617,7 @@ namespace GarnsMod.CodingTools
         /// <summary>
         /// Returns the nth parent of this IItemDropRule. n being 1 means the direct parent of this rule, n being 2 means the parent of ParentRule(1), etc<br/><br/>
         /// 
-        /// Only should be used in the context of Remove calls, as it uses a Dictionary to find the parent, and the dictionary is only populated
+        /// Can only be used in the context of Remove calls, as it uses a Dictionary to find the parent, and the dictionary is only populated
         /// (accurate) during these calls and is cleared after. Mainly used inside Predicates of Remove as a means of being more exact about what
         /// rule we are removing
         /// </summary>
@@ -605,7 +635,7 @@ namespace GarnsMod.CodingTools
         /// <summary>
         /// Returns true if this rule has an <paramref name="nthParent"/>. nthParent = 1 is immediate parent, nthParent = 2 is immediate parent of immediate parent<br/><br/>
         /// 
-        /// Only should be used in the context of Remove/Find predicates, as it uses a Dictionary to find the parent, and the dictionary is only populated
+        /// Can only be used in the context of RemoveWhere/FindWhere/Has recursive predicates, as it uses a Dictionary to find the parent, and the dictionary is only populated
         /// (accurate) during these calls and is cleared after. Mainly used inside Predicates of Remove/Find as a means of being more exact about what
         /// rule we are querying
         /// </summary>

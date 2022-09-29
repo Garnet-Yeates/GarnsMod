@@ -177,7 +177,6 @@ namespace GarnsMod.Content.RandomStuff
             }
 
 
-
             // Remove FrostBrand from Ice Mimic options
             if (npc.type == NPCID.IceMimic)
             {
