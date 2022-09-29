@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Data;
+using System.Linq;
 using Terraria.GameContent.ItemDropRules;
 using Terraria.ModLoader;
 
@@ -445,6 +446,56 @@ namespace GarnsMod.CodingTools
         public static void Clear(this ILoot loot)
         {
             loot.RemoveWhere(_ => true);
+        }
+
+        public static bool ContainsOption(this OneFromOptionsDropRule oneFromOptionsRule, int option)
+        {
+            return oneFromOptionsRule.dropIds.Contains(option);
+        }
+
+        public static void FilterOptions(this OneFromOptionsDropRule oneFromOptionsRule, Predicate<int> predicate)
+        {
+            oneFromOptionsRule.dropIds = oneFromOptionsRule.dropIds.Where(new Func<int, bool>(predicate)).ToArray();
+        }
+
+        public static bool ContainsOption(this OneFromOptionsNotScaledWithLuckDropRule oneFromOptionsRule, int option)
+        {
+            return oneFromOptionsRule.dropIds.Contains(option);
+        }
+
+        public static void FilterOptions(this OneFromOptionsNotScaledWithLuckDropRule oneFromOptionsRule, Predicate<int> predicate)
+        {
+            oneFromOptionsRule.dropIds = oneFromOptionsRule.dropIds.Where(new Func<int, bool>(predicate)).ToArray();
+        }
+
+        public static bool ContainsOption(this OneFromRulesRule oneFromRulesRule, IItemDropRule ruleOption)
+        {
+            return oneFromRulesRule.options.Contains(ruleOption);
+        }
+
+        public static void FilterOptions(this OneFromRulesRule oneFromRulesRule, Predicate<IItemDropRule> predicate)
+        {
+            oneFromRulesRule.options = oneFromRulesRule.options.Where(new Func<IItemDropRule, bool>(predicate)).ToArray();
+        }
+
+        public static bool ContainsRule(this SequentialRulesRule sequentialRulesRule, IItemDropRule ruleOption)
+        {
+            return sequentialRulesRule.rules.Contains(ruleOption);
+        }
+
+        public static void FilterSequentialRules(this SequentialRulesRule sequentialRulesRule, Predicate<IItemDropRule> predicate)
+        {
+            sequentialRulesRule.rules = sequentialRulesRule.rules.Where(new Func<IItemDropRule, bool>(predicate)).ToArray();
+        }
+
+        public static bool ContainsRule(this SequentialRulesNotScalingWithLuckRule sequentialRulesRule, IItemDropRule ruleOption)
+        {
+            return sequentialRulesRule.rules.Contains(ruleOption);
+        }
+
+        public static void FilterSequentialRules(this SequentialRulesNotScalingWithLuckRule sequentialRulesRule, Predicate<IItemDropRule> predicate)
+        {
+            sequentialRulesRule.rules = sequentialRulesRule.rules.Where(new Func<IItemDropRule, bool>(predicate)).ToArray();
         }
 
         #endregion
