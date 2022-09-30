@@ -5,11 +5,21 @@ using System.Data;
 using System.Linq;
 using Terraria.GameContent.ItemDropRules;
 using Terraria.ModLoader;
+using static Terraria.GameContent.ItemDropRules.Chains;
 
 namespace GarnsMod.CodingTools
 {
     internal static class LootExtensions
     {
+        /// <summary>
+        /// When reattachChains is set to true in any of the recursive removal methods, and a rule currRule is removed, it will reattach the child chains of the 
+        /// currRule onto the parent or currRule. This is so currRule's children are not also lost. By default it will use whatever the ChainAttempt is between
+        /// currRule => child. Supplying a ChainReattacher function will allow you to create a chain yourself between the parent of currRule and the child of
+        /// currRule. The <paramref name="ruleToChain"/> parameter of this delegate is a reference to one of currRule's children (this function will be called for
+        /// each of currRule's children)
+        /// </summary>
+        public delegate IItemDropRuleChainAttempt ChainReattcher(IItemDropRule ruleToChain);
+
         /// <summary>
         /// A <see cref="LootPredicate{R}"/> is the same as a regular predicate but the type param R must be an <see cref="IItemDropRule"/>.
         /// LootPredicates are used to find a specific rule that matches the supplied set of conditions.<br/>
@@ -29,7 +39,7 @@ namespace GarnsMod.CodingTools
         /// <see cref="HasChildWhere{C, R}(IItemDropRule, LootPredicate{R}, int?)"/><br/>
         /// <see cref="FindChildWhere{C, R}(IItemDropRule, LootPredicate{R}, int?)"/><br/>
         /// <br/>
-        /// There are special helper extension methods for <see cref="IItemDropRule"/>s that can <i>only</i> be used within predicates:<br/><br/>
+        /// There are also special helper extension methods for <see cref="IItemDropRule"/>s that can <i>only</i> be used within these predicates:<br/><br/>
         /// <see cref="ParentRule(IItemDropRule, int)"/><br/>
         /// <see cref="ImmediateParent(IItemDropRule)"/><br/>
         /// <see cref="ChainFromImmediateParent(IItemDropRule)"/><br/>
@@ -60,13 +70,13 @@ namespace GarnsMod.CodingTools
         ///
         /// Note: A rule (a) is considered the parent to another rule (b) if (b) exists in (a)'s <see cref="IItemDropRule.ChainedRules"/> array
         /// </summary>
-        public static bool RemoveWhere<R>(this ILoot loot, LootPredicate<R> predicate, int? nthChild = null, bool reattachChains = false, bool stopAtFirst = true) where R : IItemDropRule
+        public static bool RemoveWhere<R>(this ILoot loot, LootPredicate<R> predicate, int? nthChild = null, bool reattachChains = false, ChainReattcher chainReattacher = null, bool stopAtFirst = true) where R : IItemDropRule
         {
             bool removedAny = false;
 
             foreach (IItemDropRule rootRule in loot.Get())
             {
-                if (RecursiveRemoveEntry(loot, predicate, rootRule, reattachChains, stopAtFirst, 1, nthChild))
+                if (RecursiveRemoveEntry(loot, predicate, rootRule, reattachChains, chainReattacher, stopAtFirst, 1, nthChild))
                 {
                     removedAny = true;
 
@@ -95,9 +105,9 @@ namespace GarnsMod.CodingTools
         /// 
         /// Note: A rule (a) is considered the parent to another rule (b) if (b) exists in (a)'s <see cref="IItemDropRule.ChainedRules"/> array
         /// </summary>
-        public static bool RemoveChildrenWhere<R>(this IItemDropRule rootRule, LootPredicate<R> predicate, int? nthChild = null, bool reattachChains = false, bool stopAtFirst = true) where R : IItemDropRule
+        public static bool RemoveChildrenWhere<R>(this IItemDropRule rootRule, LootPredicate<R> predicate, int? nthChild = null, bool reattachChains = false, ChainReattcher chainReattacher = null, bool stopAtFirst = true) where R : IItemDropRule
         {
-            return RecursiveRemoveEntry(null, predicate, rootRule, reattachChains, stopAtFirst, 0, nthChild);
+            return RecursiveRemoveEntry(null, predicate, rootRule, reattachChains, chainReattacher, stopAtFirst, 0, nthChild);
         }
 
         /// <summary>
@@ -106,11 +116,11 @@ namespace GarnsMod.CodingTools
         /// can use RecursiveRemoveMain within RecursiveFind predicates without causing issues with the dictionary being modified during the predicates]) Note: can't think of many use cases
         /// for having RecursiveRemove within RecursiveFind predicates, but there are definitely some. It would be more common to use RecursiveFind within RecursiveRemove
         /// </summary>
-        public static bool RecursiveRemoveEntry<R>(ILoot loot, LootPredicate<R> predicate, IItemDropRule rootRule, bool reattachChains, bool stopAtFirst, int n, int? nthChild) where R : IItemDropRule
+        public static bool RecursiveRemoveEntry<R>(ILoot loot, LootPredicate<R> predicate, IItemDropRule rootRule, bool reattachChains, ChainReattcher chainReattacher, bool stopAtFirst, int n, int? nthChild) where R : IItemDropRule
         {
             bool wasInuse = DictionaryInUse;
             DictionaryInUse = true;
-            bool result = RecursiveRemoveMain(loot, predicate, rootRule, reattachChains, stopAtFirst, n, nthChild);
+            bool result = RecursiveRemoveMain(loot, predicate, rootRule, reattachChains, chainReattacher, stopAtFirst, n, nthChild);
             if (!wasInuse)
             {
                 DictionaryInUse = false;
@@ -137,13 +147,13 @@ namespace GarnsMod.CodingTools
         /// 
         /// Note: A rule (a) is considered the parent to another rule (b) if (b) exists in (a)'s <see cref="IItemDropRule.ChainedRules"/> array
         /// </summary>
-        public static bool RemoveWhere<C, R>(this ILoot loot, LootPredicate<R> predicate, int? nthChild = null, bool reattachChains = false, bool stopAtFirst = true) where C : IItemDropRuleChainAttempt where R : IItemDropRule
+        public static bool RemoveWhere<C, R>(this ILoot loot, LootPredicate<R> predicate, int? nthChild = null, bool reattachChains = false, ChainReattcher chainReattacher = null, bool stopAtFirst = true) where C : IItemDropRuleChainAttempt where R : IItemDropRule
         {
             bool removedAny = false;
 
             foreach (IItemDropRule rootRule in loot.Get())
             {
-                if (RecursiveRemoveEntry<C, R>(loot, predicate, rootRule, reattachChains, stopAtFirst, 1, nthChild))
+                if (RecursiveRemoveEntry<C, R>(loot, predicate, rootRule, reattachChains, chainReattacher, stopAtFirst, 1, nthChild))
                 {
                     removedAny = true;
 
@@ -172,9 +182,9 @@ namespace GarnsMod.CodingTools
         /// 
         /// Note: A rule (a) is considered the parent to another rule (b) if (b) exists in (a)'s <see cref="IItemDropRule.ChainedRules"/> array
         /// </summary>
-        public static bool RemoveChildrenWhere<C, R>(this IItemDropRule rootRule, LootPredicate<R> predicate, int? nthChild = null, bool reattachChains = false, bool stopAtFirst = true) where C : IItemDropRuleChainAttempt where R : IItemDropRule
+        public static bool RemoveChildrenWhere<C, R>(this IItemDropRule rootRule, LootPredicate<R> predicate, int? nthChild = null, bool reattachChains = false, ChainReattcher chainReattacher = null, bool stopAtFirst = true) where C : IItemDropRuleChainAttempt where R : IItemDropRule
         {
-            return RecursiveRemoveEntry<C, R>(null, predicate, rootRule, reattachChains, stopAtFirst, 0, nthChild);
+            return RecursiveRemoveEntry<C, R>(null, predicate, rootRule, reattachChains, chainReattacher, stopAtFirst, 0, nthChild);
         }
 
         /// <summary>
@@ -183,11 +193,11 @@ namespace GarnsMod.CodingTools
         /// can use RecursiveRemoveMain within RecursiveFind predicates without causing issues with the dictionary being modified during the predicates]) Note: can't think of many use cases
         /// for having RecursiveRemove within RecursiveFind predicates, but there are definitely some. It would be more common to use RecursiveFind within RecursiveRemove
         /// </summary>
-        public static bool RecursiveRemoveEntry<C, R>(ILoot loot, LootPredicate<R> predicate, IItemDropRule rootRule, bool reattachChains, bool stopAtFirst, int n, int? nthChild) where C : IItemDropRuleChainAttempt where R : IItemDropRule
+        public static bool RecursiveRemoveEntry<C, R>(ILoot loot, LootPredicate<R> predicate, IItemDropRule rootRule, bool reattachChains, ChainReattcher chainReattacher, bool stopAtFirst, int n, int? nthChild) where C : IItemDropRuleChainAttempt where R : IItemDropRule
         {
             bool wasInuse = DictionaryInUse;
             DictionaryInUse = true;
-            bool result = RecursiveRemoveMain<R>(loot, (rule) => rule.ChainFromImmediateParent() is C && predicate(rule), rootRule, reattachChains, stopAtFirst, n, nthChild);
+            bool result = RecursiveRemoveMain<R>(loot, (rule) => rule.ChainFromImmediateParent() is C && predicate(rule), rootRule, reattachChains, chainReattacher, stopAtFirst, n, nthChild);
             if (!wasInuse)
             {
                 DictionaryInUse = false;
@@ -211,7 +221,7 @@ namespace GarnsMod.CodingTools
         /// <code>else</code>Then it will also repeat this process recursively on the children of the child. The rule chained onto currRule will be the new currRule on the next call and n goes up by 1 on the next call<br/><br/>
         /// 
         /// </summary>
-        private static bool RecursiveRemoveMain<R>(ILoot loot, LootPredicate<R> predicate, IItemDropRule currRule, bool reattachChains, bool stopAtFirst, int n, int? nthChild) where R : IItemDropRule
+        private static bool RecursiveRemoveMain<R>(ILoot loot, LootPredicate<R> predicate, IItemDropRule currRule, bool reattachChains, ChainReattcher chainReattacher, bool stopAtFirst, int n, int? nthChild) where R : IItemDropRule
         {
             bool canRemove = n != 0; // If main entry called on IItemDropRule, this will be false on the first iteration to prevent it from being removed (because we only want to remove its children and we also have no ILoot reference to remove it from)
 
@@ -219,7 +229,7 @@ namespace GarnsMod.CodingTools
             {
                 if (currRule.ImmediateParent() is IItemDropRule parentRule)
                 {
-                    currRule.RemoveFromParent(reattachChains);
+                    currRule.RemoveFromParent(reattachChains, chainReattacher);
 
                     if (reattachChains && !stopAtFirst)
                     {
@@ -255,7 +265,7 @@ namespace GarnsMod.CodingTools
                     IItemDropRule child = chainAttempt.RuleToChain;
                     child.SetParent(newParent, chainAttempt);
 
-                    if (RecursiveRemoveMain(loot, predicate, child, reattachChains, stopAtFirst, nextN, nthChild))
+                    if (RecursiveRemoveMain(loot, predicate, child, reattachChains, chainReattacher, stopAtFirst, nextN, nthChild))
                     {
                         removedAny = true;
 
@@ -317,7 +327,6 @@ namespace GarnsMod.CodingTools
         {
             return RecursiveFindEntry(root, query, 0, nthChild);
         }
-
 
         /// <summary>
         /// Main entry point into RecursiveFindMain. RecursiveFindMain should only ever be called by this method or itself. This method marks the dictionary as in use and will clear
@@ -411,7 +420,7 @@ namespace GarnsMod.CodingTools
             // itself isn't queried and returned if it happens to match the predicate (because we only want to query its children). n will be initially set to 1 when called on ILoot entry, 0 when called on IItemDropRule entry
             
             // n must not be 0, currRule must be of type T and match the predicate, and nthChild must not be specified (or if it is specified, n must be == nthChild)
-            if (n != 0 && currRule is R castedRule && query(castedRule) && (nthChild is not int nth || nth == n))
+            if (n != 0 && currRule is R castedRule && query(castedRule) && (nthChild is null || nthChild == n))
             {
                 return castedRule;
             }
@@ -436,66 +445,6 @@ namespace GarnsMod.CodingTools
 
                 return default; // return null
             }
-        }
-
-        #endregion
-
-        #region Other Extensions
-
-        /// <summary>Syntax sugar to clear this ILoot. What it does is calls RemoveWhere(_ => true) </summary>
-        public static void Clear(this ILoot loot)
-        {
-            loot.RemoveWhere(_ => true);
-        }
-
-        public static bool ContainsOption(this OneFromOptionsDropRule oneFromOptionsRule, int option)
-        {
-            return oneFromOptionsRule.dropIds.Contains(option);
-        }
-
-        public static void FilterOptions(this OneFromOptionsDropRule oneFromOptionsRule, Predicate<int> predicate)
-        {
-            oneFromOptionsRule.dropIds = oneFromOptionsRule.dropIds.Where(new Func<int, bool>(predicate)).ToArray();
-        }
-
-        public static bool ContainsOption(this OneFromOptionsNotScaledWithLuckDropRule oneFromOptionsRule, int option)
-        {
-            return oneFromOptionsRule.dropIds.Contains(option);
-        }
-
-        public static void FilterOptions(this OneFromOptionsNotScaledWithLuckDropRule oneFromOptionsRule, Predicate<int> predicate)
-        {
-            oneFromOptionsRule.dropIds = oneFromOptionsRule.dropIds.Where(new Func<int, bool>(predicate)).ToArray();
-        }
-
-        public static bool ContainsOption(this OneFromRulesRule oneFromRulesRule, IItemDropRule ruleOption)
-        {
-            return oneFromRulesRule.options.Contains(ruleOption);
-        }
-
-        public static void FilterOptions(this OneFromRulesRule oneFromRulesRule, Predicate<IItemDropRule> predicate)
-        {
-            oneFromRulesRule.options = oneFromRulesRule.options.Where(new Func<IItemDropRule, bool>(predicate)).ToArray();
-        }
-
-        public static bool ContainsRule(this SequentialRulesRule sequentialRulesRule, IItemDropRule ruleOption)
-        {
-            return sequentialRulesRule.rules.Contains(ruleOption);
-        }
-
-        public static void FilterSequentialRules(this SequentialRulesRule sequentialRulesRule, Predicate<IItemDropRule> predicate)
-        {
-            sequentialRulesRule.rules = sequentialRulesRule.rules.Where(new Func<IItemDropRule, bool>(predicate)).ToArray();
-        }
-
-        public static bool ContainsRule(this SequentialRulesNotScalingWithLuckRule sequentialRulesRule, IItemDropRule ruleOption)
-        {
-            return sequentialRulesRule.rules.Contains(ruleOption);
-        }
-
-        public static void FilterSequentialRules(this SequentialRulesNotScalingWithLuckRule sequentialRulesRule, Predicate<IItemDropRule> predicate)
-        {
-            sequentialRulesRule.rules = sequentialRulesRule.rules.Where(new Func<IItemDropRule, bool>(predicate)).ToArray();
         }
 
         #endregion
@@ -695,18 +644,242 @@ namespace GarnsMod.CodingTools
             return rule.ParentRule(nthParent) is not null;
         }
 
-        /// <summary>Helper method for RecursiveRemoveMain</summary>
-        private static void RemoveFromParent(this IItemDropRule rule, bool reattachChains = false)
+        /// <summary>Helper method for RecursiveRemoveMain. Removes <paramref name="removing"/> from the ChainedRules of its parent. If reattachChains
+        /// is set to true it will attach the chains between <paramref name="removing"/> and its children onto the parent of <paramref name="removing"/> so
+        /// that removing's children aren't lost. Furthermore, if <paramref name="reattcher"/> is supplied, you will be able to specify what type of chain
+        /// to reattach per-child-of-removing</summary>
+        private static void RemoveFromParent(this IItemDropRule removing, bool reattachChains = false, ChainReattcher reattcher = null)
         {
-            if (ParentDictionary.TryGetValue(rule, out ParentWithChain parentWithChain))
+            if (ParentDictionary.TryGetValue(removing, out ParentWithChain parentWithChain))
             {
-                parentWithChain.Parent.ChainedRules.Remove(parentWithChain.ChainAttempt);
+                IItemDropRule parentOfRemoving = parentWithChain.Parent;
+                parentOfRemoving.ChainedRules.Remove(parentWithChain.ChainAttempt);
 
                 if (reattachChains)
-                {
-                    parentWithChain.Parent.ChainedRules.AddRange(rule.ChainedRules);
-                }
+                    foreach (IItemDropRuleChainAttempt chainAttempt in removing.ChainedRules)
+                        parentOfRemoving.ChainedRules.Add(reattcher is null ? chainAttempt : reattcher(chainAttempt.RuleToChain));
             }
+        }
+
+        #endregion
+
+        #region Other ILoot Extensions
+
+        /// <summary>Syntax sugar to clear this ILoot. What it does is calls RemoveWhere(_ => true) </summary>
+        public static void Clear(this ILoot loot)
+        {
+            loot.RemoveWhere(_ => true);
+        }
+
+        #endregion
+
+
+        #region LeadingConditionRule Extensions
+
+        public static IItemDropRule OnConditionsMet(this LeadingConditionRule leadingCondition, params IItemDropRule[] rulesToExecute)
+        {
+            foreach (IItemDropRule rule in rulesToExecute)
+            {
+                leadingCondition.OnSuccess(rule);
+            }
+            return leadingCondition;
+        }
+
+        #endregion
+
+
+        #region OneFromOptionsDropRule Extensions
+
+        public static void AddOption(this OneFromOptionsDropRule oneFromOptionsRule, int option)
+        {
+            List<int> asList = oneFromOptionsRule.dropIds.ToList();
+            asList.Add(option);
+            oneFromOptionsRule.dropIds = asList.ToArray();
+        }
+
+        public static bool RemoveOption(this OneFromOptionsDropRule oneFromOptionsRule, int removing)
+        {
+            return oneFromOptionsRule.FilterOptions(option => option != removing);
+        }
+
+        public static bool ContainsOption(this OneFromOptionsDropRule oneFromOptionsRule, int option)
+        {
+            return oneFromOptionsRule.dropIds.Contains(option);
+        }
+
+        public static bool FilterOptions(this OneFromOptionsDropRule oneFromOptionsRule, Predicate<int> predicate)
+        {
+            bool anyFiltered = false;
+            List<int> newDropIds = new();
+            foreach (int dropId in oneFromOptionsRule.dropIds)
+            {
+                if (predicate(dropId))
+                    newDropIds.Add(dropId);
+                else
+                    anyFiltered = true;
+            }
+            oneFromOptionsRule.dropIds = newDropIds.ToArray();
+            return anyFiltered;
+        }
+
+
+        #endregion
+
+        #region OneFromOptionsNotScaledWithLuckDropRule Extensions
+
+        public static void AddOption(this OneFromOptionsNotScaledWithLuckDropRule oneFromOptionsRule, int option)
+        {
+            List<int> asList = oneFromOptionsRule.dropIds.ToList();
+            asList.Add(option);
+            oneFromOptionsRule.dropIds = asList.ToArray();
+        }
+
+        public static bool RemoveOption(this OneFromOptionsNotScaledWithLuckDropRule oneFromOptionsRule, int removing)
+        {
+            return oneFromOptionsRule.FilterOptions(option => option != removing);
+        }
+
+        public static bool ContainsOption(this OneFromOptionsNotScaledWithLuckDropRule oneFromOptionsRule, int option)
+        {
+            return oneFromOptionsRule.dropIds.Contains(option);
+        }
+
+        public static bool FilterOptions(this OneFromOptionsNotScaledWithLuckDropRule oneFromOptionsRule, Predicate<int> predicate)
+        {
+            bool anyFiltered = false;
+            List<int> newDropIds = new();
+            foreach (int dropId in oneFromOptionsRule.dropIds)
+            {
+                if (predicate(dropId))
+                    newDropIds.Add(dropId);
+                else
+                    anyFiltered = true;
+            }
+            oneFromOptionsRule.dropIds = newDropIds.ToArray();
+            return anyFiltered;
+        }
+
+        #endregion
+
+        #region OneFromRulesRule Extensions
+
+        public static void AddRule(this OneFromRulesRule oneFromRulesRule, IItemDropRule option)
+        {
+            List<IItemDropRule> asList = oneFromRulesRule.options.ToList();
+            asList.Add(option);
+            oneFromRulesRule.options = asList.ToArray();
+        }
+
+        public static bool RemoveRule(this OneFromRulesRule oneFromRulesRule, IItemDropRule removing)
+        {
+            return oneFromRulesRule.FilterRules(rule => rule != removing);
+        }
+
+        public static bool RemoveRule(this OneFromRulesRule oneFromRulesRule, Predicate<IItemDropRule> query)
+        {
+            return oneFromRulesRule.FilterRules(rule => !query(rule));
+        }
+
+        public static bool ContainsRule(this OneFromRulesRule oneFromRulesRule, IItemDropRule ruleOption)
+        {
+            return oneFromRulesRule.options.Contains(ruleOption);
+        }
+
+        public static bool FilterRules(this OneFromRulesRule oneFromRulesRule, Predicate<IItemDropRule> predicate)
+        {
+            bool anyFiltered = false;
+            List<IItemDropRule> newOptions = new();
+            foreach (IItemDropRule rule in oneFromRulesRule.options)
+            {
+                if (predicate(rule))
+                    newOptions.Add(rule);
+                else
+                    anyFiltered = true;
+            }
+            oneFromRulesRule.options = newOptions.ToArray();
+            return anyFiltered;
+        }
+
+        #endregion
+
+        #region SequentialRulesRule Extensions
+
+        public static void AddRule(this SequentialRulesRule sequentialRulesRule, IItemDropRule option)
+        {
+            List<IItemDropRule> asList = sequentialRulesRule.rules.ToList();
+            asList.Add(option);
+            sequentialRulesRule.rules = asList.ToArray();
+        }
+
+        public static bool RemoveRule(this SequentialRulesRule sequentialRulesRule, IItemDropRule removing)
+        {
+            return sequentialRulesRule.FilterRules(rule => rule != removing);
+        }
+
+        public static bool RemoveRule(this SequentialRulesRule sequentialRulesRule, Predicate<IItemDropRule> query)
+        {
+            return sequentialRulesRule.FilterRules(rule => !query(rule));
+        }
+
+        public static bool ContainsRule(this SequentialRulesRule sequentialRulesRule, IItemDropRule ruleOption)
+        {
+            return sequentialRulesRule.rules.Contains(ruleOption);
+        }
+
+        public static bool FilterRules(this SequentialRulesRule sequentialRulesRule, Predicate<IItemDropRule> predicate)
+        {
+            bool anyFiltered = false;
+            List<IItemDropRule> newRules = new();
+            foreach (IItemDropRule rule in sequentialRulesRule.rules)
+            {
+                if (predicate(rule))
+                    newRules.Add(rule);
+                else
+                    anyFiltered = true;
+            }
+            sequentialRulesRule.rules = newRules.ToArray();
+            return anyFiltered;
+        }
+
+        #endregion
+
+        #region SequentialRulesNotScalingWithLuckRule Extensions
+
+        public static void AddRule(this SequentialRulesNotScalingWithLuckRule sequentialRulesRule, IItemDropRule option)
+        {
+            List<IItemDropRule> asList = sequentialRulesRule.rules.ToList();
+            asList.Add(option);
+            sequentialRulesRule.rules = asList.ToArray();
+        }
+
+        public static bool RemoveRule(this SequentialRulesNotScalingWithLuckRule sequentialRulesRule, IItemDropRule removing)
+        {
+            return sequentialRulesRule.FilterRules(rule => rule != removing);
+        }
+
+        public static bool RemoveRule(this SequentialRulesNotScalingWithLuckRule sequentialRulesRule, Predicate<IItemDropRule> query)
+        {
+            return sequentialRulesRule.FilterRules(rule => !query(rule));
+        }
+
+        public static bool ContainsRule(this SequentialRulesNotScalingWithLuckRule sequentialRulesRule, IItemDropRule ruleOption)
+        {
+            return sequentialRulesRule.rules.Contains(ruleOption);
+        }
+
+        public static bool FilterRules(this SequentialRulesNotScalingWithLuckRule sequentialRulesRule, Predicate<IItemDropRule> predicate)
+        {
+            bool anyFiltered = false;
+            List<IItemDropRule> newRules = new();
+            foreach (IItemDropRule rule in sequentialRulesRule.rules)
+            {
+                if (predicate(rule))
+                    newRules.Add(rule);
+                else
+                    anyFiltered = true;
+            }
+            sequentialRulesRule.rules = newRules.ToArray();
+            return anyFiltered;
         }
 
         #endregion

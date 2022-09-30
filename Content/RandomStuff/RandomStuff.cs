@@ -1,9 +1,11 @@
 ﻿using GarnsMod.CodingTools;
-using Humanizer;
+using GarnsMod.Content.Items.Tools;
+using GarnsMod.Content.Items.Weapons.Melee;
+using GarnsMod.Content.Items.Weapons.Melee.SlasherSwords;
 using Microsoft.Xna.Framework;
 using System;
 using System.Collections.Generic;
-using System.Data;
+using System.Data.OleDb;
 using System.Linq;
 using Terraria;
 using Terraria.Chat;
@@ -143,10 +145,151 @@ namespace GarnsMod.Content.RandomStuff
     }
 
 
+    class ExtensionUseCases : GlobalNPC
+    {
+        public override void ModifyNPCLoot(NPC npc, NPCLoot npcLoot)
+        {
+            // Example 1
+            //
+            // Remove Book of Skulls from Skeletron. Book of skulls is chained onto a CommonDrop(skeletronHandId) chained onto a ItemDropWithCondition(skeletronMaskId)
+            // Book of skulls has no further chains after it
+            //
+            // Normal way of removing a rule that is nested very far down. We must hardcode for-loops to find the exact rule and remove it from its parent rule
+            // This is pretty tedious to do do.
+            //
+            // Not only is it tedious, there are also potential compatibility issues:
+            //     What if another mod that was loaded before this mod removes the skeletron mask rule, and moved the skeletron hand rule up one level? (so the
+            //     skeletron hand rule is now at the top level, directly under NpcLoot.Get()). If this were the case, then the code below would fail to find
+            //     the SkeletronHandRule to remove the book of skulls from, because it is looking for the SkeletronHandRule chained to a SkeletronMaskRule but there
+            //     is no longer a SkeletronMaskRule in the loot (so the SkeletronHandRule has no chains, it is a direct child of loot.Get())
+            //
+            //     Essentially, if the [parent => child => child => ...] chained rule structure changes, these hard-coded loops will fail to find the drop to remove/remove from 
+            if (npc.type == NPCID.SkeletronHead && false)
+            {
+                foreach (IItemDropRule rule in npcLoot.Get())
+                {
+                    if (rule is ItemDropWithConditionRule skeletronMaskRule && skeletronMaskRule.itemId == ItemID.SkeletronMask && skeletronMaskRule.condition is Conditions.NotExpert)
+                    {
+                        foreach (IItemDropRuleChainAttempt maskChain in skeletronMaskRule.ChainedRules)
+                        {
+                            if (maskChain.RuleToChain is CommonDrop skeletronHandRule && skeletronHandRule.itemId == ItemID.SkeletronHand)
+                            {
+                                IEnumerable<IItemDropRuleChainAttempt> withoutBookOfSkulls = skeletronHandRule.ChainedRules.Where(attempt => !(attempt.RuleToChain is CommonDrop bookOfSkullsDrop && bookOfSkullsDrop.itemId == ItemID.BookofSkulls));
+                                skeletronHandRule.ChainedRules.Clear();
+                                skeletronHandRule.ChainedRules.AddRange(withoutBookOfSkulls);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Example 1
+            // 
+            // EXTENSION WAY
+            //
+            // Any BookOfSkulls CommonDrop anywhere within the loot will be removed. Doesn't care about if it has a parent or if/how it is chained to its parent. Chains are automatically re-attached
+            if (npc.type == NPCID.SkeletronHead && true)
+            {
+                npcLoot.RemoveWhere<CommonDrop>(bookofSkullsDrop => bookofSkullsDrop.itemId == ItemID.BookofSkulls, reattachChains: true);
+            }
+            
+            // Example 2
+            // 
+            // NORMAL WAY
+            // 
+            // Remove Bone Sword from Skeleton. BoneSword is chained onto a CommonDrop(ancientGoldDrop) chained onto a CommonDrop(ancientIronDrop).
+            // BoneSword has SkullDrop chained after it, and we don't want to lose that drop, so we have to re-attach the chains
+            //
+            // This is another example of doing a simple removal that unfortunately needs a lot of hard-coded nested statements
+            // Note that ALL this code is trying to achieve is simply remove BoneSwordDrop from Skeleton NPC (BoneSwordDrop is chained onto AncientGoldHelmet drop),
+            // then re-attach BoneSwordDrop's ChainedRules onto AncientGoldHelmetDrop so that the things chained after BoneSword (Skull Drop) are not lost
+            if (npc.type == NPCID.Skeleton && false)
+            {
+                foreach (IItemDropRule rule in npcLoot.Get())
+                {
+                    if (rule is CommonDrop ancientIronDrop && ancientIronDrop.itemId == ItemID.AncientIronHelmet)
+                    {
+                        foreach (IItemDropRuleChainAttempt chainFromAncientIron in ancientIronDrop.ChainedRules)
+                        {
+                            if (chainFromAncientIron.RuleToChain is CommonDrop ancientGoldDrop && ancientGoldDrop.itemId == ItemID.AncientGoldHelmet)
+                            {
+                                foreach (IItemDropRuleChainAttempt chainFromAncientGold in new List<IItemDropRuleChainAttempt>(ancientGoldDrop.ChainedRules))
+                                {
+                                    if (chainFromAncientGold.RuleToChain is CommonDrop boneSwordRule && boneSwordRule.itemId == ItemID.BoneSword)
+                                    {
+                                        ancientGoldDrop.ChainedRules.Remove(chainFromAncientGold);
+
+                                        ancientGoldDrop.ChainedRules.AddRange(boneSwordRule.ChainedRules);
+
+                                        break; // Stop at first
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Example 2
+            //
+            // EXTENSION WAY
+            //
+            // Any BoneSword CommonDrop anywhere within the loot will be removed. Doesn't care about if it has a parent or if/how it is chained to its parent. Chains are automatically re-attached
+            if (npc.type == NPCID.Skeleton && false)
+            {
+                npcLoot.RemoveWhere<CommonDrop>(boneSwordDrop => boneSwordDrop.itemId == ItemID.BoneSword, reattachChains: true);
+            }
+        }
+    }
+
+
     class NPCLootExtensionTest : GlobalNPC
     {
         public override void ModifyNPCLoot(NPC npc, NPCLoot npcLoot)
         {
+            // SIMPLIFYING STUFF FROM EXAMPLEMOD
+
+            // EXAMPLEMOD VERSION
+            // Editing an existing drop rule, but for a boss
+            // In addition to this code, we also do similar code in Common/GlobalItems/BossBagLoot.cs to edit the boss bag loot. Remember to do both if your edits should affect boss bags as well.
+            if (npc.type == NPCID.QueenBee && false)
+            {
+                foreach (var rule in npcLoot.Get())
+                {
+                    if (rule is DropBasedOnExpertMode dropBasedOnExpertMode && dropBasedOnExpertMode.ruleForNormalMode is OneFromOptionsNotScaledWithLuckDropRule oneFromOptionsDrop && oneFromOptionsDrop.dropIds.Contains(ItemID.BeeGun))
+                    {
+                        var original = oneFromOptionsDrop.dropIds.ToList();
+                        original.Add(ModContent.ItemType<NorthernStarSword>());
+                        oneFromOptionsDrop.dropIds = original.ToArray();
+                    }
+                }
+            }
+            // MY VERSION: The ?. are there because it is possible for FindRuleWhere to return null
+            if (npc.type == NPCID.QueenBee)
+            {
+                DropBasedOnExpertMode dboe = npcLoot.FindRuleWhere<DropBasedOnExpertMode>(dboe => dboe.ruleForNormalMode is OneFromOptionsNotScaledWithLuckDropRule ofo && ofo.ContainsOption(ItemID.BeeGun));
+                OneFromOptionsNotScaledWithLuckDropRule ofo = dboe?.ruleForNormalMode as OneFromOptionsNotScaledWithLuckDropRule;
+                ofo?.AddOption(ModContent.ItemType<NorthernStarSword>());
+            }
+
+            if (false)
+            {
+                // VANILLA BOSS LEADING CONDITION CLUTTER. THIS IS UGLY
+                LeadingConditionRule leadingConditionRule = new(new Conditions.NotExpert());
+                leadingConditionRule.OnSuccess(ItemDropRule.Common(ModContent.ItemType<NorthernStarSword>(), 7));
+                leadingConditionRule.OnSuccess(ItemDropRule.Common(ModContent.ItemType<RainbowBlade>()));
+                leadingConditionRule.OnSuccess(ItemDropRule.Common(ModContent.ItemType<GarnsFishingRod>(), 20));
+
+                // This looks much more readable (in my opinion)
+                npcLoot.Add(new LeadingConditionRule(new Conditions.NotExpert()).OnConditionsMet(
+                    ItemDropRule.Common(ModContent.ItemType<NorthernStarSword>(), 7),
+                    ItemDropRule.Common(ModContent.ItemType<RainbowBlade>()),
+                    ItemDropRule.Common(ModContent.ItemType<GarnsFishingRod>(), 20)
+                ));
+            }
+
+            // OTHER RANDOM EXAMPLES
+
             // Remove bone sword from skeleton
             if (npc.type == NPCID.Skeleton)
             {
@@ -165,7 +308,7 @@ namespace GarnsMod.Content.RandomStuff
                     reattachChains: true
                 );
 
-                // UNSPECIFIC EXAMPLE (MUCH SIMPLER CODE): Any BoneSword CommonDrop anywhere within the loot will be removed. More "robust" if you will
+                // UNSPECIFIC EXAMPLE (MUCH SIMPLER CODE): Any BoneSword CommonDrop anywhere within the loot will be removed. Doesn't care about if it has a parent or if/how it is chained to its parent
                 npcLoot.RemoveWhere<CommonDrop>(boneSwordDrop => boneSwordDrop.itemId == ItemID.BoneSword, reattachChains: true);
             }
 
@@ -196,7 +339,7 @@ namespace GarnsMod.Content.RandomStuff
                     rule.ContainsOption(ItemID.Frostbrand) &&
                     rule.HasParentRuleWhere<CommonDrop>(parentRule => parentRule.itemId == ItemID.ToySled, nthParent: 1));
 
-                // UNSPECIFIC FIND EXAMPLE: Any OneFromOptionsDropRule containing a FrostBrand will be found
+                // UNSPECIFIC FIND EXAMPLE: Any OneFromOptionsDropRule containing a FrostBrand will be found. Doesn't care about if it has a parent or if/how it is chained to its parent
                 iceMimicOptions = npcLoot.FindRuleWhere<OneFromOptionsDropRule>(rule => rule.ContainsOption(ItemID.Frostbrand));
 
                 // Don't forget the ?. before accessing stuff after using FindRuleWhere<R>, incase FindRuleWhere returns null! (what if another mod already removed frostbrand?)
