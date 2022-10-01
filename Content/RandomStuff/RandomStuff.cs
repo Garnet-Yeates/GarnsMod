@@ -20,8 +20,24 @@ namespace GarnsMod.Content.RandomStuff
 {
     internal class TileTest : GlobalTile
     {
+        // Not called on Multiplayer Client
         public override bool Drop(int tileX, int tileY, int type)
         {
+            List<IItemDropRule> rulesToTry = new()
+            {
+                new CoinsRule(Item.sellPrice(0, 0, 80, 0), true),
+                new OneFromRulesRule
+                (
+                    chanceDenominator: 1, chanceNumerator: 1,
+                    new CommonDrop(ItemID.SoulofFright, 1, 5, 10),
+                    new CommonDrop(ItemID.SoulofMight, 1, 5, 10),
+                    new CommonDrop(ItemID.SoulofSight, 1, 5, 10),
+                    new CommonDrop(ItemID.SoulofLight, 1, 5, 10),
+                    new CommonDrop(ItemID.SoulofNight, 1, 5, 10),
+                    new CommonDrop(ItemID.SoulofFlight, 1, 5, 10)
+                )
+            };
+
             // Return true if it isn't shadow orb/crimson heart as we don't want to modify logic for other tile such as life crystal
             if (type != TileID.ShadowOrbs)
             {
@@ -44,51 +60,21 @@ namespace GarnsMod.Content.RandomStuff
 
             bool isCrimsonHeart = frameX >= 36;
 
-            // This code adjusts the tileX and Y that we broke to make it the top left of the tile
-            int x = (Main.tile[tileX, tileY].TileFrameX != 0 && Main.tile[tileX, tileY].TileFrameX != 36) ? (tileX - 1) : tileX;
-            int y = (Main.tile[tileX, tileY].TileFrameY != 0) ? (tileY - 1) : tileY;
+            // This code adjusts the tileX and Y that we broke to make it the top left of the multitile
+            tileX = (Main.tile[tileX, tileY].TileFrameX != 0 && Main.tile[tileX, tileY].TileFrameX != 36) ? (tileX - 1) : tileX;
+            tileY = (Main.tile[tileX, tileY].TileFrameY != 0) ? (tileY - 1) : tileY;
+
+            Rectangle dropArea = new(tileX * 16, tileY * 16, 32, 32);
 
             if (isCrimsonHeart) // CRIMSON HEART LOGIC
             {
-                // TODO either replace one of the choices, add another choice, or both, or add an additional drop on top of the choice. Or all 3. You see where I'm going with this
-                List<IItemDropRule> rulesToTry = new()
-                {
-                    new CommonDrop(ItemID.CrimtaneOre, 1, 20, 60),
-                    new CoinsRule(Item.sellPrice(0, 0, 80, 0), true),
-                    new OneFromRulesRule
-                    (
-                        chanceDenominator: 1, chanceNumerator: 1,
-                        new CommonDrop(ItemID.SoulofFright, 1, 5, 10),
-                        new CommonDrop(ItemID.SoulofMight, 1, 5, 10),
-                        new CommonDrop(ItemID.SoulofSight, 1, 5, 10),
-                        new CommonDrop(ItemID.SoulofLight, 1, 5, 10),
-                        new CommonDrop(ItemID.SoulofNight, 1, 5, 10),
-                        new CommonDrop(ItemID.SoulofFlight, 1, 5, 10)
-                    )
-                };
-                rulesToTry.ForEach(rule => CustomItemDropResolver.ResolveRule(rule, CustomItemDropResolver.CreateDropAttemptInfo(new Rectangle(x * 16, y * 16, 32, 32))));
+                rulesToTry.Add(new CommonDrop(ItemID.CrimtaneOre, 1, 20, 60));
+                rulesToTry.ResolveRules(CustomItemDropResolver.CreateDropAttemptInfo(dropArea));
             }
             else // SHADOW ORB LOGIC
             {
-                // TODO either replace one of the choices, add another choice, or both, or add an additional drop on top of the choice. Or all 3. You see where I'm going with this
-
-                // Example of me using this. Make sure it is never called on mp client netmode
-                List<IItemDropRule> rulesToTry = new()
-                {
-                    new CommonDrop(ItemID.DemoniteOre, 1, 20, 60),
-                    new CoinsRule(Item.sellPrice(0, 0, 80, 0), true),
-                    new OneFromRulesRule
-                    (
-                        chanceDenominator: 1, chanceNumerator: 1,
-                        new CommonDrop(ItemID.SoulofFright, 1, 5, 10),
-                        new CommonDrop(ItemID.SoulofMight, 1, 5, 10),
-                        new CommonDrop(ItemID.SoulofSight, 1, 5, 10),
-                        new CommonDrop(ItemID.SoulofLight, 1, 5, 10),
-                        new CommonDrop(ItemID.SoulofNight, 1, 5, 10),
-                        new CommonDrop(ItemID.SoulofFlight, 1, 5, 10)
-                    )
-                };
-                rulesToTry.ForEach(rule => CustomItemDropResolver.ResolveRule(rule, CustomItemDropResolver.CreateDropAttemptInfo(new Rectangle(x * 16, y * 16, 32, 32))));
+                rulesToTry.Add(new CommonDrop(ItemID.DemoniteOre, 1, 20, 60));
+                rulesToTry.ResolveRules(CustomItemDropResolver.CreateDropAttemptInfo(dropArea));
             }
 
             // Has to do with spawing the corresponding boss and putting text in the chat. If you forget this part then the bosses wont spawn
@@ -101,16 +87,16 @@ namespace GarnsMod.Content.RandomStuff
                 if (!(NPC.AnyNPCs(NPCID.BrainofCthulhu) && isCrimsonHeart) && !(NPC.AnyNPCs(NPCID.EaterofWorldsHead) && !isCrimsonHeart))
                 {
                     WorldGen.shadowOrbCount = 0;
-                    float num5 = x * 16;
-                    float num6 = y * 16;
+                    float x = tileX * 16;
+                    float y = tileY * 16;
                     float num7 = -1f;
                     int plr = 0;
-                    for (int num8 = 0; num8 < 255; num8++)
+                    for (int i = 0; i < 255; i++)
                     {
-                        float num9 = Math.Abs(Main.player[num8].position.X - num5) + Math.Abs(Main.player[num8].position.Y - num6);
+                        float num9 = Math.Abs(Main.player[i].position.X - x) + Math.Abs(Main.player[i].position.Y - y);
                         if (num9 < num7 || num7 == -1f)
                         {
-                            plr = num8;
+                            plr = i;
                             num7 = num9;
                         }
                     }
@@ -240,7 +226,7 @@ namespace GarnsMod.Content.RandomStuff
                 npcLoot.RemoveWhere<CommonDrop>(boneSwordDrop => boneSwordDrop.itemId == ItemID.BoneSword, reattachChains: true);
             }
         }
-    }
+    };
 
 
     class NPCLootExtensionTest : GlobalNPC
