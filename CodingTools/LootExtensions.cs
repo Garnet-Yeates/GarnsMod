@@ -1,8 +1,7 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Data;
 using System.Linq;
+using Terraria;
 using Terraria.GameContent.ItemDropRules;
 using Terraria.ModLoader;
 using static Terraria.GameContent.ItemDropRules.Chains;
@@ -12,7 +11,7 @@ namespace GarnsMod.CodingTools
     internal static class LootExtensions
     {
         /// <summary>
-        /// When reattachChains is set to true in any of the recursive removal methods, and a rule currRule is removed, it will reattach the child chains of the 
+        /// When reattachChains is set to true in any of the recursive removal methods, and a rule <paramref name="ruleToChain"/> is removed, it will reattach the child chains of the 
         /// currRule onto the parent or currRule. This is so currRule's children are not also lost. By default it will use whatever the ChainAttempt is between
         /// currRule => child. Supplying a ChainReattacher function will allow you to create a chain yourself between the parent of currRule and the child of
         /// currRule. The <paramref name="ruleToChain"/> parameter of this delegate is a reference to one of currRule's children (this function will be called for
@@ -25,10 +24,10 @@ namespace GarnsMod.CodingTools
         /// LootPredicates are used to find a specific rule that matches the supplied set of conditions.<br/>
         /// <br/>
         /// These predicates can be used inside any of the top-level recursive extension methods:<br/><br/>
-        /// <see cref="RemoveWhere{R}(ILoot, LootPredicate{R}, int?, bool, bool)"/><br/>
-        /// <see cref="RemoveChildrenWhere{R}(IItemDropRule, LootPredicate{R}, int?, bool, bool)"/><br/>
-        /// <see cref="RemoveWhere{C, R}(ILoot, LootPredicate{R}, int?, bool, bool)"/><br/>
-        /// <see cref="RemoveChildrenWhere{C, R}(IItemDropRule, LootPredicate{R}, int?, bool, bool)"/><br/>
+        /// <see cref="RemoveWhere{R}(ILoot, LootPredicate{R}, int?, bool, ChainReattcher, bool)"/><br/>
+        /// <see cref="RemoveChildrenWhere{R}(IItemDropRule, LootPredicate{R}, int?, bool, ChainReattcher, bool)"/><br/>
+        /// <see cref="RemoveWhere{C, R}(ILoot, LootPredicate{R}, int?, bool, ChainReattcher bool)"/><br/>
+        /// <see cref="RemoveChildrenWhere{C, R}(IItemDropRule, LootPredicate{R}, int?, bool, ChainReattcher bool)"/><br/>
         /// <br/>
         /// <see cref="HasRuleWhere{R}(ILoot, LootPredicate{R}, int?)"/><br/>
         /// <see cref="FindRuleWhere{R}(ILoot, LootPredicate{R}, int?)"/><br/>
@@ -170,7 +169,7 @@ namespace GarnsMod.CodingTools
         /// <summary>
         /// Performs the following processes/checks on each child rule of this <paramref name="rootRule"/><br/><br/>
         ///
-        /// <code>if (<paramref name="currRule"/> was chained onto its parent via an <see cref="IItemDropRuleChainAttempt"/> of type <typeparamref name="C"/>, and <paramref name="currRule"/> is of type <typeparamref name="R"/>, and <paramref name="currRule"/> matches the predicate)</code>
+        /// <code>if (<paramref name="rootRule"/> was chained onto its parent via an <see cref="IItemDropRuleChainAttempt"/> of type <typeparamref name="C"/>, and <paramref name="currRule"/> is of type <typeparamref name="R"/>, and <paramref name="currRule"/> matches the predicate)</code>
         /// Then it will remove currRule from this loot pool, and possibly re-attach currRule's children onto currRule's parent if <paramref name="reattachChains"/> is set to true.
         /// If <paramref name="reattachChains"/> is set to false it will terminate here because this means the loot chained after this rule is lost, so there is no reason to make modifications to this rule's children. 
         /// If <paramref name="reattachChains"/> is true, and <paramref name="stopAtFirst"/> is set to false, it will then repeat this same predicate-checking process on the children of the child recursively until it
@@ -197,7 +196,7 @@ namespace GarnsMod.CodingTools
         {
             bool wasInuse = DictionaryInUse;
             DictionaryInUse = true;
-            bool result = RecursiveRemoveMain<R>(loot, (rule) => rule.ChainFromImmediateParent() is C && predicate(rule), rootRule, reattachChains, chainReattacher, stopAtFirst, n, nthChild);
+            bool result = RecursiveRemoveMain<R>(loot, rule => rule.ChainFromImmediateParent() is C && predicate(rule), rootRule, reattachChains, chainReattacher, stopAtFirst, n, nthChild);
             if (!wasInuse)
             {
                 DictionaryInUse = false;
@@ -225,7 +224,7 @@ namespace GarnsMod.CodingTools
         {
             bool canRemove = n != 0; // If main entry called on IItemDropRule, this will be false on the first iteration to prevent it from being removed (because we only want to remove its children and we also have no ILoot reference to remove it from)
 
-            if (canRemove && currRule is R castedRule && predicate(castedRule) && (nthChild is not int nth || nth == n))
+            if (canRemove && currRule is R castedRule && predicate(castedRule) && (nthChild is null || nthChild == n))
             {
                 if (currRule.ImmediateParent() is IItemDropRule parentRule)
                 {
@@ -235,7 +234,7 @@ namespace GarnsMod.CodingTools
                     {
                         ContinueRecursion(newParent: parentRule); // Don't return here because this could possibly return false. We must return true no matter what if we found one
                     }
-
+                 
                     return true;
                 }
                 else // (canRemove == true) && (parentRule == null) implies that loot is not null. Being at this else means loot can't be null
@@ -253,7 +252,7 @@ namespace GarnsMod.CodingTools
             bool ContinueRecursion(IItemDropRule newParent)
             {
                 int nextN = n + 1;
-                if (nthChild is int maxN && nextN > maxN) // Stop trying to search if they specified that it must be nth child (maxN) and we are gonna be further than maxN next iteration
+                if (nthChild is not null && nextN > nthChild) // Stop trying to search if they specified that it must be nth child (maxN) and we are gonna be further than maxN next iteration
                 {
                     return false;
                 }
@@ -306,7 +305,6 @@ namespace GarnsMod.CodingTools
                     return result;
             return default;
         }
-
 
         /// <summary>
         /// Recursively loops through this <see cref="IItemDropRule"/>'s children and sees if there is any child <see cref="IItemDropRule"/> of type <typeparamref name="R"/> that matches the given predicate. If <paramref name="nthChild"/> is specified, then the rule must be the nth child of the loot pool.
@@ -427,7 +425,7 @@ namespace GarnsMod.CodingTools
             else
             {
                 int nextN = n + 1;
-                if (nthChild is int maxN && nextN > maxN) // Stop trying to search if they specified that it must be nth child (maxN) and we are gonna be further than maxN next iteration
+                if (nthChild is not null && nextN > nthChild) // Stop trying to search if they specified that it must be nth child (maxN) and we are gonna be further than maxN next iteration
                 {
                     return default;
                 }
@@ -464,7 +462,7 @@ namespace GarnsMod.CodingTools
         /// </summary>
         public static bool HasParentRuleWhere<R>(this IItemDropRule rule, LootPredicate<R> pred, int? nthParent = null) where R : IItemDropRule
         {
-            return rule.FindParentRuleWhere<R>(pred, nthParent) is not null;
+            return rule.FindParentRuleWhere(pred, nthParent) is not null;
         }
 
         /// <summary>
@@ -544,7 +542,7 @@ namespace GarnsMod.CodingTools
         /// Can only be used in the context of RemoveWhere/FindWhere/Has recursive predicates, as it uses a Dictionary to find the parent, and the dictionary is only populated
         /// (accurate) during these calls and is cleared after. Mainly used inside Predicates of Remove/Find as a means of being more exact about what
         /// rule we are querying        
-        /// /// </summary>
+        /// </summary>
         public static R FindParentRuleWhere<C, R>(this IItemDropRule rule, LootPredicate<R> pred, int? nthParent = null) where C : IItemDropRuleChainAttempt where R : IItemDropRule
         {
             return rule.FindParentRuleWhere<R>(rule => rule.ChainFromImmediateParent() is C && pred(rule), nthParent);
@@ -673,7 +671,6 @@ namespace GarnsMod.CodingTools
 
         #endregion
 
-
         #region LeadingConditionRule Extensions
 
         public static IItemDropRule OnConditionsMet(this LeadingConditionRule leadingCondition, params IItemDropRule[] rulesToExecute)
@@ -686,7 +683,6 @@ namespace GarnsMod.CodingTools
         }
 
         #endregion
-
 
         #region OneFromOptionsDropRule Extensions
 
@@ -714,7 +710,7 @@ namespace GarnsMod.CodingTools
             foreach (int dropId in oneFromOptionsRule.dropIds)
             {
                 if (predicate(dropId))
-                    newDropIds.Add(dropId);
+                    newDropIds.Add(dropId);       
                 else
                     anyFiltered = true;
             }
