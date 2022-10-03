@@ -8,6 +8,7 @@ using Microsoft.Xna.Framework.Graphics;
 using ReLogic.Content;
 using System.Collections.Generic;
 using GarnsMod.Content.Mechanics;
+using GarnsMod.Content.Mechanics.AlternatingAmmoMechanic;
 
 namespace GarnsMod.UI.AlternatingAmmoUI
 {
@@ -29,7 +30,7 @@ namespace GarnsMod.UI.AlternatingAmmoUI
 
         public override void OnInitialize()
         {
-            SelectedAlternatingAmmoMode = Main.LocalPlayer.GetModPlayer<AlternatingAmmoPlayer>().SelectedAlternatingAmmoMode;
+            SelectedAlternatingAmmoMode = Main.LocalPlayer.GetModPlayer<AlternatingAmmoPlayer>().Mode;
 
             ModeButton = new UIHoverImageButton(SelectedAlternatingAmmoMode.TextureAsset, $"Trail Color: {SelectedAlternatingAmmoMode.DisplayName}");
             ModeButton.OnClick += ModeButton_OnClick;
@@ -42,7 +43,7 @@ namespace GarnsMod.UI.AlternatingAmmoUI
         {
             SoundEngine.PlaySound(SoundID.Item10);
             SelectedAlternatingAmmoMode = ((int)SelectedAlternatingAmmoMode + 1) % AlternatingAmmoMode.Count;
-            Main.LocalPlayer.GetModPlayer<AlternatingAmmoPlayer>().SelectedAlternatingAmmoMode = SelectedAlternatingAmmoMode;
+            Main.LocalPlayer.GetModPlayer<AlternatingAmmoPlayer>().Mode = SelectedAlternatingAmmoMode;
             RefreshButtons();
         }
 
@@ -56,37 +57,5 @@ namespace GarnsMod.UI.AlternatingAmmoUI
             ModeButton.Top.Set(Origin.Y, 0f);
             ModeButton.Recalculate();
         }
-    }
-
-    internal readonly struct AlternatingAmmoMode
-    {
-        internal static List<AlternatingAmmoMode> ammoModes = new();
-
-        public static int Count => ammoModes.Count;
-
-        public static readonly AlternatingAmmoMode Disabled = new("Disabled", ModContent.Request<Texture2D>($"{nameof(GarnsMod)}/UI/AlternatingAmmoUI/AlternatingMode_Disabled"));
-        public static readonly AlternatingAmmoMode Alternate = new("Cycle through ammo", ModContent.Request<Texture2D>($"{nameof(GarnsMod)}/UI/AlternatingAmmoUI/AlternatingMode_ByType"));
-        public static readonly AlternatingAmmoMode Alternate_PreserveRatio = new("Cycle through ammo, keeping ratios", ModContent.Request<Texture2D>($"{nameof(GarnsMod)}/UI/AlternatingAmmoUI/AlternatingMode_ByRatio"));
-
-        internal int Value { get; }
-        internal string DisplayName { get; }
-        internal Asset<Texture2D> TextureAsset { get; }
-
-        private AlternatingAmmoMode(string name, Asset<Texture2D> asset)
-        {
-            Value = Count;
-            TextureAsset = asset;
-            DisplayName = name;
-            ammoModes.Add(this);
-        }
-
-        public static explicit operator int(AlternatingAmmoMode m) => m.Value;
-
-        public static implicit operator AlternatingAmmoMode(int i) => ammoModes[i];
-
-        public static bool operator ==(AlternatingAmmoMode m1, AlternatingAmmoMode m2) => m1.Value == m2.Value;
-        public static bool operator !=(AlternatingAmmoMode m1, AlternatingAmmoMode m2) => m1.Value != m2.Value;
-
-        public override int GetHashCode() => Value;
     }
 }

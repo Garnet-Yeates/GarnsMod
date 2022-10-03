@@ -5,7 +5,8 @@ using Terraria;
 using Terraria.ID;
 using Terraria.ModLoader;
 
-namespace GarnsMod.Content.Mechanics
+// This .cs file acts like its own folder (has it's on sub-namespace under Mechanics namespace)
+namespace GarnsMod.Content.Mechanics.StarboardBoostDownMechanic
 {
     // This class adds the actual downwards boost mechanic to the wings
     internal class StarboardBoostDownPlayer : ModPlayer

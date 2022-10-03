@@ -26,6 +26,11 @@ namespace GarnsMod.CodingTools
             return a - b * (float)Math.Floor(a / b);
         }
 
+        public static int Modulo(int a, int b)
+        {
+            return a - b * (int)Math.Floor((float)a / b);
+        }
+
     }
 
 }
