@@ -156,7 +156,7 @@ namespace GarnsMod.Content.Projectiles
             Projectile.rotation = Projectile.velocity.ToRotation();
 
             // Update our 'wouldBePosition' based on normal rules.
-            wouldBePosition += Projectile.velocity; ;
+            wouldBePosition += Projectile.velocity;
         }
 
         public override bool PreDraw(ref Color lightColor)

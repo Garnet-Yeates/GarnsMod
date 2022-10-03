@@ -1,5 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using Terraria;
 using Terraria.DataStructures;
 using Terraria.GameContent.Creative;
@@ -87,7 +89,6 @@ namespace GarnsMod.Content.Items.Weapons.Ranged
 
         public override bool Shoot(Player player, EntitySource_ItemUse_WithAmmo source, Vector2 position, Vector2 velocity, int type, int damage, float knockback)
         {
-            Item.shootSpeed = 1;
             return true;
         }
 
@@ -105,16 +106,11 @@ namespace GarnsMod.Content.Items.Weapons.Ranged
 
         public override bool? UseItem(Player player)
         {
-            // Make this client sided, other players don't need to see these changes
-            // as item use/shoot stuff is client sided anyways and this stuff resets after 0.2s of not using the item
-            if (Main.myPlayer == player.whoAmI)
-            {
-                Main.NewText($"Charge: {currentCharge} ticks {currentCharge * 100 / ChargeTimeTicks}%");
-                Item.useTime = (int)Math.Round(BaseUseTime - (BaseUseTime - ChargedUseTime) * ChargeProgress);
-                Item.reuseDelay = (int)Math.Round(BaseReuseDelay - (BaseReuseDelay - ChargedReuseDelay) * ChargeProgress);
-                Item.useAnimation = (int)Math.Round(BaseUseAnimation - (BaseUseAnimation - ChargedUseAnimation) * ChargeProgress);
-                Item.shootSpeed = BaseShootSpeed - (BaseShootSpeed - ChargedShootSpeed) * ChargeProgress;
-            }
+            Main.NewText($"Charge: {currentCharge} ticks {currentCharge * 100 / ChargeTimeTicks}%");
+            Item.useTime = (int)Math.Round(BaseUseTime - (BaseUseTime - ChargedUseTime) * ChargeProgress);
+            Item.reuseDelay = (int)Math.Round(BaseReuseDelay - (BaseReuseDelay - ChargedReuseDelay) * ChargeProgress);
+            Item.useAnimation = (int)Math.Round(BaseUseAnimation - (BaseUseAnimation - ChargedUseAnimation) * ChargeProgress);
+            Item.shootSpeed = BaseShootSpeed - (BaseShootSpeed - ChargedShootSpeed) * ChargeProgress;
 
             return null;
         }
@@ -122,15 +118,54 @@ namespace GarnsMod.Content.Items.Weapons.Ranged
         public override void UseItemFrame(Player player)
         {
             // Make this client sided, doesn't need to be synced
-            if (Main.myPlayer == player.whoAmI)
+
+            chargeTimeout = Grace;
+            currentCharge++;
+            if (currentCharge > ChargeTimeTicks)
             {
-                chargeTimeout = Grace;
-                currentCharge++;
-                if (currentCharge > ChargeTimeTicks)
-                {
-                    currentCharge = ChargeTimeTicks;
-                }
+                currentCharge = ChargeTimeTicks;
             }
         }
     }
+
+    class GarnGunGlobalAmmunition : GlobalItem
+    {
+        // Represents the available ammunitions that the GarnGun should be able to use, ordered by priority
+        public static readonly List<int> AmmoPriorityList = new() { AmmoID.Bullet, AmmoID.Arrow };
+
+        public override bool AppliesToEntity(Item item, bool lateInstantiation)
+        {
+            return lateInstantiation && AmmoPriorityList.Contains(item.ammo);
+        }
+
+        // Reject using lower priority ammos if the user has a higher priority ammo in their inventory
+        public override bool? CanBeChosenAsAmmo(Item ammoType, Item weapon, Player player)
+        {
+            return null;
+            if (weapon.type == ModContent.ItemType<GarnGun>())
+            {
+                foreach (int prioritizeAmmoType in AmmoPriorityList)
+                {
+                    if (ammoType.ammo == prioritizeAmmoType)
+                    {
+                        return true;
+                    }
+                    // Don't let it advance to the next iteration to try a lower prio ammo if we have a higher prio one in inventory
+                    else if (player.inventory.Any(item => item.ammo == prioritizeAmmoType))
+                    {
+                        return false;
+                    }
+
+                    // If ammo.type isn't prioritizeAmmoType, and they don't have prioritizeAmmoType in their inventory, try the next highest priority
+                    // AKA continue to the next iteration of this foreach
+                }
+
+                return false;
+            }
+
+            return null;
+        }
+    }
+
+
 }

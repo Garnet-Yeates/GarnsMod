@@ -89,9 +89,9 @@ namespace GarnsMod.Content.Projectiles
 
         private enum NorthernStarPhase : byte { Rising, Peaking, Falling };
 
-        private bool Falling => currPhase == NorthernStarPhase.Falling;
-        private bool Peaking => currPhase == NorthernStarPhase.Peaking;
         private bool Rising => currPhase == NorthernStarPhase.Rising;
+        private bool Peaking => currPhase == NorthernStarPhase.Peaking;
+        private bool Falling => currPhase == NorthernStarPhase.Falling;
 
         public override void AI()
         {
@@ -149,9 +149,8 @@ namespace GarnsMod.Content.Projectiles
             Projectile.CapYSpeed(25f);
 
             // X logic
-            if (numTicks > 50 || Projectile.IsHigherUpThan(yTarget))
+            if (numTicks > 50)
             {
-
                 // Accelerate x towards target if we aren't going towards it, or we are going towards it but we are further than 150px away
                 if (!Projectile.IsGoingTowardsX(xTarget) || Projectile.IsXFurtherThan(150f, xTarget))
                 {
@@ -218,7 +217,7 @@ namespace GarnsMod.Content.Projectiles
                 }
                 else
                 {
-                    velocity.X += 1f * dirToXTarget * Utils.GetLerpValue(0, 1, fallingFor / 60f, true); // Use lerp to cap ratio value at 1
+                    velocity.X += 1f * dirToXTarget * Utils.GetLerpValue(0, 1, fallingFor / 60f, true); // Use clamped lerp to cap ratio value at 1
                 }
             }
 

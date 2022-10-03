@@ -20,10 +20,10 @@ namespace GarnsMod.Content.RandomStuff
 {
     internal class TileTest : GlobalTile
     {
-        // Not called on Multiplayer Client
+        // Not called on Multiplayer Clients
         public override bool Drop(int tileX, int tileY, int type)
         {
-            List<IItemDropRule> rulesToTry = new()
+            List<IItemDropRule> rulesToExecute = new()
             {
                 new CoinsRule(Item.sellPrice(0, 0, 80, 0), true),
                 new OneFromRulesRule
@@ -68,14 +68,14 @@ namespace GarnsMod.Content.RandomStuff
 
             if (isCrimsonHeart) // CRIMSON HEART LOGIC
             {
-                rulesToTry.Add(new CommonDrop(ItemID.CrimtaneOre, 1, 20, 60));
-                rulesToTry.ResolveRules(CustomItemDropResolver.CreateDropAttemptInfo(dropArea));
+                rulesToExecute.Add(new CommonDrop(ItemID.CrimtaneOre, 1, 20, 60));
             }
             else // SHADOW ORB LOGIC
             {
-                rulesToTry.Add(new CommonDrop(ItemID.DemoniteOre, 1, 20, 60));
-                rulesToTry.ResolveRules(CustomItemDropResolver.CreateDropAttemptInfo(dropArea));
+                rulesToExecute.Add(new CommonDrop(ItemID.DemoniteOre, 1, 20, 60));
             }
+
+            rulesToExecute.ResolveRules(CustomItemDropResolver.CreateDropAttemptInfo(dropArea));
 
             // Has to do with spawing the corresponding boss and putting text in the chat. If you forget this part then the bosses wont spawn
             WorldGen.shadowOrbSmashed = true;
@@ -130,7 +130,6 @@ namespace GarnsMod.Content.RandomStuff
         }
     }
 
-
     class ExtensionUseCases : GlobalNPC
     {
         public override void ModifyNPCLoot(NPC npc, NPCLoot npcLoot)
@@ -168,9 +167,6 @@ namespace GarnsMod.Content.RandomStuff
                     }
                 }
             }
-
-            // Example 1
-            // 
             // EXTENSION WAY
             //
             // Any BookOfSkulls CommonDrop anywhere within the loot will be removed. Doesn't care about if it has a parent or if/how it is chained to its parent. Chains are automatically re-attached

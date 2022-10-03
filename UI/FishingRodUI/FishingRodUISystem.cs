@@ -1,15 +1,12 @@
-﻿using Microsoft.Xna.Framework;
+﻿using GarnsMod.Content.Items.Weapons.Ranged;
+using Microsoft.Xna.Framework;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using Terraria;
 using Terraria.Audio;
-using Terraria.Chat;
-using Terraria.GameContent.Achievements;
 using Terraria.ID;
-using Terraria.Localization;
 using Terraria.ModLoader;
 using Terraria.UI;
 using static GarnsMod.Content.Items.Tools.GarnsFishingRod;
@@ -24,12 +21,14 @@ namespace GarnsMod.UI.FishingRodUI
 
         private UserInterface _fishingRodInterface;
 
+        // On Mod Load
         public override void Load()
         {
             _fishingRodInterface = new UserInterface();
         }
 
-        public override void Unload()
+        // On World Unload (just in case it is open)
+        public override void OnWorldUnload()
         {
             CloseFishingRodUI();
         }

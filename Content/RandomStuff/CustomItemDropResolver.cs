@@ -1,15 +1,47 @@
 ﻿using Microsoft.Xna.Framework;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Reflection;
 using Terraria;
 using Terraria.GameContent.ItemDropRules;
 using Terraria.ID;
+using Terraria.ModLoader;
 
 namespace GarnsMod.Content.RandomStuff
 {
+    internal static class ItemDropResolveExtensions
+    {
+        /// <summary>
+        /// Can be called on any NetMode but keep in mind that some rules and their respective CommonCode methods are meant to only be called on SP/Server netmodes. <br/><br/>
+        /// If resolving rules from client code, make sure to do a whoAmI check when needed to make sure that the rules are only resolved on ONE client. 
+        /// If you fail to do this extra items will spawn depending on how many people are connected<br/><br/>
+        /// If resolving rules from server code, make sure that the DropAttemptInfo either has a hitbox set, or a (non server aka not whoAmI = 255) player specified. If you want an
+        /// explanation on why, read the exception thrown in CustomItemDropResolver.CreateDropAttemptInfo()
+        /// </summary>
+        public static void ResolveRules(this List<IItemDropRule> rulesToExecute, DropAttemptInfo info)
+        {
+            ResolveMultipleRules(rulesToExecute, info);
+        }
+
+        /// <summary>
+        /// Can be called on any NetMode but keep in mind that some rules and their respective CommonCode methods are meant to only be called on SP/Server netmodes. <br/><br/>
+        /// If resolving rules from client code, make sure to do a whoAmI check when needed to make sure that the rules are only resolved on ONE client. 
+        /// If you fail to do this extra items will spawn depending on how many people are connected<br/><br/>
+        /// If resolving rules from server code, make sure that the DropAttemptInfo either has a hitbox set, or a (non server aka not whoAmI = 255) player specified. If you want an
+        /// explanation on why, read the exception thrown in CustomItemDropResolver.CreateDropAttemptInfo()
+        /// </summary>
+        public static void ResolveMultipleRules(List<IItemDropRule> rulesToExecute, DropAttemptInfo info)
+        {
+            foreach (IItemDropRule rule in rulesToExecute)
+            {
+                CustomItemDropResolver.ResolveRule(rule, info);
+            }
+        }
+    }
+
     // This is vanilla code copied verbatim so that we can just call ResolveRule recursive logic on any rules/chains that we create
-    internal static class CustomItemDropResolver
+    internal class CustomItemDropResolver : ModSystem
     {
         #region CommonCode Class Explanation
         /*
@@ -144,20 +176,8 @@ namespace GarnsMod.Content.RandomStuff
             };
         }
 
-        /// <summary>
-        /// Can be called on any NetMode but keep in mind that some rules and their respective CommonCode methods are meant to only be called on SP/Server netmodes. <br/><br/>
-        /// If resolving rules from client code, make sure to do a whoAmI check when needed to make sure that the rules are only resolved on ONE client. 
-        /// If you fail to do this extra items will spawn depending on how many people are connected<br/><br/>
-        /// If resolving rules from server code, make sure that the DropAttemptInfo either has a hitbox set, or a (non server aka not whoAmI = 255) player specified. If you want an
-        /// explanation on why, read the exception thrown in CustomItemDropResolver.CreateDropAttemptInfo()
-        /// </summary>
-        public static void ResolveMultipleRules(List<IItemDropRule> rulesToExecute, DropAttemptInfo info)
-        {
-            foreach (IItemDropRule rule in rulesToExecute)
-            {
-                ResolveRule(rule, info);
-            }
-        }
+
+        public delegate ItemDropAttemptResult RuleResolver(IItemDropRule rule, DropAttemptInfo info);
 
         /// <summary>
         /// Can be called on any NetMode but keep in mind that some rules and their respective CommonCode methods are meant to only be called on SP/Server netmodes. <br/><br/>
@@ -166,25 +186,14 @@ namespace GarnsMod.Content.RandomStuff
         /// If resolving rules from server code, make sure that the DropAttemptInfo either has a hitbox set, or a (non server aka not whoAmI = 255) player specified. If you want an
         /// explanation on why, read the exception thrown in CustomItemDropResolver.CreateDropAttemptInfo()
         /// </summary>
-        public static void ResolveRules(this List<IItemDropRule> rulesToExecute, DropAttemptInfo info)
-        {
-            ResolveMultipleRules(rulesToExecute, info);
-        }
+        public static RuleResolver ResolveRule;
 
-        /// <summary>
-        /// Can be called on any NetMode but keep in mind that some rules and their respective CommonCode methods are meant to only be called on SP/Server netmodes. <br/><br/>
-        /// If resolving rules from client code, make sure to do a whoAmI check when needed to make sure that the rules are only resolved on ONE client. 
-        /// If you fail to do this extra items will spawn depending on how many people are connected<br/><br/>
-        /// If resolving rules from server code, make sure that the DropAttemptInfo either has a hitbox set, or a (non server aka not whoAmI = 255) player specified. If you want an
-        /// explanation on why, read the exception thrown in CustomItemDropResolver.CreateDropAttemptInfo()
-        /// </summary>
-        public static void ResolveRule(IItemDropRule rule, DropAttemptInfo info)
+        public override void SetStaticDefaults()
         {
             ItemDropResolver resolver = Main.ItemDropSolver;
-            Func<IItemDropRule, DropAttemptInfo, ItemDropAttemptResult> resolve = resolver.GetType()
+            ResolveRule = resolver.GetType()
                 .GetMethod("ResolveRule", BindingFlags.NonPublic | BindingFlags.Instance)
-                .CreateDelegate<Func<IItemDropRule, DropAttemptInfo, ItemDropAttemptResult>>(resolver);
-            resolve(rule, info);
+                .CreateDelegate<RuleResolver>(resolver);
         }
     }
 }

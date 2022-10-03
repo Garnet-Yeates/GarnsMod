@@ -14,6 +14,7 @@ namespace GarnsMod.Content.Items.Weapons.Melee.SlasherSwords
     {
         public override void SetStaticDefaults()
         {
+            Vector2 vec = new(2, 2);
             DisplayName.SetDefault("Garn's Rainbow Blade");
 
             CreativeItemSacrificesCatalog.Instance.SacrificeCountNeededByItemId[Type] = 1;
@@ -66,7 +67,6 @@ namespace GarnsMod.Content.Items.Weapons.Melee.SlasherSwords
         {
             position += velocity.SafeNormalize(default) * 20; // Make it spawn a bit further ahead
             velocity *= player.GetAttackSpeed(DamageClass.Melee)*1.25f;
-
         }
 
         public override bool Shoot(Player player, EntitySource_ItemUse_WithAmmo source, Vector2 position, Vector2 velocity, int type, int damage, float knockback)
