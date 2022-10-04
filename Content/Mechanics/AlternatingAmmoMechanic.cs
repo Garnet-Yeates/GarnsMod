@@ -38,17 +38,25 @@ namespace GarnsMod.Content.Mechanics.AlternatingAmmoMechanic
         private AlternatingAmmoMode _mode;
 
         // When we change mode we Reset
-        public AlternatingAmmoMode Mode { get => _mode; set { _mode = value; Reset(); } }
+        public AlternatingAmmoMode Mode
+        {
+            get => _mode;
+
+            set
+            {
+                _mode = value;
+                Reset();
+            }
+        }
 
         public bool AlternatingDisabled => Mode == AlternatingAmmoMode.Disabled;
 
-        public int AmmoAlternatingCounter { get; private set; }
-
+        // All of the ammo item id's that are available to be used for the current weapon. Calculated right after the weapon shoots. Used to restrict the type of ammo we can use next shot
         public int[] AmmoPool { get; private set; }
 
         // IsReset basically means don't use ammo alternating logic in AlternatingAmmoGun.CanChooseAmmo until the next time a bullet is shot.
         // When a bullet is shot, AmmoPool may be recalculated based on conditions (see Shoot and UpdateAndRotatePool)
-
+        //
         // The main reason we use IsReset is to stop the gun from choking up from trying to use expired ammo alternating logic
         // (i.e logic that was determined last shoot isn't guaranteed to stay valid. So we reset after a short timeout, as well as in other situations)
         public bool IsReset => AmmoPool is null;
@@ -56,10 +64,12 @@ namespace GarnsMod.Content.Mechanics.AlternatingAmmoMechanic
         public void Reset()
         {
             AmmoPool = null;
-            AmmoAlternatingCounter = 0;
+            CurrPoolIndex = 0;
         }
 
-        public int CurrentAmmoItemType => IsReset ? 0 : AmmoPool[AmmoAlternatingCounter % AmmoPool.Length];
+        // Increments by one after the Pool is recalculated (every time a weapon is shot). This is what 'cycles' through the pool to 'alternate'
+        // our current ammo
+        public int CurrPoolIndex = 0;
 
         // When this hits 0 we Reset
         private int alternatorTimeout = 0;
@@ -109,7 +119,7 @@ namespace GarnsMod.Content.Mechanics.AlternatingAmmoMechanic
                 return null;
 
             // We are only allowed to choose ammo based on CurrentAmmoItemType, which is the element at AmmoPool[CurrentPoolChoice] 
-            return ammoItem.type == CurrentAmmoItemType;
+            return ammoItem.type == AmmoPool[CurrPoolIndex];
         }
 
         // This hook is the first one called in ItemLoader, it will always be called. Globals are always called too but the ModItem one won't be called if any return false
@@ -135,7 +145,6 @@ namespace GarnsMod.Content.Mechanics.AlternatingAmmoMechanic
         // each time a gun is shot)
         public void UpdateAndRotatePool(Item weapon)
         {
-            AmmoAlternatingCounter++; // Timer goes up each time a bullet is shot
             alternatorTimeout = 450;
 
             bool ratioBased = Mode == AlternatingAmmoMode.Alternate_PreserveRatio; // Make this a config option. also make this whole mechanic a config option (client side)
@@ -192,7 +201,13 @@ namespace GarnsMod.Content.Mechanics.AlternatingAmmoMechanic
             // If no ammo is found, we reset to tell the next call to our CanChooseAmmo hook to use default logic.
             // The pool won't be recalculated again until after the next call to Shoot() happens and UpdateAndRotatePool() is called again
             if (AmmoPool.Length == 0)
+            {
                 Reset();
+            }
+            else
+            {
+                CurrPoolIndex = (CurrPoolIndex + 1) % AmmoPool.Length;
+            }
         }
 
         public override void Initialize()
