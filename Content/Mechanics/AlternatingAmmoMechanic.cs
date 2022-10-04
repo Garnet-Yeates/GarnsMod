@@ -47,8 +47,7 @@ namespace GarnsMod.Content.Mechanics.AlternatingAmmoMechanic
         public int[] AmmoPool { get; private set; }
 
         // IsReset basically means don't use ammo alternating logic in AlternatingAmmoGun.CanChooseAmmo until the next time a bullet is shot.
-        // When a bullet is shot, AmmoPool will be recalculated and it will set to a non-null again as long as Mode != Disabled
-        // && The weapon is allowed to alternate && the weapon has ammo that can be used (based on consulting other hooks to find ammo)
+        // When a bullet is shot, AmmoPool may be recalculated based on conditions (see Shoot and UpdateAndRotatePool)
 
         // The main reason we use IsReset is to stop the gun from choking up from trying to use expired ammo alternating logic
         // (i.e logic that was determined last shoot isn't guaranteed to stay valid. So we reset after a short timeout, as well as in other situations)
@@ -86,11 +85,29 @@ namespace GarnsMod.Content.Mechanics.AlternatingAmmoMechanic
 
         }
 
-        private class ItemWithCountAndStackCount
+        /// <summary>
+        /// In CanAddToPool (local function inside UpdateAndRotatePool) we call all ItemLoader.CanChooseAmmo() hooks on all the items in
+        /// the player's inventory to dynamically build the ammo pool so we can restrict it (aka alternate current available ammo). The thing is, we don't want this hook to run
+        /// when we are calling all hooks manually. If we did this, then our hook would make it so items aren't added to the pool if they aren't equivalent to CurrentAmmoItemType,
+        /// so the pool would not work properly at all (it would only have one item type in it).
+        /// </summary>
+        private static bool DontRunCanChooseAmmoHook { get; set; }
+
+        internal bool? CanChooseAmmo(Item weapon, Item ammoItem, Player player)
         {
-            public bool Consumable { get; init; }
-            public int Stacks { get; set; }
-            public int Count { get; set; }
+            if (DontRunCanChooseAmmoHook)
+                return null;
+
+            // Refuse to use the last item in the stack if alternating is enabled (regardless of if it's reset, or if this gun is allowed to alternate)
+            if (ammoItem.stack == 1 && ammoItem.consumable && !AlternatingDisabled)
+                return false;
+
+            // Make it so it only applied to the held item, for efficiency (also because seeing ammunition count changing for other guns besides this one is annoying)
+            if (AlternatingDisabled || IsReset || player.HeldItem.type != weapon.type || ammoItem.type == ItemID.None)
+                return null;
+
+            // We are only allowed to choose ammo based on CurrentAmmoItemType, which is the element at AmmoPool[CurrentPoolChoice] 
+            return ammoItem.type == CurrentAmmoItemType;
         }
 
         /// <summary>
@@ -98,8 +115,6 @@ namespace GarnsMod.Content.Mechanics.AlternatingAmmoMechanic
         /// We consult other hooks to determine what should be in the ammo pool, the exact same way tmodloader consults these hooks. This is to ensure as much compatibility/flexibility
         /// as possible between this mod and other mods (i.e if other mods use these hooks to add things to the ammo pool, my mod will see it and know to add them to the alternating pool)
         /// </summary>
-
-
         // This hook is the first one called in ItemLoader, it will always be called. Globals are always called too but the ModItem one won't be called if any return false
         public override bool Shoot(Item item, EntitySource_ItemUse_WithAmmo source, Vector2 position, Vector2 velocity, int type, int damage, float knockback)
         {
@@ -158,9 +173,9 @@ namespace GarnsMod.Content.Mechanics.AlternatingAmmoMechanic
                 if (ammoItem.type == ItemID.None)
                     return false;
 
-                AlternatingAmmoGun.DontRunHook = true;
+                DontRunCanChooseAmmoHook = true;
                 bool result = ItemLoader.CanChooseAmmo(weapon, ammoItem, player);
-                AlternatingAmmoGun.DontRunHook = false;
+                DontRunCanChooseAmmoHook = false;
                 return result;
             }
 
@@ -173,6 +188,13 @@ namespace GarnsMod.Content.Mechanics.AlternatingAmmoMechanic
             // The pool won't be recalculated again until after the next call to Shoot() happens and UpdateAndRotatePool() is called again
             if (AmmoPool.Length == 0)
                 Reset();
+        }
+
+        private class ItemWithCountAndStackCount
+        {
+            public bool Consumable { get; init; }
+            public int Stacks { get; set; }
+            public int Count { get; set; }
         }
 
         public override void Initialize()
@@ -198,35 +220,8 @@ namespace GarnsMod.Content.Mechanics.AlternatingAmmoMechanic
     {
         public override bool AppliesToEntity(Item weapon, bool lateInstantiation) => lateInstantiation && weapon.useAmmo != 0;
 
-
-        /// <summary>
-        /// In CanAddToPool (local function inside UpdateAndRotatePool) we call all ItemLoader.CanChooseAmmo() hooks on all the items in
-        /// the player's inventory to dynamically build the ammo pool so we can restrict it (aka alternate current available ammo). The thing is, we don't want this hook to run
-        /// when we are calling all hooks manually. If we did this, then our hook would make it so items aren't added to the pool if they aren't equivalent to CurrentAmmoItemType,
-        /// so the pool would not work properly at all (it would only have one item type in it).
-        /// </summary>
-        internal static bool DontRunHook { get; set; }
-
-        // CanChooseAmmo (Weapon) hooks work like this: First it tries all global hooks, then tries all ModItem hooks. If any return false it stops (meaning returning false on global
-        // stops other globals from running and also stops the hook from being called on the Moditem). If they return null or true it continues. If not true by the end it uses item.ammo == weapon.useAmmo
-        public override bool? CanChooseAmmo(Item weapon, Item ammoItem, Player player)
-        {
-            if (DontRunHook)
-                return null;
-
-            AlternatingAmmoPlayer altPlayer = player.GetModPlayer<AlternatingAmmoPlayer>();
-
-            // Refuse to use the last item in the stack if alternating is enabled (regardless of if it's reset, or if this gun is allowed to alternate)
-            if (ammoItem.stack == 1 && ammoItem.consumable && !altPlayer.AlternatingDisabled)
-                return false;
-
-            // Make it so it only applied to the held item, for efficiency (also because seeing ammunition count changing for other guns besides this one is annoying)
-            if (altPlayer.AlternatingDisabled || altPlayer.IsReset || player.HeldItem.type != weapon.type || ammoItem.type == ItemID.None)
-                return null;
-
-            // We are only allowed to choose ammo based on CurrentAmmoItemType, which is the element at AmmoPool[CurrentPoolChoice] 
-            return ammoItem.type == altPlayer.CurrentAmmoItemType;
-        }
+        // Redirect to the one we defined in AlternatingAmmoPlayer to keep the logic organized
+        public override bool? CanChooseAmmo(Item weapon, Item ammoItem, Player player) => player.GetModPlayer<AlternatingAmmoPlayer>().CanChooseAmmo(weapon, ammoItem, player);
     }
 
     internal readonly struct AlternatingAmmoMode
