@@ -32,69 +32,53 @@ namespace GarnsMod.Content.Mechanics.AlternatingAmmoMechanic
         public override void SetStaticDefaults() => AlternatingAmmoMechanic.Sets.SetStaticDefaults();
     }
 
+    class ZZZSuperiorPlayer : ModPlayer
+    {
+        public override bool CanShoot(Item item)
+        {
+            return false;
+        }
+    }
+
     // Creates a client-sided timer (never synced) as a means of rotating through ammo types
     internal class AlternatingAmmoPlayer : ModPlayer
     {
-        private AlternatingAmmoMode _mode;
-
-        // When we change mode we Reset
-        public AlternatingAmmoMode Mode
-        {
-            get => _mode;
-
-            set
-            {
-                _mode = value;
-                Reset();
-            }
-        }
+        public AlternatingAmmoMode Mode { get; set; }
 
         public bool AlternatingDisabled => Mode == AlternatingAmmoMode.Disabled;
 
         // All of the ammo item id's that are available to be used for the current weapon. Calculated right after the weapon shoots. Used to restrict the type of ammo we can use next shot
         public int[] AmmoPool { get; private set; }
 
-        // IsReset basically means don't use ammo alternating logic in AlternatingAmmoGun.CanChooseAmmo until the next time a bullet is shot.
-        // When a bullet is shot, AmmoPool may be recalculated based on conditions (see Shoot and UpdateAndRotatePool)
-        //
-        // The main reason we use IsReset is to stop the gun from choking up from trying to use expired ammo alternating logic
-        // (i.e logic that was determined last shoot isn't guaranteed to stay valid. So we reset after a short timeout, as well as in other situations)
-        public bool IsReset => AmmoPool is null;
-
-        public void Reset()
-        {
-            AmmoPool = null;
-            CurrPoolIndex = 0;
-        }
-
-        // Increments by one after the Pool is recalculated (every time a weapon is shot). This is what 'cycles' through the pool to 'alternate'
-        // our current ammo
+        // Increments by one after the Pool is recalculated (every time a weapon is shot). This is what 'cycles' through the pool to 'alternate' our current ammo
         public int CurrPoolIndex = 0;
 
-        // When this hits 0 we Reset
-        private int alternatorTimeout = 0;
-
-        // In PostUpdate we use this to determine if they switched their current hotbar index. Useless info: this is 58 when they have an item on their cursor. 
-        private int lastHotbarIndex = 0;
-
-        public override void PostUpdate()
+        // *Slight visual bug happens if this hook is called BEFORE another CanShoot hook that returns false. Very rare case and doesn't affect gameplay. I could technically fix it by consulting other CanShoot hooks and returning false if any of them return false
+        //
+        // Called just before ammo is picked / subtracted. We update our pool here. After this it consults CanChooseAmmo hooks to decide which ammo to pick / subtract.
+        // Our CanChooseAmmo hook will restrict what ammo can be chosen based on Pool[CurrPoolIndex] of the Pool we just updated 
+        // After this, Shoot() is called
+        public override bool CanShoot(Item weapon)
         {
-            if (lastHotbarIndex != Player.selectedItem)
+            if (DontCallMyHooks)
+                return true;
+
+            AmmoPool = null;
+
+            DontCallMyHooks = true;
+            bool result = CombinedHooks.CanShoot(Player, weapon);
+            DontCallMyHooks = false;
+
+            // We pre-emptively call CombinedHooks.CanShoot to see if other hooks would return false (even if they are naturally called after this one). If any of them return false, we do too
+            if (!result) // This prevents a visual bug that is caused when CanShoot is called here first and the pool is updated, but then another CanShoot returns false 
+                return false;
+
+            if (!AlternatingDisabled && !AlternatingAmmoMechanic.Sets.NonAmmoAlternatingItems[weapon.type])
             {
-                lastHotbarIndex = Player.selectedItem;
-                Reset(); // Reset when we switch hotbar index
+                UpdateAndRotatePool(weapon);
             }
 
-            if (alternatorTimeout > 0)
-            {
-                alternatorTimeout--;
-                if (alternatorTimeout == 0)
-                {
-                    // Set to null to do default vanilla logic until they shoot again
-                    Reset();
-                }
-            }
-
+            return true;
         }
 
         /// <summary>
@@ -103,41 +87,7 @@ namespace GarnsMod.Content.Mechanics.AlternatingAmmoMechanic
         /// when we are calling all hooks manually. If we did this, then our hook would make it so items aren't added to the pool if they aren't equivalent to CurrentAmmoItemType,
         /// so the pool would not work properly at all (it would only have one item type in it).
         /// </summary>
-        private static bool DontRunHook { get; set; }
-
-        internal bool? CanChooseAmmo(Item weapon, Item ammoItem, Player player)
-        {
-            if (DontRunHook)
-                return null;
-
-            // Refuse to use the last item in the stack if alternating is enabled (regardless of if it's reset, or if this gun is allowed to alternate)
-            if (ammoItem.stack == 1 && ammoItem.consumable && !AlternatingDisabled)
-                return false;
-
-            // Make it so it only applied to the held item, for efficiency (also because seeing ammunition count changing for other guns besides this one is annoying)
-            if (AlternatingDisabled || IsReset || player.HeldItem.type != weapon.type || ammoItem.type == ItemID.None)
-                return null;
-
-            // We are only allowed to choose ammo based on CurrentAmmoItemType, which is the element at AmmoPool[CurrentPoolChoice] 
-            return ammoItem.type == AmmoPool[CurrPoolIndex];
-        }
-
-        // This hook is the first one called in ItemLoader, it will always be called. Globals are always called too but the ModItem one won't be called if any return false
-
-        // We calculate the available ammo pool after we shoot (as opposed to constantly during CanChooseAmmo
-        // hook). The reason why is because 1. I like the idea of it cycling on a per-shot counter instead of on a time-based timer, it just makes more
-        // sense that way. Also, CanChooseAmmo gets called [numGunsInInventory] times every tick, as opposed to once every shot which is virtually guaranteed to occur less,
-        // so putting recalculation logic there just makes more sense from an efficiency perspective. Coding it like this way definitely requires more checks to prevent issues
-        // (see IsReset) but overall will feel way better in game
-        public override bool Shoot(Item item, EntitySource_ItemUse_WithAmmo source, Vector2 position, Vector2 velocity, int type, int damage, float knockback)
-        {
-            if (!AlternatingDisabled && !AlternatingAmmoMechanic.Sets.NonAmmoAlternatingItems[source.Item.type])
-            {
-                UpdateAndRotatePool(source.Item);
-            }
-
-            return true;
-        }
+        private static bool DontCallMyHooks { get; set; }
 
         // Default vanilla/tModloader logic for choosing ammo to be used for a gun upon shooting is to choose the first ammo that ItemLoader.CanChooseAmmo returns true on.
         // Instead of doing this, I want to build a pool of available ammunitions (using the same ItemLoader.CanChooseAmmo hooks), then restrict what ammunition can be used
@@ -145,8 +95,6 @@ namespace GarnsMod.Content.Mechanics.AlternatingAmmoMechanic
         // each time a gun is shot)
         public void UpdateAndRotatePool(Item weapon)
         {
-            alternatorTimeout = 450;
-
             bool ratioBased = Mode == AlternatingAmmoMode.Alternate_PreserveRatio; // Make this a config option. also make this whole mechanic a config option (client side)
 
             IEnumerable<int> availableItemTypes = ratioBased ? new List<int>() : new HashSet<int>();
@@ -187,9 +135,9 @@ namespace GarnsMod.Content.Mechanics.AlternatingAmmoMechanic
                 if (ammoItem.type == ItemID.None)
                     return false;
 
-                DontRunHook = true;
+                DontCallMyHooks = true;
                 bool result = ItemLoader.CanChooseAmmo(weapon, ammoItem, player);
-                DontRunHook = false;
+                DontCallMyHooks = false;
                 return result;
             }
 
@@ -198,16 +146,40 @@ namespace GarnsMod.Content.Mechanics.AlternatingAmmoMechanic
             // TL;DR CurrentAmmoItemType can not be an ammo type that we only have stacks of 1, of or else the weapon won't shoot and will have to wait for the automatic Reset() timeout to shoot again
             AmmoPool = availableItemTypes.Where(itemType => anyStackGreaterThan1[itemType]).ToArray();
 
-            // If no ammo is found, we reset to tell the next call to our CanChooseAmmo hook to use default logic.
-            // The pool won't be recalculated again until after the next call to Shoot() happens and UpdateAndRotatePool() is called again
+            // If no ammo is found, ammo pool is set to null which means our CanChooseAmmo hook will return null to default to other hook / vanilla logic
             if (AmmoPool.Length == 0)
             {
-                Reset();
+                AmmoPool = null;
+                CurrPoolIndex = 0;
             }
             else
             {
                 CurrPoolIndex = (CurrPoolIndex + 1) % AmmoPool.Length;
             }
+        }
+
+        internal bool? CanChooseAmmo(Item weapon, Item ammoItem, Player player)
+        {
+            if (DontCallMyHooks)
+                return null;
+
+            // Refuse to use the last item in the stack if alternating is enabled (regardless of if AmmoPool is null, or if this gun is allowed to alternate)
+            if (ammoItem.stack == 1 && ammoItem.consumable && !AlternatingDisabled)
+                return false;
+
+            // Make it so it only applied to the held item, for efficiency (also because seeing ammunition count changing for other guns besides this one is annoying)
+            if (AlternatingDisabled || AmmoPool is null || player.HeldItem.type != weapon.type || ammoItem.type == ItemID.None)
+                return null;
+
+            // We are only allowed to choose ammo based on CurrentAmmoItemType, which is the element at AmmoPool[CurrentPoolChoice] 
+            return ammoItem.type == AmmoPool[CurrPoolIndex];
+        }
+
+        // Shoot is the last thing called
+        public override bool Shoot(Item item, EntitySource_ItemUse_WithAmmo source, Vector2 position, Vector2 velocity, int type, int damage, float knockback)
+        {
+            AmmoPool = null;
+            return true;
         }
 
         public override void Initialize()
