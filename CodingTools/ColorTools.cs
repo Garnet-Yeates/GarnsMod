@@ -1,8 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 using System;
 using System.Collections.Generic;
-using GarnsMod.CodingTools;
-using System.ComponentModel.DataAnnotations;
 
 namespace GarnsMod.CodingTools
 {
@@ -42,7 +40,7 @@ namespace GarnsMod.CodingTools
             Dictionary<int, ColorGradient> dict = new();
             for (int i = 0; i < RainbowColors.Count; i++)
             {
-                dict.Add(i, FromCollectionWithStartIndex(RainbowColors, i, extraStart: extraStart, extraLoops: extraLoops, reverse: reverse ));
+                dict.Add(i, FromCollectionWithStartIndex(RainbowColors, i, extraStart: extraStart, extraLoops: extraLoops, reverse: reverse));
             }
             return dict;
         }
@@ -108,7 +106,7 @@ namespace GarnsMod.CodingTools
             int length = colors.Count;
             if (reverse)
             {
-                for (int currIndex = startIndex, i = length + extraLoops - 1; i >= 0; currIndex = (int) GarnMathHelpers.Modulo(currIndex - 1, length), i--)
+                for (int currIndex = startIndex, i = length + extraLoops - 1; i >= 0; currIndex = (int)GarnMathHelpers.Modulo(currIndex - 1, length), i--)
                 {
                     grad.AddColor(colors[currIndex]);
                 }
@@ -170,7 +168,7 @@ namespace GarnsMod.CodingTools
                 inc = 1;
                 return;
             }
-            inc = (float) Math.Round(1f / (n - 1f), 4);
+            inc = (float)Math.Round(1f / (n - 1f), 4);
         }
 
         public Color GetColor(float progress)

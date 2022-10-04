@@ -1,11 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Terraria;
-using Terraria.GameContent.ItemDropRules;
 using Terraria.ModLoader;
 
 namespace GarnsMod.CodingTools
@@ -48,7 +43,7 @@ namespace GarnsMod.CodingTools
 
         public static Vector2 MouseWorldWithoutZoom()
         {
-            return Main.MouseWorld + (Main.MouseScreen - MouseScreenForUI()*Main.UIScale) / Main.GameZoomTarget / Main.UIScale;
+            return Main.MouseWorld + (Main.MouseScreen - MouseScreenForUI() * Main.UIScale) / Main.GameZoomTarget / Main.UIScale;
             // same as Main.MouseWorld + (Main.MouseScreen - Vector2.Transform(Main.MouseScreen, Main.GameViewMatrix.ZoomMatrix)) / Main.GameZoomTarget / Main.UIScale;
         }
     }

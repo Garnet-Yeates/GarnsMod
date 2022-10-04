@@ -1,12 +1,12 @@
-﻿using System.Collections.Generic;
+﻿using GarnsMod.CodingTools;
 using GarnsMod.Content.Projectiles;
-using GarnsMod.CodingTools;
 using Microsoft.Xna.Framework;
+using System.Collections.Generic;
 using Terraria;
 using Terraria.DataStructures;
-using static GarnsMod.CodingTools.ColorGradient;
 using Terraria.ID;
 using Terraria.ModLoader;
+using static GarnsMod.CodingTools.ColorGradient;
 
 namespace GarnsMod.Content.Items.Weapons.Melee
 {
@@ -72,7 +72,7 @@ namespace GarnsMod.Content.Items.Weapons.Melee
                 // Generate new bobbers
                 Vector2 vel = current;
 
-                NorthernStar p = (NorthernStar) Projectile.NewProjectileDirect(source, position, vel, type, damage, knockback, player.whoAmI).ModProjectile;
+                NorthernStar p = (NorthernStar)Projectile.NewProjectileDirect(source, position, vel, type, damage, knockback, player.whoAmI).ModProjectile;
                 p.starColorIndex = currentColor;
 
                 if (Main.netMode == NetmodeID.MultiplayerClient)

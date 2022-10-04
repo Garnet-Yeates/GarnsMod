@@ -1,12 +1,12 @@
 ﻿using GarnsMod.Content.Projectiles;
 using Microsoft.Xna.Framework;
+using System;
 using Terraria;
 using Terraria.DataStructures;
 using Terraria.GameContent.Creative;
 using Terraria.ID;
-using static GarnsMod.CodingTools.ColorGradient;
 using Terraria.ModLoader;
-using System;
+using static GarnsMod.CodingTools.ColorGradient;
 
 namespace GarnsMod.Content.Items.Weapons.Melee.SlasherSwords
 {
@@ -24,11 +24,11 @@ namespace GarnsMod.Content.Items.Weapons.Melee.SlasherSwords
         {
             Item.damage = 200;
             Item.useTime = 22;
-            Item.useAnimation = 22; 
+            Item.useAnimation = 22;
             Item.useStyle = ItemUseStyleID.Swing;
             Item.autoReuse = true;
             Item.useTurn = false;
-            
+
             Item.UseSound = null;
             Item.width = 66;
             Item.height = 66;
@@ -66,7 +66,7 @@ namespace GarnsMod.Content.Items.Weapons.Melee.SlasherSwords
         public override void ModifyShootStats(Player player, ref Vector2 position, ref Vector2 velocity, ref int type, ref int damage, ref float knockback)
         {
             position += velocity.SafeNormalize(default) * 20; // Make it spawn a bit further ahead
-            velocity *= player.GetAttackSpeed(DamageClass.Melee)*1.25f;
+            velocity *= player.GetAttackSpeed(DamageClass.Melee) * 1.25f;
         }
 
         public override bool Shoot(Player player, EntitySource_ItemUse_WithAmmo source, Vector2 position, Vector2 velocity, int type, int damage, float knockback)

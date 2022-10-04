@@ -1,6 +1,5 @@
 ﻿using Microsoft.Xna.Framework;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using Terraria;
 using Terraria.DataStructures;
@@ -62,17 +61,17 @@ namespace GarnsMod.Content.Items.Weapons.Ranged
         // This is what charge timeout is set to when you stop using the item. You are given 'grace' ticks to use the item again before it times out
         private const int Grace = 20;
 
-        public const int BaseUseAnimation = 24;
+        public const int BaseUseAnimation = 6;
         public const int ChargedUseAnimation = 24;
 
-        public const int BaseUseTime = 8;
-        public const int ChargedUseTime = 5;
+        public const int BaseUseTime = 6;
+        public const int ChargedUseTime = 3;
 
-        public const int BaseReuseDelay = 24;
-        public const int ChargedReuseDelay = 12;
+        public const int BaseReuseDelay = 0;
+        public const int ChargedReuseDelay = 0;
 
-        public const float BaseShootSpeed = 5f;
-        public const float ChargedShootSpeed = 15f;
+        public const float BaseShootSpeed = 10f;
+        public const float ChargedShootSpeed = 10f;
 
 
         // This method lets you adjust position of the gun in the player's hands. Play with these values until it looks good with your graphics.
@@ -92,6 +91,7 @@ namespace GarnsMod.Content.Items.Weapons.Ranged
             return true;
         }
 
+
         public override void UpdateInventory(Player player)
         {
             if (--chargeTimeout == 0)
@@ -102,6 +102,14 @@ namespace GarnsMod.Content.Items.Weapons.Ranged
                 Item.shootSpeed = BaseShootSpeed;
                 Item.useAnimation = BaseUseAnimation;
             }
+        }
+
+        public override bool? CanChooseAmmo(Item ammoItem, Player player)
+        {
+            int[] alsoAcceptAmmoTypes = { AmmoID.Arrow };
+
+            Item weapon = Item; // The Item that this ModItem is attached to is the weapon
+            return ammoItem.ammo == weapon.useAmmo || alsoAcceptAmmoTypes.Contains(ammoItem.ammo);
         }
 
         public override bool? UseItem(Player player)
@@ -127,45 +135,4 @@ namespace GarnsMod.Content.Items.Weapons.Ranged
             }
         }
     }
-
-    class GarnGunGlobalAmmunition : GlobalItem
-    {
-        // Represents the available ammunitions that the GarnGun should be able to use, ordered by priority
-        public static readonly List<int> AmmoPriorityList = new() { AmmoID.Bullet, AmmoID.Arrow };
-
-        public override bool AppliesToEntity(Item item, bool lateInstantiation)
-        {
-            return lateInstantiation && AmmoPriorityList.Contains(item.ammo);
-        }
-
-        // Reject using lower priority ammos if the user has a higher priority ammo in their inventory
-        public override bool? CanBeChosenAsAmmo(Item ammoType, Item weapon, Player player)
-        {
-            return null;
-            if (weapon.type == ModContent.ItemType<GarnGun>())
-            {
-                foreach (int prioritizeAmmoType in AmmoPriorityList)
-                {
-                    if (ammoType.ammo == prioritizeAmmoType)
-                    {
-                        return true;
-                    }
-                    // Don't let it advance to the next iteration to try a lower prio ammo if we have a higher prio one in inventory
-                    else if (player.inventory.Any(item => item.ammo == prioritizeAmmoType))
-                    {
-                        return false;
-                    }
-
-                    // If ammo.type isn't prioritizeAmmoType, and they don't have prioritizeAmmoType in their inventory, try the next highest priority
-                    // AKA continue to the next iteration of this foreach
-                }
-
-                return false;
-            }
-
-            return null;
-        }
-    }
-
-
 }

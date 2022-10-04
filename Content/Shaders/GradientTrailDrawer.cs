@@ -40,7 +40,7 @@ namespace GarnsMod.Content.Shaders
     public struct GradientTrailDrawer
     {
         private static readonly VertexStrip vertexStrip = new();
-           
+
         internal void Draw(Projectile proj, ColorGradient grad, TrailType trailType, Vector2 offset = default, float? overrideSaturation = null, float? overrideOpacity = null, StripHalfWidthFunction overrideWidthFunction = null, int progressModifier = 0, bool padding = true, float? colorAlphaModifier = null)
         {
             MiscShaderData miscShaderData = GameShaders.Misc[$"TrailShader{trailType.ShaderName}"];
@@ -50,13 +50,13 @@ namespace GarnsMod.Content.Shaders
             miscShaderData.Apply();
 
             colorAlphaModifier ??= trailType.AlphaModifier;
-            
+
             // Progress is a float between 0 and 1 where 0 is the beginning of the strip right behind the projectile and 1 is the end
             Color StripColorFunc(float progress)
             {
                 float usingProgress = GarnMathHelpers.Modulo(progress + progressModifier / 1000f, 1.00f);
                 Color col = grad.GetColor(usingProgress);
-                col.A = (byte) (col.A * colorAlphaModifier);
+                col.A = (byte)(col.A * colorAlphaModifier);
                 return col;
             }
 
@@ -86,14 +86,14 @@ namespace GarnsMod.Content.Shaders
         public static readonly TrailType Plain = new("Plain", saturation: 0.0f, opacity: 2.5f, widthFunc: PlainWidthFunction, alphaModifier: 0.45f);
         public static readonly TrailType Stream = new("Stream", saturation: 1.5f, opacity: 4.0f, widthFunc: StreamWidthFunction, alphaModifier: 0.45f);
         public static readonly TrailType Fire = new("Fire", saturation: -1f, opacity: 6.0f, widthFunc: FireWidthFunction, alphaModifier: 0.45f);
-        
+
         internal string ShaderName { get; }
         internal float Saturation { get; }
         internal float AlphaModifier { get; }
         internal float Opacity { get; }
 
         internal StripHalfWidthFunction WidthFunction { get; }
-        
+
         private TrailType(string shaderName, float saturation, float opacity, StripHalfWidthFunction widthFunc, float alphaModifier = 1f)
         {
             Value = typeModes.Count;
@@ -119,7 +119,7 @@ namespace GarnsMod.Content.Shaders
 
             return MathHelper.Lerp(30, 40f, (progress - 0.5f) * (1.0f / 0.5f));
         }
-        
+
         public static float StreamWidthFunction(float progress)
         {
             if (progress < 0.25f)
@@ -130,7 +130,7 @@ namespace GarnsMod.Content.Shaders
             {
                 return MathHelper.Lerp(15f, 20f, (progress - 0.25f) * (1.0f / 0.25f));
             }
-                  
+
             return MathHelper.Lerp(20f, 30f, (progress - 0.5f) * (1.0f / 0.5f));
         }
 

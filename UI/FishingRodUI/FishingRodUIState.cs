@@ -1,14 +1,12 @@
-﻿using Microsoft.Xna.Framework;
+﻿using GarnsMod.CodingTools;
+using GarnsMod.Content.Items.Tools;
+using Microsoft.Xna.Framework;
 using Terraria;
 using Terraria.Audio;
 using Terraria.ID;
 using Terraria.ModLoader;
 using Terraria.UI;
-using GarnsMod.Content.Items.Tools;
 using static GarnsMod.Content.Items.Tools.GarnsFishingRod;
-using GarnsMod.CodingTools;
-using Terraria.ModLoader.UI.Elements;
-using Terraria.GameContent.UI.Elements;
 
 namespace GarnsMod.UI.FishingRodUI
 {
@@ -19,18 +17,18 @@ namespace GarnsMod.UI.FishingRodUI
         private UIHoverImageButton ShootModeButton;
 
         public Vector2 Origin { get; private set; }
-        public int InventoryIndex { get; private set; }
+        public int HotbarIndex { get; private set; }
         public TrailColorMode SelectedTrailColorMode { get; private set; }
         public TrailTypeMode SelectedTrailTypeMode { get; private set; }
         public ShootMode SelectedShootMode { get; private set; }
 
-        public FishingRodUIState(ShootMode shootMode, TrailColorMode trailColorMode, TrailTypeMode trailTypeMode, int inventoryIndex)
+        public FishingRodUIState(ShootMode shootMode, TrailColorMode trailColorMode, TrailTypeMode trailTypeMode, int hotbarIndex)
         {
             Origin = GarnTools.MouseScreenForUI();
             SelectedShootMode = shootMode;
             SelectedTrailColorMode = trailColorMode;
             SelectedTrailTypeMode = trailTypeMode;
-            InventoryIndex = inventoryIndex;
+            HotbarIndex = hotbarIndex;
         }
 
         public override void OnInitialize()
@@ -100,7 +98,7 @@ namespace GarnsMod.UI.FishingRodUI
 
             Player myPlayer = Main.player[Main.myPlayer];
 
-            if (myPlayer.HeldItem.ModItem is not GarnsFishingRod || myPlayer.selectedItem != InventoryIndex)
+            if (myPlayer.HeldItem.ModItem is not GarnsFishingRod || myPlayer.selectedItem != HotbarIndex)
             {
                 Close();
             }

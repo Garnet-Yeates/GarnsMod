@@ -27,13 +27,13 @@ namespace GarnsMod.Content.Players
 
         void Test()
         {
-NPC p1 = new();
-NPC p2 = new();
-NPC p3 = p2;
+            NPC p1 = new();
+            NPC p2 = new();
+            NPC p3 = p2;
 
-bool b1 = p1 == p2; // false
-bool b2 = p2 == p3; // true, p3 is assigned to the same object as p2
-bool b3 = p1 is NPC; // true, they are both of type NPC
+            bool b1 = p1 == p2; // false
+            bool b2 = p2 == p3; // true, p3 is assigned to the same object as p2
+            bool b3 = p1 is NPC; // true, they are both of type NPC
         }
 
         // Only called on the client that caught the fish, so totalCratesCaught and totalFishCaught will get desynced

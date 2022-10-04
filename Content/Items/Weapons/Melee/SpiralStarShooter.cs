@@ -2,9 +2,9 @@
 using Microsoft.Xna.Framework;
 using Terraria;
 using Terraria.DataStructures;
-using static GarnsMod.CodingTools.ColorGradient;
 using Terraria.ID;
 using Terraria.ModLoader;
+using static GarnsMod.CodingTools.ColorGradient;
 
 namespace GarnsMod.Content.Items.Weapons.Melee
 {

@@ -1,18 +1,16 @@
-﻿using GarnsMod.Content.Shaders;
-using GarnsMod.CodingTools;
+﻿using GarnsMod.CodingTools;
+using GarnsMod.Content.Shaders;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using ReLogic.Content;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using Terraria;
 using Terraria.Audio;
 using Terraria.DataStructures;
 using Terraria.ID;
 using Terraria.ModLoader;
-using static Terraria.Graphics.VertexStrip;
-using GarnsMod.Content.Items.Weapons.Melee;
-using System.IO;
 
 namespace GarnsMod.Content.Projectiles
 {
@@ -150,7 +148,7 @@ namespace GarnsMod.Content.Projectiles
             }
 
             // "undo" normal movement calculation beforehand or else our calculated position above will be offset by (velocity.X, velocity.Y) because vanilla adds velocity to pos after AI code.
-      //      Projectile.position -= Projectile.velocity;
+            //      Projectile.position -= Projectile.velocity;
 
             // We always draw it at 0 degree rotation. But for the sake of the trail drawing accurately we still rotate the projectile to its direction
             Projectile.rotation = Projectile.velocity.ToRotation();

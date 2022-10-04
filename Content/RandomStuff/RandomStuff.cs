@@ -5,7 +5,6 @@ using GarnsMod.Content.Items.Weapons.Melee.SlasherSwords;
 using Microsoft.Xna.Framework;
 using System;
 using System.Collections.Generic;
-using System.Data.OleDb;
 using System.Linq;
 using Terraria;
 using Terraria.Chat;
@@ -174,7 +173,7 @@ namespace GarnsMod.Content.RandomStuff
             {
                 npcLoot.RemoveWhere<CommonDrop>(bookofSkullsDrop => bookofSkullsDrop.itemId == ItemID.BookofSkulls, reattachChains: true);
             }
-            
+
             // Example 2
             // 
             // NORMAL WAY
@@ -317,7 +316,7 @@ namespace GarnsMod.Content.RandomStuff
                 OneFromOptionsDropRule iceMimicOptions;
 
                 // SPECIFIC FIND EXAMPLE: Will only find a OneFromOptionsDropRule that is chained onto a ToySled CommonDrop via TryIfFailedRandomRoll chain
-                iceMimicOptions = npcLoot.FindRuleWhere<TryIfFailedRandomRoll, OneFromOptionsDropRule>(rule => 
+                iceMimicOptions = npcLoot.FindRuleWhere<TryIfFailedRandomRoll, OneFromOptionsDropRule>(rule =>
                     rule.ContainsOption(ItemID.Frostbrand) &&
                     rule.HasParentRuleWhere<CommonDrop>(parentRule => parentRule.itemId == ItemID.ToySled, nthParent: 1));
 
@@ -420,7 +419,7 @@ namespace GarnsMod.Content.RandomStuff
                         stopAtFirst: true // stopAtFirst is true by default, just showing it here so you knowit exists
                     ); ;
                 }
-                
+
             }
         }
     }

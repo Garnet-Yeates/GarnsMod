@@ -1,7 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Reflection;
 using Terraria;
 using Terraria.GameContent.ItemDropRules;
@@ -165,14 +164,14 @@ namespace GarnsMod.Content.RandomStuff
             }
 
             return new DropAttemptInfo
-            { 
-                npc = npcDummy, 
-                item = itemDummy, 
-                rng = Main.rand, 
-                IsExpertMode = Main.expertMode, 
-                IsMasterMode = Main.masterMode, 
-                IsInSimulation = false, 
-                player = player ?? Main.LocalPlayer 
+            {
+                npc = npcDummy,
+                item = itemDummy,
+                rng = Main.rand,
+                IsExpertMode = Main.expertMode,
+                IsMasterMode = Main.masterMode,
+                IsInSimulation = false,
+                player = player ?? Main.LocalPlayer
             };
         }
 

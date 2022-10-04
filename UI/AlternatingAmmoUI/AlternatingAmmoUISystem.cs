@@ -1,5 +1,4 @@
-﻿using GarnsMod.UI.FishingRodUI;
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using System.Collections.Generic;
 using Terraria;
 using Terraria.ModLoader;
@@ -11,7 +10,7 @@ namespace GarnsMod.UI.AlternatingAmmoUI
     {
         private UserInterface _alternatingAmmoInterface;
 
-        public AlternatingAmmoUIState UIState => _alternatingAmmoInterface?.CurrentState as AlternatingAmmoUIState;  
+        public AlternatingAmmoUIState UIState => _alternatingAmmoInterface?.CurrentState as AlternatingAmmoUIState;
 
         public override void Load()
         {

@@ -1,5 +1,4 @@
-﻿using GarnsMod.Content.Players;
-using Terraria;
+﻿using Terraria;
 using Terraria.ModLoader;
 
 namespace GarnsMod.Content.InfoDisplays

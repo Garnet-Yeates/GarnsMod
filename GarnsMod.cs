@@ -1,7 +1,3 @@
-using IL.Terraria.DataStructures;
-using Microsoft.Xna.Framework.Graphics;
-using Terraria;
-using Terraria.Graphics.Shaders;
 using Terraria.ModLoader;
 
 namespace GarnsMod
@@ -10,7 +6,7 @@ namespace GarnsMod
     {
         public override void Load()
         {
-       
+
         }
         public override void Unload()
         {

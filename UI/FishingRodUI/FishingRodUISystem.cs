@@ -1,9 +1,5 @@
-﻿using GarnsMod.Content.Items.Weapons.Ranged;
-using Microsoft.Xna.Framework;
-using System;
+﻿using Microsoft.Xna.Framework;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using Terraria;
 using Terraria.Audio;
 using Terraria.ID;
@@ -33,10 +29,10 @@ namespace GarnsMod.UI.FishingRodUI
             CloseFishingRodUI();
         }
 
-        public void OpenFishingRodUI(ShootMode shootMode, TrailColorMode trailColorMode, TrailTypeMode trailTypeMode, int inventoryIndex)
+        public void OpenFishingRodUI(ShootMode shootMode, TrailColorMode trailColorMode, TrailTypeMode trailTypeMode, int hotbarIndex)
         {
             SoundEngine.PlaySound(SoundID.MenuOpen);
-            _fishingRodInterface.SetState(new FishingRodUIState(shootMode, trailColorMode, trailTypeMode, inventoryIndex)); // setState calls Activate() on the new ui
+            _fishingRodInterface.SetState(new FishingRodUIState(shootMode, trailColorMode, trailTypeMode, hotbarIndex)); // setState calls Activate() on the new ui
         }
 
         public void CloseFishingRodUI()

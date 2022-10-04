@@ -1,5 +1,4 @@
-﻿using GarnsMod.Content.Players;
-using GarnsMod.CodingTools;
+﻿using GarnsMod.CodingTools;
 using Terraria;
 using Terraria.ModLoader;
 

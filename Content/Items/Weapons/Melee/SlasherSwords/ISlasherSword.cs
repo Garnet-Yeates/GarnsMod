@@ -3,9 +3,7 @@ using Microsoft.Xna.Framework;
 using System;
 using Terraria;
 using Terraria.Audio;
-using Terraria.GameInput;
 using Terraria.ID;
-using Terraria.ModLoader;
 
 namespace GarnsMod.Content.Items.Weapons.Melee.SlasherSwords
 {
@@ -77,7 +75,7 @@ namespace GarnsMod.Content.Items.Weapons.Melee.SlasherSwords
         {
             float progress = GetAnimationProgress(player);
 
-            if (progress >= CanHitNPCAt && !CanHitNPCYet) 
+            if (progress >= CanHitNPCAt && !CanHitNPCYet)
             {
                 CanHitNPCYet = true;
                 SoundEngine.PlaySound(SoundID.Item1);
@@ -108,9 +106,9 @@ namespace GarnsMod.Content.Items.Weapons.Melee.SlasherSwords
 
         public void UseItemHitbox(Player player, ref Rectangle hitbox)
         {
-            int width = (int) (Item.width * Item.scale);
-            int height = (int) (Item.height * Item.scale);
-            Vector2 vecToOtherCorner = new(width*1.1f * player.direction, -height*1.1f);
+            int width = (int)(Item.width * Item.scale);
+            int height = (int)(Item.height * Item.scale);
+            Vector2 vecToOtherCorner = new(width * 1.1f * player.direction, -height * 1.1f);
 
             Vector2 itemLoc = player.Center + new Vector2(player.direction * -2, -6);
             float rot = GetItemRotation(player);

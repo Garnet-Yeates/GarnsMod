@@ -1,15 +1,15 @@
-﻿using Microsoft.Xna.Framework;
+﻿using GarnsMod.CodingTools;
+using GarnsMod.Content.Shaders;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using System;
 using System.IO;
 using Terraria;
 using Terraria.DataStructures;
 using Terraria.ID;
 using Terraria.ModLoader;
 using static GarnsMod.CodingTools.ColorGradient;
-using Microsoft.Xna.Framework.Graphics;
-using System;
 using static GarnsMod.Content.Items.Tools.GarnsFishingRod;
-using GarnsMod.Content.Shaders;
-using GarnsMod.CodingTools;
 
 namespace GarnsMod.Content.Projectiles
 {

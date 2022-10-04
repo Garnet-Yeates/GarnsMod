@@ -1,6 +1,6 @@
-﻿using GarnsMod.Content.Items.Weapons.Melee;
+﻿using GarnsMod.CodingTools;
+using GarnsMod.Content.Items.Weapons.Melee;
 using GarnsMod.Content.Shaders;
-using GarnsMod.CodingTools;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using ReLogic.Content;
