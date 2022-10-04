@@ -1,14 +1,9 @@
-﻿using Microsoft.Xna.Framework;
+﻿using GarnsMod.Content.Mechanics.AlternatingAmmoMechanic;
+using Microsoft.Xna.Framework;
 using Terraria;
 using Terraria.Audio;
 using Terraria.ID;
-using Terraria.ModLoader;
 using Terraria.UI;
-using Microsoft.Xna.Framework.Graphics;
-using ReLogic.Content;
-using System.Collections.Generic;
-using GarnsMod.Content.Mechanics;
-using GarnsMod.Content.Mechanics.AlternatingAmmoMechanic;
 
 namespace GarnsMod.UI.AlternatingAmmoUI
 {
@@ -20,12 +15,21 @@ namespace GarnsMod.UI.AlternatingAmmoUI
 
         public static readonly int ButtonSize = 76; // Should correspond to the texture size since the draw size is based on the texture size
 
-        Vector2 Origin { get; set; }
+        private Vector2 Origin { get; set; }
 
         public void CalculateOrigin()
         {
-            Origin = new Vector2(0, Main.screenHeight - ButtonSize);
-            RefreshButtons();
+            Vector2 newOrigin = new(0, Main.screenHeight - ButtonSize);
+            if (newOrigin != Origin)
+            {
+                Origin = newOrigin;
+                RefreshButtons();
+            }
+        }
+
+        public override void Update(GameTime gameTime)
+        {
+            CalculateOrigin();
         }
 
         public override void OnInitialize()
