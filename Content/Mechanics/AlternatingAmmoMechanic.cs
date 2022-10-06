@@ -32,6 +32,16 @@ namespace GarnsMod.Content.Mechanics.AlternatingAmmoMechanic
         public override void SetStaticDefaults() => AlternatingAmmoMechanic.Sets.SetStaticDefaults();
     }
 
+
+    internal class ZZZ : ModPlayer
+    {
+        public override bool CanShoot(Item item)
+        {
+            return true;
+        }
+    }
+
+
     // Creates a client-sided timer (never synced) as a means of rotating through ammo types
     internal class AlternatingAmmoPlayer : ModPlayer
     {
@@ -45,25 +55,39 @@ namespace GarnsMod.Content.Mechanics.AlternatingAmmoMechanic
         // Increments by one after the Pool is recalculated (every time a weapon is shot). This is what 'cycles' through the pool to 'alternate' our current ammo
         public int CurrPoolIndex = 0;
 
-        // *Slight visual bug happens if this hook is called BEFORE another CanShoot hook that returns false. Very rare case and doesn't affect gameplay. I could technically fix it by consulting other CanShoot hooks and returning false if any of them return false
-        //
-        // Called just before ammo is picked / subtracted. We update our pool here. After this it consults CanChooseAmmo hooks to decide which ammo to pick / subtract.
-        // Our CanChooseAmmo hook will restrict what ammo can be chosen based on Pool[CurrPoolIndex] of the Pool we just updated 
+
+        // We set AmmoPool to null at the very beginning of the ItemCheck_CheckCanUse vanilla method. ItemCheck_CheckCanUse happens before ItemCheck_Shoot and in the context of guns it is
+        // used to make sure the gun has the ammo required to be able to be used. Setting it to null here instead of in CanShoot ensures that any issue with AmmoPool staying set (read comments above CanShoot)
+        // are purely visual, instead of gameplay related (although I basically ensured that we won't run into issues on that front.. putting it here guarantees no gameplay issues)
+        public override bool CanUseItem(Item item)
+        {
+            AmmoPool = null; // We reset 
+            return true;
+
+        }
+
+        // Called just before ammo is picked / subtracted. We update our pool here. After this, tmodloader consults CanChooseAmmo hooks to decide which ammo to pick / subtract.
+        // Our CanChooseAmmo hook will restrict what ammo can be chosen based on Pool[CurrPoolIndex] of the Pool we just updated. After this, tmodloader calls shoot and the pool is set back to null
         // After this, Shoot() is called
+        //
+        // This hook would never be reached in the first place if they did not have the ammo required to shoot, as it checks in ItemCheck_CheckCanUse before ItemCheck_Shoot happens.
+        // "Having the ammo required to shoot" also means that they MUST have at least one stack of ammo that is non consumable or has a stacksize of > 1 (my CanChooseAmmo hook makes *sure* of this if
+        // alternating is enabled). This means that the ONLY thing that can possibly "choke" the process is other CanShoot's returning false. That's why we check those hooks to ENSURE that we don't set the
+        // pool to something non-null unless KNOW we will get to the end of Shoot() and set the pool back to null. If we fail to set the pool back to null, then 
         public override bool CanShoot(Item weapon)
         {
-            if (DontCallMyHooks)
+            if (DontCallMyHooks || AlternatingDisabled)
                 return true;
-
-            AmmoPool = null;
 
             // We pre-emptively call CombinedHooks.CanShoot to see if other hooks would return false (even if they are naturally called after this one). If any of them return false, we do too
             // This prevents a visual bug that is caused when CanShoot is called here first and the pool is updated, but then another CanShoot returns false. We want to keep the pool null if any CanShoot
-            // would return false
+            // would return false 
             DontCallMyHooks = true;
             bool result = CombinedHooks.CanShoot(Player, weapon);
             DontCallMyHooks = false;
 
+            // We don't want to update the new pool if a later hook would make it so this item cannot shoot. Or else the pool will
+            // be updated
             if (!result)
                 return false;
 
