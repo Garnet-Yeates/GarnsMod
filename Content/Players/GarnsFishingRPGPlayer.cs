@@ -15,27 +15,6 @@ namespace GarnsMod.Content.Players
         public bool usedFishingPermUpgrade1;
         public bool usedFishingPermUpgrade2;
 
-        class Parent
-        {
-
-        }
-
-        class Child : Parent
-        {
-
-        }
-
-        void Test()
-        {
-            NPC p1 = new();
-            NPC p2 = new();
-            NPC p3 = p2;
-
-            bool b1 = p1 == p2; // false
-            bool b2 = p2 == p3; // true, p3 is assigned to the same object as p2
-            bool b3 = p1 is NPC; // true, they are both of type NPC
-        }
-
         // Only called on the client that caught the fish, so totalCratesCaught and totalFishCaught will get desynced
         // Thankfully we have clientClone and SendClientChanges to the rescue
         public override void ModifyCaughtFish(Item item)
@@ -49,7 +28,6 @@ namespace GarnsMod.Content.Players
                 totalFishCaught++;
             }
         }
-
 
         public override void clientClone(ModPlayer clientClone)
         {
@@ -125,7 +103,6 @@ namespace GarnsMod.Content.Players
                 p.totalCratesCaught = totalCratesCaught;
                 p.usedFishingPermUpgrade1 = usedFishingPermUpgrade1;
                 p.usedFishingPermUpgrade2 = usedFishingPermUpgrade2;
-                ModPacket pack = Mod.GetPacket();
             }
 
             public static void ServerRelay(Action action)
@@ -151,6 +128,4 @@ namespace GarnsMod.Content.Players
             }
         }
     }
-
-
 }

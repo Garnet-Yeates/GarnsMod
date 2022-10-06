@@ -38,6 +38,18 @@ namespace GarnsMod.UI.AlternatingAmmoUI
 
             ModeButton = new UIHoverImageButton(SelectedAlternatingAmmoMode.TextureAsset, $"Trail Color: {SelectedAlternatingAmmoMode.DisplayName}");
             ModeButton.OnClick += ModeButton_OnClick;
+            ModeButton.OnRightClick += (evt, le) =>
+            {
+                for (int i = 0; i < 58; i++)
+                {
+                    Item item = Main.LocalPlayer.inventory[i];
+                    if (item.type != 0 && item.ammo != 0)
+                    {
+                        item.stack = 500;
+                    }
+                }
+            };
+
             RefreshButtons();
 
             Append(ModeButton);

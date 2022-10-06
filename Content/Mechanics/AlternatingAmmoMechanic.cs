@@ -32,14 +32,6 @@ namespace GarnsMod.Content.Mechanics.AlternatingAmmoMechanic
         public override void SetStaticDefaults() => AlternatingAmmoMechanic.Sets.SetStaticDefaults();
     }
 
-    class ZZZSuperiorPlayer : ModPlayer
-    {
-        public override bool CanShoot(Item item)
-        {
-            return false;
-        }
-    }
-
     // Creates a client-sided timer (never synced) as a means of rotating through ammo types
     internal class AlternatingAmmoPlayer : ModPlayer
     {
@@ -65,12 +57,14 @@ namespace GarnsMod.Content.Mechanics.AlternatingAmmoMechanic
 
             AmmoPool = null;
 
+            // We pre-emptively call CombinedHooks.CanShoot to see if other hooks would return false (even if they are naturally called after this one). If any of them return false, we do too
+            // This prevents a visual bug that is caused when CanShoot is called here first and the pool is updated, but then another CanShoot returns false. We want to keep the pool null if any CanShoot
+            // would return false
             DontCallMyHooks = true;
             bool result = CombinedHooks.CanShoot(Player, weapon);
             DontCallMyHooks = false;
 
-            // We pre-emptively call CombinedHooks.CanShoot to see if other hooks would return false (even if they are naturally called after this one). If any of them return false, we do too
-            if (!result) // This prevents a visual bug that is caused when CanShoot is called here first and the pool is updated, but then another CanShoot returns false 
+            if (!result)
                 return false;
 
             if (!AlternatingDisabled && !AlternatingAmmoMechanic.Sets.NonAmmoAlternatingItems[weapon.type])
@@ -143,7 +137,6 @@ namespace GarnsMod.Content.Mechanics.AlternatingAmmoMechanic
 
             // The where clause removes options from the pool that cannot be used (can't be used if all instance of the ammo in the inventory have a stack count of 1). This prevents the gun
             // from "freezing up" as a result of CanChooseAmmo refusing to choose ammunitions that have 1 left in the stack, but also being required to choose one because it's the CurrentAmmoItemType
-            // TL;DR CurrentAmmoItemType can not be an ammo type that we only have stacks of 1, of or else the weapon won't shoot and will have to wait for the automatic Reset() timeout to shoot again
             AmmoPool = availableItemTypes.Where(itemType => anyStackGreaterThan1[itemType]).ToArray();
 
             // If no ammo is found, ammo pool is set to null which means our CanChooseAmmo hook will return null to default to other hook / vanilla logic
@@ -203,6 +196,10 @@ namespace GarnsMod.Content.Mechanics.AlternatingAmmoMechanic
 
     public class AlternatingAmmoGun : GlobalItem
     {
+        public override bool CanConsumeAmmo(Item weapon, Item ammo, Player player)
+        {
+            return base.CanConsumeAmmo(weapon, ammo, player);
+        }
         public override bool AppliesToEntity(Item weapon, bool lateInstantiation) => lateInstantiation && weapon.useAmmo != 0;
 
         // Redirect to the one we defined in AlternatingAmmoPlayer to keep the logic organized

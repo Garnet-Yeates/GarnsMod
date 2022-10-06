@@ -295,8 +295,8 @@ namespace GarnsMod.Content.Items.Tools
             int bobberAmount = level;
 
             Vector2 current = velocity;
-            float xDec = velocity.X / bobberAmount / 1.1f;
-            float yDec = velocity.Y / bobberAmount / 1.1f;
+            float xDec = velocity.X * 0.66f / bobberAmount;
+            float yDec = velocity.Y * 0.66f / bobberAmount;
 
             for (int colorIndex = 0; colorIndex < bobberAmount; ++colorIndex)
             {
@@ -307,14 +307,7 @@ namespace GarnsMod.Content.Items.Tools
                     ShootBobber(colorIndex % RainbowColors.Count, source, position, bobberVector + bonusSpread);
                 }
 
-                if (bobberAmount < 8)
-                {
-                    current -= new Vector2(xDec / 3, yDec / 3); ;
-                }
-                else
-                {
-                    current -= new Vector2(xDec, yDec); ;
-                }
+                current -= new Vector2(xDec, yDec); ;
             }
         }
 
@@ -322,27 +315,22 @@ namespace GarnsMod.Content.Items.Tools
         {
             int bobberAmount = level;
 
-            float MinSpread = 10f;
-            float MaxSpread = 120f;
+            float MinSpread = MathHelper.ToRadians(10f) / 2;
+            float MaxSpread = MathHelper.ToRadians(120f) / 2;
 
             // Spread starts at MinSpread and scales up to MaxSpread depending on fishing rod level
             float spread = MinSpread + (float)level / MaxLevel * (MaxSpread - MinSpread);
-
-            Vector2 current = velocity.RotatedBy(MathHelper.ToRadians(spread / 2));
-
-            float increment = MathHelper.ToRadians(-spread / (bobberAmount - 1));
 
             for (int colorIndex = 0; colorIndex < bobberAmount; ++colorIndex)
             {
                 for (int j = 0; j < 1 + bonus; j++)
                 {
                     // Generate new bobbers
-                    Vector2 bobberVector = current;
+                    float rot = Utils.AngleLerp(-spread, spread, (float)colorIndex / bobberAmount);
+                    Vector2 bobberVector = velocity.RotatedBy(rot);
                     Vector2 bonusSpread = j == 0 ? default : GetBonusSpreadVector(bobberVector, 0.15f);
                     ShootBobber(colorIndex % RainbowColors.Count, source, position, bobberVector + bonusSpread);
                 }
-
-                current = current.RotatedBy(increment);
             }
         }
 
