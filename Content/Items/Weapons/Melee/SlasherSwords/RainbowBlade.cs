@@ -32,7 +32,7 @@ namespace GarnsMod.Content.Items.Weapons.Melee.SlasherSwords
             Item.UseSound = null;
             Item.width = 66;
             Item.height = 66;
-            Item.shootSpeed = 18f;
+            Item.shootSpeed = 14f;
             Item.shoot = ModContent.ProjectileType<RainbowSpiralStar>();
             Item.DamageType = DamageClass.Melee;
             Item.knockBack = 6;

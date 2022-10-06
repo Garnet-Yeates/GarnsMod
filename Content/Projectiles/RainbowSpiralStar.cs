@@ -79,6 +79,7 @@ namespace GarnsMod.Content.Projectiles
 
         public override void OnSpawn(IEntitySource source)
         {
+            Projectile.rotation = Projectile.velocity.ToRotation();
             wouldBePosition = Projectile.position;
             colorGradient = RainbowSpiralStarGradients[GradientIndex];
             upperBound = Projectile.velocity.SafeNormalize(default).RotatedBy(-MathHelper.PiOver2);
@@ -97,8 +98,6 @@ namespace GarnsMod.Content.Projectiles
 
         public override void AI()
         {
-            numTicks++;
-
             if (numTicks > 10)
             {
                 colorTicks++;
@@ -110,8 +109,8 @@ namespace GarnsMod.Content.Projectiles
             {
                 Lighting.AddLight(Projectile.Center, CurrentColor.ToVector3() * 0.5f);
             }
-        }
 
+        }
 
         // Don't use vanilla position updating
         public override bool ShouldUpdatePosition()
@@ -119,42 +118,46 @@ namespace GarnsMod.Content.Projectiles
             return false;
         }
 
-
         private void UpdatePosition()
+        {
+            Projectile.position = GetPosition();
+            wouldBePosition += Projectile.velocity;
+            numTicks++;
+
+            // After we update position, get the next position
+            //       Vector2 nextPosition = GetPosition();
+            //       Projectile.rotation = Projectile.position.To(nextPosition).ToRotation(); // <= This is how we make it rotate towards its direction on the sine wave (not doing this, just showing)
+
+            // We always draw it at 0 degree rotation. But for the sake of the trail drawing accurately we still rotate the projectile to its direction
+        }
+
+        public Vector2 GetPosition()
         {
             float ampMax = 25f;
             float ampTime = 30; // It takes 30 ticks for amp to grow to the max
             float ampMult = MathHelper.Lerp(0, ampMax, Math.Min(1, numTicks / ampTime));
+            //  ampMult = ampMax;
 
-            float frequencyMult = 0.25f * Projectile.velocity.Length();
+            // Used 
+            float normalizer = 0.0001f * Projectile.velocity.Length();
 
             // numTicks divided by 20 is our x on the graph. Every 20 ticks, x goes up by 1
-            float x = numTicks / 20f;
-            const float pi = MathHelper.Pi;
-            float sineResult = (float)Math.Sin(frequencyMult * x - 2 * pi * SineOffset) * ampMult;
+            float frequencyMult = 20;
+            float shift = -MathHelper.TwoPi * SineOffset;
+            float sineResult = (float)Math.Sin(MathHelper.TwoPi * numTicks * frequencyMult * normalizer - shift) * ampMult;
 
             // Projectile position is offset from "wouldBePosition" based on sine function. "wouldBePosition" is the position calculated normally (i.e gets velocity added to it every tick)
             if (sineResult > 0)
             {
-                Projectile.position = wouldBePosition + upperBound * sineResult;
+                return wouldBePosition + upperBound * sineResult;
             }
-            else if (sineResult == 0)
+
+            if (sineResult == 0)
             {
-                Projectile.position = wouldBePosition;
-            }
-            else
-            {
-                Projectile.position = wouldBePosition + lowerBound * Math.Abs(sineResult);
+                return wouldBePosition;
             }
 
-            // "undo" normal movement calculation beforehand or else our calculated position above will be offset by (velocity.X, velocity.Y) because vanilla adds velocity to pos after AI code.
-            //      Projectile.position -= Projectile.velocity;
-
-            // We always draw it at 0 degree rotation. But for the sake of the trail drawing accurately we still rotate the projectile to its direction
-            Projectile.rotation = Projectile.velocity.ToRotation();
-
-            // Update our 'wouldBePosition' based on normal rules.
-            wouldBePosition += Projectile.velocity;
+            return wouldBePosition + lowerBound * Math.Abs(sineResult);
         }
 
         public override bool PreDraw(ref Color lightColor)
@@ -175,8 +178,6 @@ namespace GarnsMod.Content.Projectiles
 
             return false;
         }
-
-
 
         // TL;DR we don't want the projectile to die immediately because that would make the trail just instantly disappear
         public override void Kill(int timeLeft)
