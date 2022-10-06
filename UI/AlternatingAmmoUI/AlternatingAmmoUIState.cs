@@ -29,6 +29,8 @@ namespace GarnsMod.UI.AlternatingAmmoUI
 
         public override void Update(GameTime gameTime)
         {
+            base.Update(gameTime);
+
             CalculateOrigin();
         }
 
