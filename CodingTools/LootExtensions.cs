@@ -23,17 +23,17 @@ namespace GarnsMod.CodingTools
         /// LootPredicates are used to find a specific rule that matches the supplied set of conditions.<br/>
         /// <br/>
         /// These predicates can be used inside any of the top-level recursive extension methods:<br/><br/>
-        /// <see cref="RemoveWhere{R}(ILoot, LootPredicate{R}, int?, bool, ChainReattcher, bool)"/><br/>
+        /// <see cref="RemoveWhere{R}(ILoot, LootPredicate{R}, bool, int?, bool, ChainReattcher, bool)"/><br/>
         /// <see cref="RemoveChildrenWhere{R}(IItemDropRule, LootPredicate{R}, int?, bool, ChainReattcher, bool)"/><br/>
-        /// <see cref="RemoveWhere{C, R}(ILoot, LootPredicate{R}, int?, bool, ChainReattcher bool)"/><br/>
+        /// <see cref="RemoveWhere{C, R}(ILoot, LootPredicate{R}, bool, int?, bool, ChainReattcher bool)"/><br/>
         /// <see cref="RemoveChildrenWhere{C, R}(IItemDropRule, LootPredicate{R}, int?, bool, ChainReattcher bool)"/><br/>
         /// <br/>
-        /// <see cref="HasRuleWhere{R}(ILoot, LootPredicate{R}, int?)"/><br/>
-        /// <see cref="FindRuleWhere{R}(ILoot, LootPredicate{R}, ChainReattcher, int?)"/><br/>
+        /// <see cref="HasRuleWhere{R}(ILoot, LootPredicate{R}, bool, int?)"/><br/>
+        /// <see cref="FindRuleWhere{R}(ILoot, LootPredicate{R}, bool, ChainReattcher, int?)"/><br/>
         /// <see cref="HasChildWhere{R}(IItemDropRule, LootPredicate{R}, int?)"/><br/>
         /// <see cref="FindChildWhere{R}(IItemDropRule, LootPredicate{R}, ChainReattcher, int?)"/><br/>
-        /// <see cref="HasRuleWhere{C, R}(ILoot, LootPredicate{R}, int?)"/><br/>
-        /// <see cref="FindRuleWhere{C, R}(ILoot, LootPredicate{R}, ChainReattcher, int?)"/><br/>
+        /// <see cref="HasRuleWhere{C, R}(ILoot, LootPredicate{R}, bool, int?)"/><br/>
+        /// <see cref="FindRuleWhere{C, R}(ILoot, LootPredicate{R}, bool, ChainReattcher, int?)"/><br/>
         /// <see cref="HasChildWhere{C, R}(IItemDropRule, LootPredicate{R}, int?)"/><br/>
         /// <see cref="FindChildWhere{C, R}(IItemDropRule, LootPredicate{R}, ChainReattcher, int?)"/><br/>
         /// <br/>
@@ -59,7 +59,7 @@ namespace GarnsMod.CodingTools
         /// Then it will remove currRule from this loot pool, and possibly re-attach currRule's children onto currRule's parent if <paramref name="reattachChains"/> is set to true.
         /// If <paramref name="reattachChains"/> is true but the rule has no parent (i.e it is directly inside this ILoot, as opposed to being the child of a rule directly inside this ILoot), the chains can't be reattached. If 
         /// <paramref name="reattachChains"/> is set to false it will terminate here because this means the loot chained after this rule is lost, so there is no reason to make modifications to this rule's children. 
-        /// If <paramref name="reattachChains"/> is true, and <paramref name="stopAtFirst"/> is set to false, it will then repeat this same predicate-checking process on the children of the child recursively until it
+        /// If <paramref name="reattachChains"/> is true, and <paramref name="stopAtFirst"/> is set to false, it will then repeat this same predicate-checking process on the children of the child (nested and chained children) recursively until it
         /// runs out of children to operate on. <br/><br/>
         /// 
         /// If <paramref name="nthChild"/> is supplied, then the above if check will fail unless <paramref name="currRule"/> is the nth descendent of the <see cref="IItemDropRule"/> or <see cref="ILoot"/> that this extension method originated from.<br/><br/>
@@ -67,15 +67,15 @@ namespace GarnsMod.CodingTools
         /// If <paramref name="chainReattacher"/> function is supplied, and reattachChains is set to true, it will re-attach the chains using the function provided as opposed to the default re-attaching mechanism (which is to add currRule's ChainedRules to the 
         /// parent that currRule is removed from). The rule being chained is the param of the function and the function should return some type of IItemDropRuleChainAttempt where ChainAttempt.RuleToChain is set to the parameter.
         ///
-        /// <code>else</code>Then it will also repeat this process recursively on the children of the child. The rule chained onto currRule will be the new currRule on the next call and n goes up by 1 on the next call<br/><br/>
+        /// <code>else</code>Then it will also repeat this process recursively on the children of the child (nested and chained children). The rule chained/nested onto currRule will be the new currRule on the next call and n goes up by 1 on the next call<br/><br/>
         ///
         /// Note: A rule (a) is considered the parent to another rule (b) if (b) exists in (a)'s <see cref="IItemDropRule.ChainedRules"/> array
         /// </summary>
-        public static bool RemoveWhere<R>(this ILoot loot, LootPredicate<R> predicate, int? nthChild = null, bool reattachChains = false, ChainReattcher chainReattacher = null, bool stopAtFirst = true) where R : IItemDropRule
+        public static bool RemoveWhere<R>(this ILoot loot, LootPredicate<R> predicate, bool includeGlobalDrops = false, int? nthChild = null, bool reattachChains = false, ChainReattcher chainReattacher = null, bool stopAtFirst = true) where R : IItemDropRule
         {
             bool removedAny = false;
 
-            foreach (IItemDropRule rootRule in loot.Get())
+            foreach (IItemDropRule rootRule in loot.Get(includeGlobalDrops))
             {
                 if (RecursiveRemoveEntryPoint(loot, predicate, rootRule, reattachChains, chainReattacher, stopAtFirst, 1, nthChild))
                 {
@@ -97,7 +97,7 @@ namespace GarnsMod.CodingTools
         /// <code>if (<paramref name="currRule"/> is of type <typeparamref name="R"/>, and <paramref name="currRule"/> matches the predicate)</code>
         /// Then it will remove currRule from this loot pool, and possibly re-attach currRule's children onto currRule's parent if <paramref name="reattachChains"/> is set to true.
         /// If <paramref name="reattachChains"/> is set to false it will terminate here because this means the loot chained after this rule is lost, so there is no reason to make modifications to this rule's children. 
-        /// If <paramref name="reattachChains"/> is true, and <paramref name="stopAtFirst"/> is set to false, it will then repeat this same predicate-checking process on the children of the child recursively until it
+        /// If <paramref name="reattachChains"/> is true, and <paramref name="stopAtFirst"/> is set to false, it will then repeat this same predicate-checking process on the children of the child (nested and chained children) recursively until it
         /// runs out of children to operate on. <br/><br/>
         /// 
         /// If <paramref name="nthChild"/> is supplied, then the above if check will fail unless <paramref name="currRule"/> is the nth descendent of the <see cref="IItemDropRule"/> or <see cref="ILoot"/> that this extension method originated from.<br/><br/>
@@ -105,7 +105,7 @@ namespace GarnsMod.CodingTools
         /// If <paramref name="chainReattacher"/> function is supplied, and reattachChains is set to true, it will re-attach the chains using the function provided as opposed to the default re-attaching mechanism (which is to add currRule's ChainedRules to the 
         /// parent that currRule is removed from). The rule being chained is the param of the function and the function should return some type of IItemDropRuleChainAttempt where ChainAttempt.RuleToChain is set to the parameter.
         ///
-        /// <code>else</code>Then it will also repeat this process recursively on the children of the child. The rule chained onto currRule will be the new currRule on the next call and n goes up by 1 on the next call<br/><br/>
+        /// <code>else</code>Then it will also repeat this process recursively on the children of the child (nested and chained children). The rule chained/nested onto currRule will be the new currRule on the next call and n goes up by 1 on the next call<br/><br/>
         /// 
         /// Note: A rule (a) is considered the parent to another rule (b) if (b) exists in (a)'s <see cref="IItemDropRule.ChainedRules"/> array
         /// </summary>
@@ -137,7 +137,7 @@ namespace GarnsMod.CodingTools
         /// Then it will remove currRule from this loot pool, and possibly re-attach currRule's children onto currRule's parent if <paramref name="reattachChains"/> is set to true.
         /// If <paramref name="reattachChains"/> is true but the rule has no parent (i.e it is directly inside this ILoot, as opposed to being the child of a rule directly inside this ILoot), the chains can't be reattached. If 
         /// <paramref name="reattachChains"/> is set to false it will terminate here because this means the loot chained after this rule is lost, so there is no reason to make modifications to this rule's children. 
-        /// If <paramref name="reattachChains"/> is true, and <paramref name="stopAtFirst"/> is set to false, it will then repeat this same predicate-checking process on the children of the child recursively until it
+        /// If <paramref name="reattachChains"/> is true, and <paramref name="stopAtFirst"/> is set to false, it will then repeat this same predicate-checking process on the children of the child (nested and chained children) recursively until it
         /// runs out of children to operate on. <br/><br/>
         /// 
         /// If <paramref name="nthChild"/> is supplied, then the above if check will fail unless <paramref name="currRule"/> is the nth descendent of the <see cref="IItemDropRule"/> or <see cref="ILoot"/> that this extension method originated from.<br/><br/>
@@ -145,15 +145,15 @@ namespace GarnsMod.CodingTools
         /// If <paramref name="chainReattacher"/> function is supplied, and reattachChains is set to true, it will re-attach the chains using the function provided as opposed to the default re-attaching mechanism (which is to add currRule's ChainedRules to the 
         /// parent that currRule is removed from). The rule being chained is the param of the function and the function should return some type of IItemDropRuleChainAttempt where ChainAttempt.RuleToChain is set to the parameter.
         ///
-        /// <code>else</code>Then it will also repeat this process recursively on the children of the child. The rule chained onto currRule will be the new currRule on the next call and n goes up by 1 on the next call<br/><br/>
+        /// <code>else</code>Then it will also repeat this process recursively on the children of the child (nested and chained children). The rule chained/nested onto currRule will be the new currRule on the next call and n goes up by 1 on the next call<br/><br/>
         /// 
         /// Note: A rule (a) is considered the parent to another rule (b) if (b) exists in (a)'s <see cref="IItemDropRule.ChainedRules"/> array
         /// </summary>
-        public static bool RemoveWhere<C, R>(this ILoot loot, LootPredicate<R> predicate, int? nthChild = null, bool reattachChains = false, ChainReattcher chainReattacher = null, bool stopAtFirst = true) where C : IItemDropRuleChainAttempt where R : IItemDropRule
+        public static bool RemoveWhere<C, R>(this ILoot loot, LootPredicate<R> predicate, bool includeGlobalDrops = false, int? nthChild = null, bool reattachChains = false, ChainReattcher chainReattacher = null, bool stopAtFirst = true) where C : IItemDropRuleChainAttempt where R : IItemDropRule
         {
             bool removedAny = false;
 
-            foreach (IItemDropRule rootRule in loot.Get())
+            foreach (IItemDropRule rootRule in loot.Get(includeGlobalDrops))
             {
                 if (RecursiveRemoveEntryPoint<C, R>(loot, predicate, rootRule, reattachChains, chainReattacher, stopAtFirst, 1, nthChild))
                 {
@@ -175,7 +175,7 @@ namespace GarnsMod.CodingTools
         /// <code>if (<paramref name="rootRule"/> was chained onto its parent via an <see cref="IItemDropRuleChainAttempt"/> of type <typeparamref name="C"/>, and <paramref name="currRule"/> is of type <typeparamref name="R"/>, and <paramref name="currRule"/> matches the predicate)</code>
         /// Then it will remove currRule from this loot pool, and possibly re-attach currRule's children onto currRule's parent if <paramref name="reattachChains"/> is set to true.
         /// If <paramref name="reattachChains"/> is set to false it will terminate here because this means the loot chained after this rule is lost, so there is no reason to make modifications to this rule's children. 
-        /// If <paramref name="reattachChains"/> is true, and <paramref name="stopAtFirst"/> is set to false, it will then repeat this same predicate-checking process on the children of the child recursively until it
+        /// If <paramref name="reattachChains"/> is true, and <paramref name="stopAtFirst"/> is set to false, it will then repeat this same predicate-checking process on the children of the child (nested and chained children) recursively until it
         /// runs out of children to operate on. <br/><br/>
         /// 
         /// If <paramref name="nthChild"/> is supplied, then the above if check will fail unless <paramref name="currRule"/> is the nth descendent of the <see cref="IItemDropRule"/> or <see cref="ILoot"/> that this extension method originated from.<br/><br/>
@@ -183,7 +183,7 @@ namespace GarnsMod.CodingTools
         /// If <paramref name="chainReattacher"/> function is supplied, and reattachChains is set to true, it will re-attach the chains using the function provided as opposed to the default re-attaching mechanism (which is to add currRule's ChainedRules to the 
         /// parent that currRule is removed from). The rule being chained is the param of the function and the function should return some type of IItemDropRuleChainAttempt where ChainAttempt.RuleToChain is set to the parameter.
         ///
-        /// <code>else</code>Then it will also repeat this process recursively on the children of the child. The rule chained onto currRule will be the new currRule on the next call and n goes up by 1 on the next call<br/><br/>
+        /// <code>else</code>Then it will also repeat this process recursively on the children of the child (nested and chained children). The rule chained/nested onto currRule will be the new currRule on the next call and n goes up by 1 on the next call<br/><br/>
         /// 
         /// Note: A rule (a) is considered the parent to another rule (b) if (b) exists in (a)'s <see cref="IItemDropRule.ChainedRules"/> array
         /// </summary>
@@ -213,15 +213,15 @@ namespace GarnsMod.CodingTools
         /// Then it will remove currRule from this loot pool / its parent, and possibly re-attach currRule's children onto currRule's parent if <paramref name="reattachChains"/> is set to true.
         /// If <paramref name="reattachChains"/> is true but the rule's parent is the ILoot that this extension method originated from, then the children cannot be reattached since the parent isn't an IItemDropRule (there'd be no rule to chain it onto). If 
         /// <paramref name="reattachChains"/> is set to false it will terminate here because this means the loot chained after this rule is lost, so there is no reason to make modifications to this rule's children. 
-        /// If <paramref name="reattachChains"/> is true, and <paramref name="stopAtFirst"/> is set to false, it will then repeat this same predicate-checking process on the children of the child recursively until it
-        /// runs out of children to operate on. <br/><br/>
+        /// If <paramref name="reattachChains"/> is true, and <paramref name="stopAtFirst"/> is set to false, it will then repeat this same predicate-checking process on the children of the child (nested and chained children) (both nested and chained rules)
+        /// recursively until it runs out of children to operate on. <br/><br/>
         /// 
         /// If <paramref name="nthChild"/> is supplied, then the above if check will fail unless <paramref name="currRule"/> is the nth descendent of the <see cref="IItemDropRule"/> or <see cref="ILoot"/> that this extension method originated from.<br/><br/>
         ///
         /// If <paramref name="chainReattacher"/> function is supplied, and reattachChains is set to true, it will re-attach the chains using the function provided as opposed to the default re-attaching mechanism (which is to add currRule's ChainedRules to the 
         /// parent that currRule is removed from). The rule being chained is the param of the function and the function should return some type of IItemDropRuleChainAttempt where ChainAttempt.RuleToChain is set to the parameter.
         ///
-        /// <code>else</code>Then it will also repeat this process recursively on the children of the child. The rule chained onto currRule will be the new currRule on the next call and n goes up by 1 on the next call<br/><br/>
+        /// <code>else</code>Then it will also repeat this process recursively on the children of the child (nested and chained children). The rule chained/nested onto currRule will be the new currRule on the next call and n goes up by 1 on the next call<br/><br/>
         /// 
         /// </summary>
         private static bool RecursiveRemoveMain<R>(ILoot loot, LootPredicate<R> predicate, IItemDropRule currRule, bool reattachChains, ChainReattcher chainReattacher, bool stopAtFirst, int n, int? nthChild) where R : IItemDropRule
@@ -252,7 +252,7 @@ namespace GarnsMod.CodingTools
                 return ContinueRecursion(newParent: currRule);
             }
 
-            // Return true if any were removed. Returns immediately after finding one (preventing extra calls to RecursiveMoveMain) if stopAtFirst is set to true
+            // Return true if any were removed. Returns immediately after finding one (preventing extra calls to RecursiveRemoveMain) if stopAtFirst is set to true
             bool ContinueRecursion(IItemDropRule newParent)
             {
                 if (nthChild is not null && (n + 1) > nthChild) // Stop trying to search if they specified that it must be nth child (maxN) and we are gonna be further than maxN next iteration
@@ -281,6 +281,7 @@ namespace GarnsMod.CodingTools
                     }
                 }
 
+                // Then chained rules
                 foreach (IItemDropRuleChainAttempt chainAttempt in new List<IItemDropRuleChainAttempt>(currRule.ChainedRules)) // iterate over shallow clone to stop concurrent modification
                 {
                     IItemDropRule child = chainAttempt.RuleToChain;
@@ -324,6 +325,90 @@ namespace GarnsMod.CodingTools
             }
         }
 
+        private static IItemDropRule[] GetRulesNestedInsideThisRule(INestedItemDropRule rule)
+        {
+            IItemDropRule[] options = null;
+            if (rule is OneFromRulesRule ofr)
+            {
+                options = ofr.options;
+            }
+            else if (rule is FewFromRulesRule ffr)
+            {
+                options = ffr.options;
+            }
+            else if (rule is SequentialRulesRule srr)
+            {
+                options = srr.rules;
+            }
+            else if (rule is SequentialRulesNotScalingWithLuckRule srrnl)
+            {
+                options = srrnl.rules;
+            }
+            else if (rule is AlwaysAtleastOneSuccessDropRule aos)
+            {
+                options = aos.rules;
+            }
+            else if (rule is DropBasedOnExpertMode dbem)
+            {
+                options = new IItemDropRule[] { dbem.ruleForExpertMode, dbem.ruleForNormalMode };
+            }
+            else if (rule is DropBasedOnMasterMode dbmm)
+            {
+                options = new IItemDropRule[] { dbmm.ruleForMasterMode, dbmm.ruleForDefault };
+            }
+
+            return options;
+        }
+
+        private static void RemoveNestedRuleFromParent(IItemDropRule rule, INestedItemDropRule parent)
+        {
+            if (parent is OneFromRulesRule ofr)
+            {
+                ofr.RemoveOption(rule);
+            }
+            else if (parent is FewFromRulesRule ffr)
+            {
+                ffr.RemoveOption(rule);
+
+            }
+            else if (parent is SequentialRulesRule srr)
+            {
+                srr.RemoveOption(rule);
+            }
+            else if (parent is SequentialRulesNotScalingWithLuckRule srrnl)
+            {
+                srrnl.RemoveOption(rule);
+            }
+            else if (parent is AlwaysAtleastOneSuccessDropRule aos)
+            {
+                aos.RemoveOption(rule);
+            }
+            else if (parent is DropBasedOnExpertMode dbem)
+            {
+                if (dbem.ruleForExpertMode == rule)
+                {
+                    dbem.ruleForExpertMode = ItemDropRule.DropNothing();
+
+                }
+                if (dbem.ruleForNormalMode == rule)
+                {
+                    dbem.ruleForNormalMode = ItemDropRule.DropNothing();
+                }
+            }
+            else if (parent is DropBasedOnMasterMode dbmm)
+            {
+                if (dbmm.ruleForMasterMode == rule)
+                {
+                    dbmm.ruleForMasterMode = ItemDropRule.DropNothing();
+                }
+                if (dbmm.ruleForDefault == rule)
+                {
+                    dbmm.ruleForDefault = ItemDropRule.DropNothing();
+                }
+            }
+        }
+
+
         #endregion
 
         #region Recursive Child Finding
@@ -333,9 +418,9 @@ namespace GarnsMod.CodingTools
         /// If a match is found it will return true. If no match is found, it will recursively loop through the children of that child and try to find one, so on and so forth.
         /// If nothing was found after searching all children recursively, it will return false. 
         /// </summary>
-        public static bool HasRuleWhere<R>(this ILoot loot, LootPredicate<R> query, int? nthChild = null) where R : IItemDropRule
+        public static bool HasRuleWhere<R>(this ILoot loot, LootPredicate<R> query, bool includeGlobalDrops = false, int? nthChild = null) where R : IItemDropRule
         {
-            return loot.FindRuleWhere(query, null, nthChild) is not null;
+            return loot.FindRuleWhere(query, includeGlobalDrops, null, nthChild) is not null;
         }
 
         /// <summary>
@@ -347,9 +432,9 @@ namespace GarnsMod.CodingTools
         /// IItemDropRuleChainAttempt where ChainAttempt.RuleToChain is set to the parameter.
         ///        
         /// </summary>
-        public static R FindRuleWhere<R>(this ILoot loot, LootPredicate<R> query, ChainReattcher chainReplacer = null, int? nthChild = null) where R : IItemDropRule
+        public static R FindRuleWhere<R>(this ILoot loot, LootPredicate<R> query, bool includeGlobalDrops = false, ChainReattcher chainReplacer = null, int? nthChild = null) where R : IItemDropRule
         {
-            foreach (IItemDropRule rootRule in loot.Get(false))
+            foreach (IItemDropRule rootRule in loot.Get(includeGlobalDrops))
                 if (RecursiveFindEntryPoint(rootRule, query, chainReplacer, 1, nthChild) is R result)
                     return result;
             return default;
@@ -399,9 +484,9 @@ namespace GarnsMod.CodingTools
         /// If a match is found it will return true. If no match is found, it will recursively loop through the children of that child and try to find one, so on and so forth.
         /// If nothing was found after searching all children recursively, it will return false. 
         /// </summary>
-        public static bool HasRuleWhere<C, R>(this ILoot loot, LootPredicate<R> query, int? nthChild = null) where C : IItemDropRuleChainAttempt where R : IItemDropRule
+        public static bool HasRuleWhere<C, R>(this ILoot loot, LootPredicate<R> query, bool includeGlobalDrops = false, int? nthChild = null) where C : IItemDropRuleChainAttempt where R : IItemDropRule
         {
-            return loot.FindRuleWhere<C, R>(query, null, nthChild) is not null;
+            return loot.FindRuleWhere<C, R>(query, includeGlobalDrops, null, nthChild) is not null;
         }
 
         /// <summary>
@@ -413,9 +498,9 @@ namespace GarnsMod.CodingTools
         /// IItemDropRuleChainAttempt where ChainAttempt.RuleToChain is set to the parameter.
         ///       
         /// </summary>
-        public static R FindRuleWhere<C, R>(this ILoot loot, LootPredicate<R> query, ChainReattcher chainReplacer = null, int? nthChild = null) where C : IItemDropRuleChainAttempt where R : IItemDropRule
+        public static R FindRuleWhere<C, R>(this ILoot loot, LootPredicate<R> query, bool includeGlobalDrops = false, ChainReattcher chainReplacer = null, int? nthChild = null) where C : IItemDropRuleChainAttempt where R : IItemDropRule
         {
-            foreach (IItemDropRule rootRule in loot.Get())
+            foreach (IItemDropRule rootRule in loot.Get(includeGlobalDrops))
                 if (RecursiveFindEntryPoint<C, R>(rootRule, query, chainReplacer, 1, nthChild) is R result)
                     return result;
             return default;
@@ -515,92 +600,6 @@ namespace GarnsMod.CodingTools
                 }
 
                 return default; // return null
-            }
-        }
-
-        private static IItemDropRule[] GetRulesNestedInsideThisRule(INestedItemDropRule rule)
-        {
-            IItemDropRule[] options = null;
-            if (rule is OneFromRulesRule ofr)
-            {
-                options = ofr.options;
-            }
-            else if (rule is FewFromRulesRule ffr)
-            {
-                options = ffr.options;
-            }
-            else if (rule is SequentialRulesRule srr)
-            {
-                options = srr.rules;
-            }
-            else if (rule is SequentialRulesNotScalingWithLuckRule srrnl)
-            {
-                options = srrnl.rules;
-            }
-            else if (rule is AlwaysAtleastOneSuccessDropRule aos)
-            {
-                options = aos.rules;
-            }
-            else if (rule is DropBasedOnExpertMode dbem)
-            {
-                options = new IItemDropRule[] { dbem.ruleForExpertMode, dbem.ruleForNormalMode };
-            }
-            else if (rule is DropBasedOnMasterMode dbmm)
-            {
-                options = new IItemDropRule[] { dbmm.ruleForMasterMode, dbmm.ruleForDefault };
-            }
-
-            return options;
-        }
-
-        private static void RemoveNestedRuleFromParent(IItemDropRule rule, INestedItemDropRule parent)
-        {
-            if (parent is not INestedItemDropRule nestParent)
-                throw new Exception("parent must be INestedItemDropRules");
-
-            if (parent is OneFromRulesRule ofr)
-            {
-                ofr.RemoveOption(rule);
-            }
-            else if (parent is FewFromRulesRule ffr)
-            {
-                ffr.RemoveOption(rule);
-
-            }
-            else if (parent is SequentialRulesRule srr)
-            {
-                srr.RemoveOption(rule);
-            }
-            else if (parent is SequentialRulesNotScalingWithLuckRule srrnl)
-            {
-                srrnl.RemoveOption(rule);
-            }
-            else if (parent is AlwaysAtleastOneSuccessDropRule aos)
-            {
-                aos.RemoveOption(rule);
-            }
-            else if (parent is DropBasedOnExpertMode dbem)
-            {
-                if (dbem.ruleForExpertMode == rule)
-                {
-                    dbem.ruleForExpertMode = ItemDropRule.DropNothing();
-
-                }
-                if (dbem.ruleForNormalMode == rule)
-                {
-                    dbem.ruleForNormalMode = ItemDropRule.DropNothing();
-                }
-            }
-            else if (parent is DropBasedOnMasterMode dbmm)
-            {
-                if (dbmm.ruleForMasterMode == rule)
-                {
-                    dbmm.ruleForMasterMode = ItemDropRule.DropNothing();
-                }
-                if (dbmm.ruleForDefault == rule)
-                {
-                    dbmm.ruleForDefault = ItemDropRule.DropNothing();
-                }
             }
         }
 
@@ -735,7 +734,7 @@ namespace GarnsMod.CodingTools
         /// on-the-fly during RecursiveRemoveMain and RecursiveFindMain, and is cleared after recursive methods are done using it, so it will only be
         /// accurate during recursion. This means that IItemDropRule.ParentRule(n) extension will only be valid during recursion and should only be used in
         /// predicates plugged into my recursive functions <br/>
-        /// See <see cref="ParentRule(IItemDropRule, int)"/>, as well as <see cref="DictionaryInUse"/>
+        /// See <see cref="ParentRule(IItemDropRule, int)"/>, as well as <see cref="DictionaryPopulated"/>
         /// </summary> 
         private readonly static Dictionary<IItemDropRule, ParentChildRelationship> ParentDictionary = new();
 
@@ -751,7 +750,7 @@ namespace GarnsMod.CodingTools
         /// </summary>
         private static readonly Stack<object> DictionaryUseStack = new();
 
-        private static bool DictionaryInUse => DictionaryUseStack.Any();
+        private static bool DictionaryPopulated => DictionaryUseStack.Any();
 
         private static void UseDictionary()
         {
@@ -779,8 +778,14 @@ namespace GarnsMod.CodingTools
 
         public static IItemDropRuleChainAttempt ChainFromImmediateParent(this IItemDropRule rule)
         {
+            if (rule.ImmediateParent() is null)
+            {
+                throw new NullReferenceException("Cannot get chain from immediate parent as there is no parent. Make sure rule.HasParentRule() returns true");
+            }
+
             return ParentDictionary.TryGetValue(rule, out ParentChildRelationship parentWithChain) ? parentWithChain.ChainAttempt : null;
         }
+
 
         /// <summary>
         /// Finds the immediate parent of this rule. This is equivalent to <see cref="ParentRule(IItemDropRule, int)"/> where nthChild is 1. <br/><br/>
@@ -793,42 +798,13 @@ namespace GarnsMod.CodingTools
         /// </summary>
         public static IItemDropRule ImmediateParent(this IItemDropRule rule)
         {
-            if (!DictionaryInUse)
+            if (!DictionaryPopulated)
+            {
                 throw new Exception("IItemDropRule parent referencing can only be done in the context of predicates within the Find, Has, and Remove extensions (and their generic overloads)");
+            }
 
             return ParentDictionary.TryGetValue(rule, out ParentChildRelationship parentWithChain) ? (parentWithChain.ChainedParent ?? parentWithChain.NestedParent) : null;
         }
-
-        /// <summary>
-        /// Determines if this rule is Chained onto its parent via an IItemDropRuleChainAttempt. A false return means this rule is nested inside of an INestedItemDropRule.<br/><br/>
-        /// 
-        /// Can only be used in the context of RemoveWhere/FindWhere/Has recursive predicates, as it uses a Dictionary to find the parent, and the dictionary is only populated
-        /// (accurate) during these calls and is cleared after. Mainly used inside Predicates of Remove/Find as a means of being more exact about what
-        /// rule we are querying<br/><br/>
-        /// Throws <see cref="NullReferenceException"></see> if the rule has no parent. This is to ensure that a false return means the rule is Nested
-        /// </summary>
-        public static bool IsChained(this IItemDropRule rule)
-        {
-            if (rule.ImmediateParent() is null)
-                throw new NullReferenceException("Cannot check if the current rule is chained to its parent as it has no parent. Make sure Rule.HasParentRule() returns true");
-            return rule.ChainFromImmediateParent() is not null;
-        }
-
-        /// <summary>
-        /// Determines if this rule is Nested inside an INestedItemDropRule. A false return means this rule is chained to its parent via an IItemDropRuleChain attempt, as opposed to being nested inside a parent.<br/><br/>
-        /// 
-        /// Can only be used in the context of RemoveWhere/FindWhere/Has recursive predicates, as it uses a Dictionary to find the parent, and the dictionary is only populated
-        /// (accurate) during these calls and is cleared after. Mainly used inside Predicates of Remove/Find as a means of being more exact about what
-        /// rule we are querying<br/><br/>
-        /// Throws <see cref="NullReferenceException"></see> if the rule has no parent. This is to ensure that a false return means the rule is Chained
-        /// </summary>
-        public static bool IsNested(this IItemDropRule rule)
-        {
-            if (rule.ImmediateParent() is null)
-                throw new NullReferenceException("Cannot check if the current rule is nested to its parent as it has no parent. Make sure Rule.HasParentRule() returns true");
-            return !rule.IsChained();
-        }
-
 
         /// <summary>
         /// Returns the nth parent of this IItemDropRule. n being 1 means the direct parent of this rule, n being 2 means the parent of ParentRule(1), etc<br/><br/>
@@ -860,6 +836,43 @@ namespace GarnsMod.CodingTools
             return rule.ParentRule(nthParent) is not null;
         }
 
+        /// <summary>
+        /// Determines if this rule is Chained onto its parent via an IItemDropRuleChainAttempt. A false return means this rule is nested inside of an INestedItemDropRule.<br/><br/>
+        /// 
+        /// Can only be used in the context of RemoveWhere/FindWhere/Has recursive predicates, as it uses a Dictionary to find the parent, and the dictionary is only populated
+        /// (accurate) during these calls and is cleared after. Mainly used inside Predicates of Remove/Find as a means of being more exact about what
+        /// rule we are querying<br/><br/>
+        /// Throws <see cref="NullReferenceException"></see> if the rule has no parent. This is to ensure that a false return means the rule is Nested
+        /// </summary>
+        public static bool IsChained(this IItemDropRule rule)
+        {
+            if (rule.ImmediateParent() is null)
+            {
+                throw new NullReferenceException("Cannot check if the current rule is chained to its parent as it has no parent. Make sure rule.HasParentRule() returns true");
+            }
+
+            return rule.ChainFromImmediateParent() is not null;
+        }
+
+        /// <summary>
+        /// Determines if this rule is Nested inside an INestedItemDropRule. A false return means this rule is chained to its parent via an IItemDropRuleChain attempt, as opposed to being nested inside a parent.<br/><br/>
+        /// 
+        /// Can only be used in the context of RemoveWhere/FindWhere/Has recursive predicates, as it uses a Dictionary to find the parent, and the dictionary is only populated
+        /// (accurate) during these calls and is cleared after. Mainly used inside Predicates of Remove/Find as a means of being more exact about what
+        /// rule we are querying<br/><br/>
+        /// Throws <see cref="NullReferenceException"></see> if the rule has no parent. This is to ensure that a false return means the rule is Chained
+        /// </summary>
+        public static bool IsNested(this IItemDropRule rule)
+        {
+            if (rule.ImmediateParent() is null)
+            {
+                throw new NullReferenceException("Cannot check if the current rule is nested to its parent as it has no parent. Make sure rule.HasParentRule() returns true");
+            }
+
+            return !rule.IsChained();
+        }
+
+
         #endregion
 
         #region Other ILoot Extensions
@@ -872,55 +885,73 @@ namespace GarnsMod.CodingTools
 
         #endregion
 
-        #region LeadingConditionRule Extensions
+        #region Other IItemDropRule Extensions
 
-        public static IItemDropRule OnConditionsMet(this LeadingConditionRule leadingCondition, params IItemDropRule[] rulesToExecute)
+        public static IItemDropRule MultipleOnSuccess(this IItemDropRule parent, bool hideLootReport, params IItemDropRule[] rulesToExecute)
         {
             foreach (IItemDropRule rule in rulesToExecute)
             {
-                leadingCondition.OnSuccess(rule);
+                rule.OnSuccess(rule);
             }
-            return leadingCondition;
+            return parent;
+        }
+
+        public static IItemDropRule MultipleOnFailure(this IItemDropRule parent, bool hideLootReport, params IItemDropRule[] rulesToExecute)
+        {
+            foreach (IItemDropRule rule in rulesToExecute)
+            {
+                rule.OnFailedRoll(rule, hideLootReport);
+            }
+            return parent;
+        }
+
+        public static IItemDropRule MultipleOnFailedConditions(this IItemDropRule parent, bool hideLootReport, params IItemDropRule[] rulesToExecute)
+        {
+            foreach (IItemDropRule rule in rulesToExecute)
+            {
+                rule.OnFailedRoll(rule, hideLootReport);
+            }
+            return parent;
         }
 
         #endregion
 
         #region OneFromOptionsDropRule Extensions
 
-        public static void AddOption(this OneFromOptionsDropRule oneFromOptionsRule, int option)
+        public static void AddOption(this OneFromOptionsDropRule rule, int option)
         {
-            List<int> asList = oneFromOptionsRule.dropIds.ToList();
+            List<int> asList = rule.dropIds.ToList();
             asList.Add(option);
-            oneFromOptionsRule.dropIds = asList.ToArray();
+            rule.dropIds = asList.ToArray();
         }
 
-        public static bool RemoveOption(this OneFromOptionsDropRule oneFromOptionsRule, int removing)
+        public static bool RemoveOption(this OneFromOptionsDropRule rule, int removing)
         {
-            return oneFromOptionsRule.RemoveMultipleOptions(removing);
+            return rule.RemoveMultipleOptions(removing);
         }
 
-        public static bool RemoveMultipleOptions(this OneFromOptionsDropRule oneFromOptionsRule, params int[] removing)
+        public static bool RemoveMultipleOptions(this OneFromOptionsDropRule rule, params int[] removing)
         {
-            return oneFromOptionsRule.FilterOptions(option => !removing.Contains(option));
+            return rule.FilterOptions(option => !removing.Contains(option));
         }
 
-        public static bool ContainsOption(this OneFromOptionsDropRule oneFromOptionsRule, int option)
+        public static bool ContainsOption(this OneFromOptionsDropRule rule, int option)
         {
-            return oneFromOptionsRule.dropIds.Contains(option);
+            return rule.dropIds.Contains(option);
         }
 
-        public static bool FilterOptions(this OneFromOptionsDropRule oneFromOptionsRule, Predicate<int> predicate)
+        public static bool FilterOptions(this OneFromOptionsDropRule rule, Predicate<int> predicate)
         {
             bool anyFiltered = false;
             List<int> newDropIds = new();
-            foreach (int dropId in oneFromOptionsRule.dropIds)
+            foreach (int dropId in rule.dropIds)
             {
                 if (predicate(dropId))
                     newDropIds.Add(dropId);
                 else
                     anyFiltered = true;
             }
-            oneFromOptionsRule.dropIds = newDropIds.ToArray();
+            rule.dropIds = newDropIds.ToArray();
             return anyFiltered;
         }
 
@@ -929,44 +960,129 @@ namespace GarnsMod.CodingTools
 
         #region OneFromOptionsNotScaledWithLuckDropRule Extensions
 
-        public static void AddOption(this OneFromOptionsNotScaledWithLuckDropRule oneFromOptionsRule, int option)
+        public static void AddOption(this OneFromOptionsNotScaledWithLuckDropRule rule, int option)
         {
-            List<int> asList = oneFromOptionsRule.dropIds.ToList();
+            List<int> asList = rule.dropIds.ToList();
             asList.Add(option);
-            oneFromOptionsRule.dropIds = asList.ToArray();
+            rule.dropIds = asList.ToArray();
         }
 
-        public static bool RemoveOption(this OneFromOptionsNotScaledWithLuckDropRule oneFromOptionsRule, int removing)
+        public static bool RemoveOption(this OneFromOptionsNotScaledWithLuckDropRule rule, int removing)
         {
-            return oneFromOptionsRule.RemoveMultipleOptions(removing);
+            return rule.RemoveMultipleOptions(removing);
         }
 
-        public static bool RemoveMultipleOptions(this OneFromOptionsNotScaledWithLuckDropRule oneFromOptionsRule, params int[] removing)
+        public static bool RemoveMultipleOptions(this OneFromOptionsNotScaledWithLuckDropRule rule, params int[] removing)
         {
-            return oneFromOptionsRule.FilterOptions(option => !removing.Contains(option));
+            return rule.FilterOptions(option => !removing.Contains(option));
         }
 
-        public static bool ContainsOption(this OneFromOptionsNotScaledWithLuckDropRule oneFromOptionsRule, int option)
+        public static bool ContainsOption(this OneFromOptionsNotScaledWithLuckDropRule rule, int option)
         {
-            return oneFromOptionsRule.dropIds.Contains(option);
+            return rule.dropIds.Contains(option);
         }
 
-        public static bool FilterOptions(this OneFromOptionsNotScaledWithLuckDropRule oneFromOptionsRule, Predicate<int> predicate)
+        public static bool FilterOptions(this OneFromOptionsNotScaledWithLuckDropRule rule, Predicate<int> predicate)
         {
             bool anyFiltered = false;
             List<int> newDropIds = new();
-            foreach (int dropId in oneFromOptionsRule.dropIds)
+            foreach (int dropId in rule.dropIds)
             {
                 if (predicate(dropId))
                     newDropIds.Add(dropId);
                 else
                     anyFiltered = true;
             }
-            oneFromOptionsRule.dropIds = newDropIds.ToArray();
+            rule.dropIds = newDropIds.ToArray();
             return anyFiltered;
         }
 
         #endregion
+
+
+        #region FewFromOptionsDropRule Extensions
+
+        public static void AddOption(this FewFromOptionsDropRule rule, int option)
+        {
+            List<int> asList = rule.dropIds.ToList();
+            asList.Add(option);
+            rule.dropIds = asList.ToArray();
+        }
+
+        public static bool RemoveOption(this FewFromOptionsDropRule rule, int removing)
+        {
+            return rule.RemoveMultipleOptions(removing);
+        }
+
+        public static bool RemoveMultipleOptions(this FewFromOptionsDropRule rule, params int[] removing)
+        {
+            return rule.FilterOptions(option => !removing.Contains(option));
+        }
+
+        public static bool ContainsOption(this FewFromOptionsDropRule rule, int option)
+        {
+            return rule.dropIds.Contains(option);
+        }
+
+        public static bool FilterOptions(this FewFromOptionsDropRule rule, Predicate<int> predicate)
+        {
+            bool anyFiltered = false;
+            List<int> newDropIds = new();
+            foreach (int dropId in rule.dropIds)
+            {
+                if (predicate(dropId))
+                    newDropIds.Add(dropId);
+                else
+                    anyFiltered = true;
+            }
+            rule.dropIds = newDropIds.ToArray();
+            return anyFiltered;
+        }
+
+        #endregion
+
+        #region FewFromOptionsNotScaledWithLuckDropRule Extensions
+
+        public static void AddOption(this FewFromOptionsNotScaledWithLuckDropRule rule, int option)
+        {
+            List<int> asList = rule.dropIds.ToList();
+            asList.Add(option);
+            rule.dropIds = asList.ToArray();
+        }
+
+        public static bool RemoveOption(this FewFromOptionsNotScaledWithLuckDropRule rule, int removing)
+        {
+            return rule.RemoveMultipleOptions(removing);
+        }
+
+        public static bool RemoveMultipleOptions(this FewFromOptionsNotScaledWithLuckDropRule rule, params int[] removing)
+        {
+            return rule.FilterOptions(option => !removing.Contains(option));
+        }
+
+        public static bool ContainsOption(this FewFromOptionsNotScaledWithLuckDropRule rule, int option)
+        {
+            return rule.dropIds.Contains(option);
+        }
+
+        public static bool FilterOptions(this FewFromOptionsNotScaledWithLuckDropRule rule, Predicate<int> predicate)
+        {
+            bool anyFiltered = false;
+            List<int> newDropIds = new();
+            foreach (int dropId in rule.dropIds)
+            {
+                if (predicate(dropId))
+                    newDropIds.Add(dropId);
+                else
+                    anyFiltered = true;
+            }
+            rule.dropIds = newDropIds.ToArray();
+            return anyFiltered;
+        }
+
+        #endregion
+
+
 
         #region OneFromRulesRule Extensions
 
@@ -1004,9 +1120,13 @@ namespace GarnsMod.CodingTools
             foreach (IItemDropRule rule in oneFromRulesRule.options)
             {
                 if (predicate(rule))
+                {
                     newOptions.Add(rule);
+                }
                 else
+                {
                     anyFiltered = true;
+                }
             }
             oneFromRulesRule.options = newOptions.ToArray();
             return anyFiltered;
@@ -1050,9 +1170,13 @@ namespace GarnsMod.CodingTools
             foreach (IItemDropRule rule in oneFromRulesRule.options)
             {
                 if (predicate(rule))
+                {
                     newOptions.Add(rule);
+                }
                 else
+                {
                     anyFiltered = true;
+                }
             }
             oneFromRulesRule.options = newOptions.ToArray();
             return anyFiltered;
@@ -1096,9 +1220,13 @@ namespace GarnsMod.CodingTools
             foreach (IItemDropRule rule in sequentialRulesRule.rules)
             {
                 if (predicate(rule))
+                {
                     newRules.Add(rule);
+                }
                 else
+                {
                     anyFiltered = true;
+                }
             }
             sequentialRulesRule.rules = newRules.ToArray();
             return anyFiltered;
@@ -1142,9 +1270,13 @@ namespace GarnsMod.CodingTools
             foreach (IItemDropRule rule in sequentialRulesRule.rules)
             {
                 if (predicate(rule))
+                {
                     newRules.Add(rule);
+                }
                 else
+                {
                     anyFiltered = true;
+                }
             }
             sequentialRulesRule.rules = newRules.ToArray();
             return anyFiltered;
@@ -1188,9 +1320,13 @@ namespace GarnsMod.CodingTools
             foreach (IItemDropRule rule in alwaysOneSuccessRule.rules)
             {
                 if (predicate(rule))
+                {
                     newRules.Add(rule);
+                }
                 else
+                {
                     anyFiltered = true;
+                }
             }
             alwaysOneSuccessRule.rules = newRules.ToArray();
             return anyFiltered;
