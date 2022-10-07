@@ -139,6 +139,7 @@ namespace GarnsMod.CodingTools
         private static bool RecursiveRemoveEntryPoint<R>(ILoot loot, LootPredicate<R> query, IItemDropRule rootRule, bool reattachChains, ChainReattcher chainReattacher, bool stopAtFirst, int n, int? nthChild) where R : class, IItemDropRule
         {
             UseDictionary();
+            query ??= (_) => true;
             bool result = RecursiveRemoveMain(loot, query, rootRule, reattachChains, chainReattacher, stopAtFirst, n, nthChild);
             StopUsingDictionary();
             return result;
@@ -222,7 +223,8 @@ namespace GarnsMod.CodingTools
         private static bool RecursiveRemoveEntryPoint<C, R>(ILoot loot, LootPredicate<R> query, IItemDropRule rootRule, bool reattachChains, ChainReattcher chainReattacher, bool stopAtFirst, int n, int? nthChild) where C : class, IItemDropRuleChainAttempt where R : class, IItemDropRule
         {
             UseDictionary();
-            bool result = RecursiveRemoveMain<R>(loot, rule => rule.IsChained() && rule.ChainFromImmediateParent() is C && query(rule), rootRule, reattachChains, chainReattacher, stopAtFirst, n, nthChild);
+            query ??= (_) => true;
+            bool result = RecursiveRemoveMain<R>(loot, rule => rule.HasParentRule() && rule.IsChained() && rule.ChainFromImmediateParent() is C && query(rule), rootRule, reattachChains, chainReattacher, stopAtFirst, n, nthChild);
             StopUsingDictionary();
             return result;
         }
@@ -288,7 +290,8 @@ namespace GarnsMod.CodingTools
         private static bool RecursiveRemoveEntryPoint<N, R>(ILoot loot, LootPredicate<R> query, IItemDropRule rootRule, bool stopAtFirst, int n, int? nthChild) where N : class, IItemDropRule, INestedItemDropRule where R : class, IItemDropRule
         {
             UseDictionary();
-            bool result = RecursiveRemoveMain<R>(loot, rule => rule.IsNested() && rule.ImmediateParent() is N && query(rule), rootRule, false, null, stopAtFirst, n, nthChild);
+            query ??= (_) => true;
+            bool result = RecursiveRemoveMain<R>(loot, rule => rule.HasParentRule() && rule.IsNested() && rule.ImmediateParent() is N && query(rule), rootRule, false, null, stopAtFirst, n, nthChild);
             StopUsingDictionary();
             return result;
         }
@@ -318,8 +321,6 @@ namespace GarnsMod.CodingTools
         /// </summary>
         private static bool RecursiveRemoveMain<R>(ILoot loot, LootPredicate<R> query, IItemDropRule currRule, bool reattachChains, ChainReattcher chainReattacher, bool stopAtFirst, int n, int? nthChild) where R : class, IItemDropRule
         {
-            query ??= (_) => true;
-
             bool canRemove = n != 0; // If main entry called on IItemDropRule, this will be false on the first iteration to prevent it from being removed (because we only want to remove its children and we also have no ILoot reference to remove it from)
 
             if (canRemove && currRule is R castedRule && query(castedRule) && (nthChild is null || nthChild == n))
@@ -539,7 +540,6 @@ namespace GarnsMod.CodingTools
                 if (RecursiveFindEntryPoint(rootRule, query, chainReplacer, 1, nthChild) is R result)
                 {
                     return result;
-
                 }
             }
 
@@ -583,6 +583,7 @@ namespace GarnsMod.CodingTools
         private static R RecursiveFindEntryPoint<R>(IItemDropRule root, LootPredicate<R> query, ChainReattcher chainReplacer, int n, int? nthChild) where R : class, IItemDropRule
         {
             UseDictionary();
+            query ??= (_) => true;
             R result = RecursiveFindMain(query, null, chainReplacer, root, n, nthChild);
             StopUsingDictionary();
             return result;
@@ -667,7 +668,8 @@ namespace GarnsMod.CodingTools
         public static R RecursiveFindEntryPoint<C, R>(IItemDropRule root, LootPredicate<R> query, ChainReattcher chainReplacer, int n, int? nthChild) where C : class, IItemDropRuleChainAttempt where R : class, IItemDropRule
         {
             UseDictionary();
-            R result = RecursiveFindMain<R>(rule => rule.IsChained() && rule.ChainFromImmediateParent() is C && query(rule), null, chainReplacer, root, n, nthChild);
+            query ??= (_) => true;
+            R result = RecursiveFindMain<R>(rule => rule.HasParentRule() && rule.IsChained() && rule.ChainFromImmediateParent() is C && query(rule), null, chainReplacer, root, n, nthChild);
             StopUsingDictionary();
             return result;
         }
@@ -744,7 +746,8 @@ namespace GarnsMod.CodingTools
         private static R RecursiveFindEntryPoint<N, R>(IItemDropRule root, LootPredicate<R> query, int n, int? nthChild) where N : class, IItemDropRule, INestedItemDropRule where R : class, IItemDropRule
         {
             UseDictionary();
-            R result = RecursiveFindMain<R>(rule => rule.IsNested() && rule.ImmediateParent() is N && query(rule), null, null, root, n, nthChild);
+            query ??= (_) => true;
+            R result = RecursiveFindMain<R>(rule => rule.HasParentRule() && rule.IsNested() && rule.ImmediateParent() is N && query(rule), null, null, root, n, nthChild);
             StopUsingDictionary();
             return result;
         }
@@ -766,7 +769,6 @@ namespace GarnsMod.CodingTools
         /// </summary> 
         private static R RecursiveFindMain<R>(LootPredicate<R> query, int? indexOfChainToCurrRule, ChainReattcher chainReplacer, IItemDropRule currRule, int n, int? nthChild) where R : class, IItemDropRule
         {
-            query ??= (_) => true;
             // n == 0 means this RecursiveFindMain call should not check currRule at all. This is used when an EntryPoint is first called on an IItemDropRule (not an ILoot) so that the rule
             // itself isn't queried and returned if it happens to match the <paramref name="query"/> (because we only want to query its children). n will be initially set to 1 when called on ILoot entry, 0 when called on IItemDropRule entry
 
