@@ -232,9 +232,9 @@ namespace GarnsMod.CodingTools
             {
                 if (currRule.ImmediateParent() is IItemDropRule parentRule)
                 {
-                    currRule.RemoveFromParent(reattachChains, chainReattacher);
+                    RemoveFromParent(currRule);
 
-                    if (reattachChains && !stopAtFirst)
+                    if (reattachChains && !currRule.IsNested() && !stopAtFirst)
                     {
                         ContinueRecursion(newParent: parentRule); // Don't return here because this could possibly return false. We must return true no matter what if we found one
                     }
@@ -262,10 +262,29 @@ namespace GarnsMod.CodingTools
 
                 bool removedAny = false;
 
+                // Try nested rules first
+                if (currRule is INestedItemDropRule ruleThatExecutesOthers)
+                {
+                    foreach (IItemDropRule nestedRule in GetRulesNestedInsideThisRule(ruleThatExecutesOthers))
+                    {
+                        nestedRule.RegisterAsNestedChild(ruleThatExecutesOthers);
+
+                        if (RecursiveRemoveMain(loot, predicate, nestedRule, reattachChains, chainReattacher, stopAtFirst, n + 1, nthChild))
+                        {
+                            removedAny = true;
+
+                            if (stopAtFirst)
+                            {
+                                return true;
+                            }
+                        }
+                    }
+                }
+
                 foreach (IItemDropRuleChainAttempt chainAttempt in new List<IItemDropRuleChainAttempt>(currRule.ChainedRules)) // iterate over shallow clone to stop concurrent modification
                 {
                     IItemDropRule child = chainAttempt.RuleToChain;
-                    child.SetParent(newParent, chainAttempt);
+                    child.RegisterAsChainedChild(newParent, chainAttempt);
 
                     if (RecursiveRemoveMain(loot, predicate, child, reattachChains, chainReattacher, stopAtFirst, n + 1, nthChild))
                     {
@@ -279,6 +298,29 @@ namespace GarnsMod.CodingTools
                 }
 
                 return removedAny;
+            }
+
+            void RemoveFromParent(IItemDropRule removing)
+            {
+                // Down here it is implied that the entry exists in the dictionary
+                ParentChildRelationship relationship = ParentDictionary[removing];
+
+                // If the rule is chained to a parent
+                if (relationship.ChainedParent is not null)
+                {
+                    IItemDropRule parentOfRemoving = relationship.ChainedParent;
+                    parentOfRemoving.ChainedRules.Remove(relationship.ChainAttempt);
+
+                    if (reattachChains)
+                        foreach (IItemDropRuleChainAttempt chainAttempt in removing.ChainedRules)
+                            parentOfRemoving.ChainedRules.Add(chainReattacher is null ? chainAttempt : chainReattacher(chainAttempt.RuleToChain));
+                }
+
+                // If the rule is nested inside of a parent
+                else
+                {
+                    RemoveNestedRuleFromParent(removing, (INestedItemDropRule)relationship.NestedParent);
+                }
             }
         }
 
@@ -307,7 +349,7 @@ namespace GarnsMod.CodingTools
         /// </summary>
         public static R FindRuleWhere<R>(this ILoot loot, LootPredicate<R> query, ChainReattcher chainReplacer = null, int? nthChild = null) where R : IItemDropRule
         {
-            foreach (IItemDropRule rootRule in loot.Get())
+            foreach (IItemDropRule rootRule in loot.Get(false))
                 if (RecursiveFindEntryPoint(rootRule, query, chainReplacer, 1, nthChild) is R result)
                     return result;
             return default;
@@ -446,11 +488,25 @@ namespace GarnsMod.CodingTools
                     return default;
                 }
 
+                // Try nested rules first
+                if (currRule is INestedItemDropRule ruleThatExecutesOthers)
+                {
+                    foreach (IItemDropRule nestedRule in GetRulesNestedInsideThisRule(ruleThatExecutesOthers))
+                    {
+                        nestedRule.RegisterAsNestedChild(ruleThatExecutesOthers);
+                        if (RecursiveFindMain(query, null, chainReplacer, nestedRule, n + 1, nthChild) is R result)
+                        {
+                            return result;
+                        }
+                    }
+                }
+
+                // Then try chained rules
                 for (int i = 0; i < currRule.ChainedRules.Count; i++)
                 {
                     IItemDropRuleChainAttempt chainAttempt = currRule.ChainedRules[i];
                     IItemDropRule child = chainAttempt.RuleToChain;
-                    child.SetParent(currRule, chainAttempt);
+                    child.RegisterAsChainedChild(currRule, chainAttempt);
 
                     if (RecursiveFindMain(query, i, chainReplacer, child, n + 1, nthChild) is R result)
                     {
@@ -459,6 +515,92 @@ namespace GarnsMod.CodingTools
                 }
 
                 return default; // return null
+            }
+        }
+
+        private static IItemDropRule[] GetRulesNestedInsideThisRule(INestedItemDropRule rule)
+        {
+            IItemDropRule[] options = null;
+            if (rule is OneFromRulesRule ofr)
+            {
+                options = ofr.options;
+            }
+            else if (rule is FewFromRulesRule ffr)
+            {
+                options = ffr.options;
+            }
+            else if (rule is SequentialRulesRule srr)
+            {
+                options = srr.rules;
+            }
+            else if (rule is SequentialRulesNotScalingWithLuckRule srrnl)
+            {
+                options = srrnl.rules;
+            }
+            else if (rule is AlwaysAtleastOneSuccessDropRule aos)
+            {
+                options = aos.rules;
+            }
+            else if (rule is DropBasedOnExpertMode dbem)
+            {
+                options = new IItemDropRule[] { dbem.ruleForExpertMode, dbem.ruleForNormalMode };
+            }
+            else if (rule is DropBasedOnMasterMode dbmm)
+            {
+                options = new IItemDropRule[] { dbmm.ruleForMasterMode, dbmm.ruleForDefault };
+            }
+
+            return options;
+        }
+
+        private static void RemoveNestedRuleFromParent(IItemDropRule rule, INestedItemDropRule parent)
+        {
+            if (parent is not INestedItemDropRule nestParent)
+                throw new Exception("parent must be INestedItemDropRules");
+
+            if (parent is OneFromRulesRule ofr)
+            {
+                ofr.RemoveOption(rule);
+            }
+            else if (parent is FewFromRulesRule ffr)
+            {
+                ffr.RemoveOption(rule);
+
+            }
+            else if (parent is SequentialRulesRule srr)
+            {
+                srr.RemoveOption(rule);
+            }
+            else if (parent is SequentialRulesNotScalingWithLuckRule srrnl)
+            {
+                srrnl.RemoveOption(rule);
+            }
+            else if (parent is AlwaysAtleastOneSuccessDropRule aos)
+            {
+                aos.RemoveOption(rule);
+            }
+            else if (parent is DropBasedOnExpertMode dbem)
+            {
+                if (dbem.ruleForExpertMode == rule)
+                {
+                    dbem.ruleForExpertMode = ItemDropRule.DropNothing();
+
+                }
+                if (dbem.ruleForNormalMode == rule)
+                {
+                    dbem.ruleForNormalMode = ItemDropRule.DropNothing();
+                }
+            }
+            else if (parent is DropBasedOnMasterMode dbmm)
+            {
+                if (dbmm.ruleForMasterMode == rule)
+                {
+                    dbmm.ruleForMasterMode = ItemDropRule.DropNothing();
+                }
+                if (dbmm.ruleForDefault == rule)
+                {
+                    dbmm.ruleForDefault = ItemDropRule.DropNothing();
+                }
             }
         }
 
@@ -576,10 +718,15 @@ namespace GarnsMod.CodingTools
         /// An IItemDropRule is considered a "child" to another IItemDropRule if the parent's ChainedRules array contains an IItemDropRuleChainAttempt
         /// where the chainAttempt.RuleToChain references the child.
         /// </summary>
-        public struct ParentWithChain
+        public struct ParentChildRelationship
         {
-            public IItemDropRule Parent { get; set; }
+            // These two will be set if the child is chained to its parent (NestedParent will be null)
+            public IItemDropRule ChainedParent { get; set; }
             public IItemDropRuleChainAttempt ChainAttempt { get; set; }
+
+            // Or they will be null and NestedParent won't be 
+            public IItemDropRule NestedParent { get; set; }
+
         }
 
         /// <summary>
@@ -590,7 +737,7 @@ namespace GarnsMod.CodingTools
         /// predicates plugged into my recursive functions <br/>
         /// See <see cref="ParentRule(IItemDropRule, int)"/>, as well as <see cref="DictionaryInUse"/>
         /// </summary> 
-        private readonly static Dictionary<IItemDropRule, ParentWithChain> ParentDictionary = new();
+        private readonly static Dictionary<IItemDropRule, ParentChildRelationship> ParentDictionary = new();
 
         /// <summary>
         /// Used to determine if the dictionary is being used, and to control whether or not the dictionary should be cleared 
@@ -620,15 +767,19 @@ namespace GarnsMod.CodingTools
             }
         }
 
-        private static IItemDropRule SetParent(this IItemDropRule rule, IItemDropRule parent, IItemDropRuleChainAttempt chainAttempt)
+        private static void RegisterAsChainedChild(this IItemDropRule rule, IItemDropRule parent, IItemDropRuleChainAttempt chainAttempt)
         {
-            ParentDictionary[rule] = new ParentWithChain { Parent = parent, ChainAttempt = chainAttempt };
-            return rule;
+            ParentDictionary[rule] = new ParentChildRelationship { ChainedParent = parent, ChainAttempt = chainAttempt };
+        }
+
+        private static void RegisterAsNestedChild(this IItemDropRule rule, INestedItemDropRule parent)
+        {
+            ParentDictionary[rule] = new ParentChildRelationship { NestedParent = (IItemDropRule)parent };
         }
 
         public static IItemDropRuleChainAttempt ChainFromImmediateParent(this IItemDropRule rule)
         {
-            return ParentDictionary.TryGetValue(rule, out ParentWithChain parentWithChain) ? parentWithChain.ChainAttempt : null;
+            return ParentDictionary.TryGetValue(rule, out ParentChildRelationship parentWithChain) ? parentWithChain.ChainAttempt : null;
         }
 
         /// <summary>
@@ -636,15 +787,48 @@ namespace GarnsMod.CodingTools
         /// 
         /// Can only be used in the context of RemoveWhere/FindWhere/Has recursive predicates, as it uses a Dictionary to find the parent, and the dictionary is only populated
         /// (accurate) during these calls and is cleared after. Mainly used inside Predicates of Remove/Find as a means of being more exact about what
-        /// rule we are querying
+        /// rule we are querying<br/><br/>
+        /// 
+        /// Returns null if no parent is found
         /// </summary>
         public static IItemDropRule ImmediateParent(this IItemDropRule rule)
         {
             if (!DictionaryInUse)
                 throw new Exception("IItemDropRule parent referencing can only be done in the context of predicates within the Find, Has, and Remove extensions (and their generic overloads)");
 
-            return ParentDictionary.TryGetValue(rule, out ParentWithChain parentWithChain) ? parentWithChain.Parent : null;
+            return ParentDictionary.TryGetValue(rule, out ParentChildRelationship parentWithChain) ? (parentWithChain.ChainedParent ?? parentWithChain.NestedParent) : null;
         }
+
+        /// <summary>
+        /// Determines if this rule is Chained onto its parent via an IItemDropRuleChainAttempt. A false return means this rule is nested inside of an INestedItemDropRule.<br/><br/>
+        /// 
+        /// Can only be used in the context of RemoveWhere/FindWhere/Has recursive predicates, as it uses a Dictionary to find the parent, and the dictionary is only populated
+        /// (accurate) during these calls and is cleared after. Mainly used inside Predicates of Remove/Find as a means of being more exact about what
+        /// rule we are querying<br/><br/>
+        /// Throws <see cref="NullReferenceException"></see> if the rule has no parent. This is to ensure that a false return means the rule is Nested
+        /// </summary>
+        public static bool IsChained(this IItemDropRule rule)
+        {
+            if (rule.ImmediateParent() is null)
+                throw new NullReferenceException("Cannot check if the current rule is chained to its parent as it has no parent. Make sure Rule.HasParentRule() returns true");
+            return rule.ChainFromImmediateParent() is not null;
+        }
+
+        /// <summary>
+        /// Determines if this rule is Nested inside an INestedItemDropRule. A false return means this rule is chained to its parent via an IItemDropRuleChain attempt, as opposed to being nested inside a parent.<br/><br/>
+        /// 
+        /// Can only be used in the context of RemoveWhere/FindWhere/Has recursive predicates, as it uses a Dictionary to find the parent, and the dictionary is only populated
+        /// (accurate) during these calls and is cleared after. Mainly used inside Predicates of Remove/Find as a means of being more exact about what
+        /// rule we are querying<br/><br/>
+        /// Throws <see cref="NullReferenceException"></see> if the rule has no parent. This is to ensure that a false return means the rule is Chained
+        /// </summary>
+        public static bool IsNested(this IItemDropRule rule)
+        {
+            if (rule.ImmediateParent() is null)
+                throw new NullReferenceException("Cannot check if the current rule is nested to its parent as it has no parent. Make sure Rule.HasParentRule() returns true");
+            return !rule.IsChained();
+        }
+
 
         /// <summary>
         /// Returns the nth parent of this IItemDropRule. n being 1 means the direct parent of this rule, n being 2 means the parent of ParentRule(1), etc<br/><br/>
@@ -674,23 +858,6 @@ namespace GarnsMod.CodingTools
         public static bool HasParentRule(this IItemDropRule rule, int nthParent = 1)
         {
             return rule.ParentRule(nthParent) is not null;
-        }
-
-        /// <summary>Helper method for RecursiveRemoveMain. Removes <paramref name="removing"/> from the ChainedRules of its parent. If reattachChains
-        /// is set to true it will attach the chains between <paramref name="removing"/> and its children onto the parent of <paramref name="removing"/> so
-        /// that removing's children aren't lost. Furthermore, if <paramref name="reattcher"/> is supplied, you will be able to specify what type of chain
-        /// to reattach per-child-of-removing</summary>
-        private static void RemoveFromParent(this IItemDropRule removing, bool reattachChains = false, ChainReattcher reattcher = null)
-        {
-            if (ParentDictionary.TryGetValue(removing, out ParentWithChain parentWithChain))
-            {
-                IItemDropRule parentOfRemoving = parentWithChain.Parent;
-                parentOfRemoving.ChainedRules.Remove(parentWithChain.ChainAttempt);
-
-                if (reattachChains)
-                    foreach (IItemDropRuleChainAttempt chainAttempt in removing.ChainedRules)
-                        parentOfRemoving.ChainedRules.Add(reattcher is null ? chainAttempt : reattcher(chainAttempt.RuleToChain));
-            }
         }
 
         #endregion
@@ -729,7 +896,12 @@ namespace GarnsMod.CodingTools
 
         public static bool RemoveOption(this OneFromOptionsDropRule oneFromOptionsRule, int removing)
         {
-            return oneFromOptionsRule.FilterOptions(option => option != removing);
+            return oneFromOptionsRule.RemoveMultipleOptions(removing);
+        }
+
+        public static bool RemoveMultipleOptions(this OneFromOptionsDropRule oneFromOptionsRule, params int[] removing)
+        {
+            return oneFromOptionsRule.FilterOptions(option => !removing.Contains(option));
         }
 
         public static bool ContainsOption(this OneFromOptionsDropRule oneFromOptionsRule, int option)
@@ -766,7 +938,12 @@ namespace GarnsMod.CodingTools
 
         public static bool RemoveOption(this OneFromOptionsNotScaledWithLuckDropRule oneFromOptionsRule, int removing)
         {
-            return oneFromOptionsRule.FilterOptions(option => option != removing);
+            return oneFromOptionsRule.RemoveMultipleOptions(removing);
+        }
+
+        public static bool RemoveMultipleOptions(this OneFromOptionsNotScaledWithLuckDropRule oneFromOptionsRule, params int[] removing)
+        {
+            return oneFromOptionsRule.FilterOptions(option => !removing.Contains(option));
         }
 
         public static bool ContainsOption(this OneFromOptionsNotScaledWithLuckDropRule oneFromOptionsRule, int option)
@@ -793,29 +970,80 @@ namespace GarnsMod.CodingTools
 
         #region OneFromRulesRule Extensions
 
-        public static void AddRule(this OneFromRulesRule oneFromRulesRule, IItemDropRule option)
+        public static void AddOption(this OneFromRulesRule oneFromRulesRule, IItemDropRule option)
         {
             List<IItemDropRule> asList = oneFromRulesRule.options.ToList();
             asList.Add(option);
             oneFromRulesRule.options = asList.ToArray();
         }
 
-        public static bool RemoveRule(this OneFromRulesRule oneFromRulesRule, IItemDropRule removing)
+        public static bool RemoveOption(this OneFromRulesRule oneFromRulesRule, IItemDropRule removing)
         {
-            return oneFromRulesRule.FilterRules(rule => rule != removing);
+            return oneFromRulesRule.RemoveMultipleOptions(removing);
         }
 
-        public static bool RemoveRule(this OneFromRulesRule oneFromRulesRule, Predicate<IItemDropRule> query)
+        public static bool RemoveMultipleOptions(this OneFromRulesRule oneFromRulesRule, params IItemDropRule[] removing)
         {
-            return oneFromRulesRule.FilterRules(rule => !query(rule));
+            return oneFromRulesRule.FilterOptions(option => !removing.Contains(option));
         }
 
-        public static bool ContainsRule(this OneFromRulesRule oneFromRulesRule, IItemDropRule ruleOption)
+        public static bool RemoveOption(this OneFromRulesRule oneFromRulesRule, Predicate<IItemDropRule> query)
+        {
+            return oneFromRulesRule.FilterOptions(rule => !query(rule));
+        }
+
+        public static bool ContainsOption(this OneFromRulesRule oneFromRulesRule, IItemDropRule ruleOption)
         {
             return oneFromRulesRule.options.Contains(ruleOption);
         }
 
-        public static bool FilterRules(this OneFromRulesRule oneFromRulesRule, Predicate<IItemDropRule> predicate)
+        public static bool FilterOptions(this OneFromRulesRule oneFromRulesRule, Predicate<IItemDropRule> predicate)
+        {
+            bool anyFiltered = false;
+            List<IItemDropRule> newOptions = new();
+            foreach (IItemDropRule rule in oneFromRulesRule.options)
+            {
+                if (predicate(rule))
+                    newOptions.Add(rule);
+                else
+                    anyFiltered = true;
+            }
+            oneFromRulesRule.options = newOptions.ToArray();
+            return anyFiltered;
+        }
+
+        #endregion
+
+        #region FewFromRulesRule Extensions
+
+        public static void AddOption(this FewFromRulesRule oneFromRulesRule, IItemDropRule option)
+        {
+            List<IItemDropRule> asList = oneFromRulesRule.options.ToList();
+            asList.Add(option);
+            oneFromRulesRule.options = asList.ToArray();
+        }
+
+        public static bool RemoveOption(this FewFromRulesRule oneFromRulesRule, IItemDropRule removing)
+        {
+            return oneFromRulesRule.RemoveMultipleOptions(removing);
+        }
+
+        public static bool RemoveMultipleOptions(this FewFromRulesRule oneFromRulesRule, params IItemDropRule[] removing)
+        {
+            return oneFromRulesRule.FilterOptions(option => !removing.Contains(option));
+        }
+
+        public static bool RemoveOption(this FewFromRulesRule oneFromRulesRule, Predicate<IItemDropRule> query)
+        {
+            return oneFromRulesRule.FilterOptions(rule => !query(rule));
+        }
+
+        public static bool ContainsOption(this FewFromRulesRule oneFromRulesRule, IItemDropRule ruleOption)
+        {
+            return oneFromRulesRule.options.Contains(ruleOption);
+        }
+
+        public static bool FilterOptions(this FewFromRulesRule oneFromRulesRule, Predicate<IItemDropRule> predicate)
         {
             bool anyFiltered = false;
             List<IItemDropRule> newOptions = new();
@@ -834,29 +1062,34 @@ namespace GarnsMod.CodingTools
 
         #region SequentialRulesRule Extensions
 
-        public static void AddRule(this SequentialRulesRule sequentialRulesRule, IItemDropRule option)
+        public static void AddOption(this SequentialRulesRule sequentialRulesRule, IItemDropRule option)
         {
             List<IItemDropRule> asList = sequentialRulesRule.rules.ToList();
             asList.Add(option);
             sequentialRulesRule.rules = asList.ToArray();
         }
 
-        public static bool RemoveRule(this SequentialRulesRule sequentialRulesRule, IItemDropRule removing)
+        public static bool RemoveOption(this SequentialRulesRule sequentialRulesRule, IItemDropRule removing)
         {
-            return sequentialRulesRule.FilterRules(rule => rule != removing);
+            return sequentialRulesRule.RemoveMultipleOptions(removing);
         }
 
-        public static bool RemoveRule(this SequentialRulesRule sequentialRulesRule, Predicate<IItemDropRule> query)
+        public static bool RemoveMultipleOptions(this SequentialRulesRule sequentialRulesRule, params IItemDropRule[] removing)
         {
-            return sequentialRulesRule.FilterRules(rule => !query(rule));
+            return sequentialRulesRule.FilterOptions(option => !removing.Contains(option));
         }
 
-        public static bool ContainsRule(this SequentialRulesRule sequentialRulesRule, IItemDropRule ruleOption)
+        public static bool RemoveOption(this SequentialRulesRule sequentialRulesRule, Predicate<IItemDropRule> query)
+        {
+            return sequentialRulesRule.FilterOptions(rule => !query(rule));
+        }
+
+        public static bool ContainsOption(this SequentialRulesRule sequentialRulesRule, IItemDropRule ruleOption)
         {
             return sequentialRulesRule.rules.Contains(ruleOption);
         }
 
-        public static bool FilterRules(this SequentialRulesRule sequentialRulesRule, Predicate<IItemDropRule> predicate)
+        public static bool FilterOptions(this SequentialRulesRule sequentialRulesRule, Predicate<IItemDropRule> predicate)
         {
             bool anyFiltered = false;
             List<IItemDropRule> newRules = new();
@@ -875,29 +1108,34 @@ namespace GarnsMod.CodingTools
 
         #region SequentialRulesNotScalingWithLuckRule Extensions
 
-        public static void AddRule(this SequentialRulesNotScalingWithLuckRule sequentialRulesRule, IItemDropRule option)
+        public static void AddOption(this SequentialRulesNotScalingWithLuckRule sequentialRulesRule, IItemDropRule option)
         {
             List<IItemDropRule> asList = sequentialRulesRule.rules.ToList();
             asList.Add(option);
             sequentialRulesRule.rules = asList.ToArray();
         }
 
-        public static bool RemoveRule(this SequentialRulesNotScalingWithLuckRule sequentialRulesRule, IItemDropRule removing)
+        public static bool RemoveOption(this SequentialRulesNotScalingWithLuckRule sequentialRulesRule, IItemDropRule removing)
         {
-            return sequentialRulesRule.FilterRules(rule => rule != removing);
+            return sequentialRulesRule.RemoveMultipleOptions(removing);
         }
 
-        public static bool RemoveRule(this SequentialRulesNotScalingWithLuckRule sequentialRulesRule, Predicate<IItemDropRule> query)
+        public static bool RemoveMultipleOptions(this SequentialRulesNotScalingWithLuckRule sequentialRulesRule, params IItemDropRule[] removing)
         {
-            return sequentialRulesRule.FilterRules(rule => !query(rule));
+            return sequentialRulesRule.FilterOptions(option => !removing.Contains(option));
         }
 
-        public static bool ContainsRule(this SequentialRulesNotScalingWithLuckRule sequentialRulesRule, IItemDropRule ruleOption)
+        public static bool RemoveOption(this SequentialRulesNotScalingWithLuckRule sequentialRulesRule, Predicate<IItemDropRule> query)
+        {
+            return sequentialRulesRule.FilterOptions(rule => !query(rule));
+        }
+
+        public static bool ContainsOption(this SequentialRulesNotScalingWithLuckRule sequentialRulesRule, IItemDropRule ruleOption)
         {
             return sequentialRulesRule.rules.Contains(ruleOption);
         }
 
-        public static bool FilterRules(this SequentialRulesNotScalingWithLuckRule sequentialRulesRule, Predicate<IItemDropRule> predicate)
+        public static bool FilterOptions(this SequentialRulesNotScalingWithLuckRule sequentialRulesRule, Predicate<IItemDropRule> predicate)
         {
             bool anyFiltered = false;
             List<IItemDropRule> newRules = new();
@@ -909,6 +1147,52 @@ namespace GarnsMod.CodingTools
                     anyFiltered = true;
             }
             sequentialRulesRule.rules = newRules.ToArray();
+            return anyFiltered;
+        }
+
+        #endregion
+
+        #region AlwaysAtLeastOneSuccessDropRule Extensions
+
+        public static void AddOption(this AlwaysAtleastOneSuccessDropRule alwaysOneSuccessRule, IItemDropRule option)
+        {
+            List<IItemDropRule> asList = alwaysOneSuccessRule.rules.ToList();
+            asList.Add(option);
+            alwaysOneSuccessRule.rules = asList.ToArray();
+        }
+
+        public static bool RemoveOption(this AlwaysAtleastOneSuccessDropRule alwaysOneSuccessRule, IItemDropRule removing)
+        {
+            return alwaysOneSuccessRule.RemoveMultipleOptions(removing);
+        }
+
+        public static bool RemoveMultipleOptions(this AlwaysAtleastOneSuccessDropRule alwaysOneSuccessRule, params IItemDropRule[] removing)
+        {
+            return alwaysOneSuccessRule.FilterOptions(option => !removing.Contains(option));
+        }
+
+        public static bool RemoveOption(this AlwaysAtleastOneSuccessDropRule alwaysOneSuccessRule, Predicate<IItemDropRule> query)
+        {
+            return alwaysOneSuccessRule.FilterOptions(rule => !query(rule));
+        }
+
+        public static bool ContainsOption(this AlwaysAtleastOneSuccessDropRule alwaysOneSuccessRule, IItemDropRule ruleOption)
+        {
+            return alwaysOneSuccessRule.rules.Contains(ruleOption);
+        }
+
+        public static bool FilterOptions(this AlwaysAtleastOneSuccessDropRule alwaysOneSuccessRule, Predicate<IItemDropRule> predicate)
+        {
+            bool anyFiltered = false;
+            List<IItemDropRule> newRules = new();
+            foreach (IItemDropRule rule in alwaysOneSuccessRule.rules)
+            {
+                if (predicate(rule))
+                    newRules.Add(rule);
+                else
+                    anyFiltered = true;
+            }
+            alwaysOneSuccessRule.rules = newRules.ToArray();
             return anyFiltered;
         }
 
