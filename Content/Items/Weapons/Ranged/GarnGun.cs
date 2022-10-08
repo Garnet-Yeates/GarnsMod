@@ -233,6 +233,7 @@ namespace GarnsMod.Content.Items.Weapons.Ranged
         // We want to be 'withinShootLogic' for  when:
         // ItemCheck_CheckCanUse is called in tModloader source
         // ItemCheck_Shoot is called in tModloader source. 
+        // CanUseItem is called at the very beginning of ItemCheck_CheckCanUse which is why we set the flags here
         public override bool CanUseItem(Player player)
         {
             withinShootLogic = true;
@@ -244,8 +245,9 @@ namespace GarnsMod.Content.Items.Weapons.Ranged
         public override void UpdateInventory(Player player)
         {
             // These two flags are set at the very beginning of item use, and are naturally set to false at the very end of the shoot logic (when Shoot hook is called). 
-            // However it is possible that shoot logic ended early without Shoot hook being called. This is why we have them time out here. If they never timed out, it would
-            // mess with the displayed ammunition counts because it *thinks* we're in "shoot logic" but we're really in "display ammo counts logic"
+            // However it is possible that shoot logic ended early without Shoot hook being called. This is why we have them time out here. If we never get to Shoot()
+            // to set them to false, and they never time out, it would mess with the displayed ammunition counts because it *thinks* we're in
+            // "shoot logic" but we're really in "display ammo counts logic"
             if (--shootLogicTimeout == 0)
             {
                 usingAltFunction = false;
