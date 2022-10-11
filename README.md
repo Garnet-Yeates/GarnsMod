@@ -316,6 +316,6 @@ npcLoot.RemoveWhere<IItemDropRule, IItemDropRuleChainAttempt, CommonDrop>(drop =
 
 // This would remove the nested Grenade Launcher drop (the right one). 
 npcLoot.RemoveWhere<OneFromRulesRule, CommonDrop>(drop => drop.itemId == ItemID.GrenadeLauncher);
-// This would also remove the nested one, but it doesn't care about what it is nested onto
+// This would also remove the nested one, but it doesn't care about what it is nested inside of
 npcLoot.RemoveWhere<IItemDropRule, CommonDrop>(drop => drop.itemId == ItemID.GrenadeLauncher);
 ```
