@@ -265,7 +265,7 @@ public override void ModifyNPCLoot(NPC npc, NPCLoot npcLoot)
     // Remove BookOfSkulls from Skeletron
     if (npc.type == NPCID.SkeletronHead)
     {
-        npcLoot.RemoveWhere<CommonDrop>(bookofSkullsDrop => bookofSkullsDrop.itemId == ItemID.BookofSkulls, reattachChains: true);
+        npcLoot.RemoveWhere<CommonDrop>(bookofSkullsDrop => bookofSkullsDrop.itemId == ItemID.BookofSkulls);
     }
 
     // Remove Bone Sword from Skeleton.
@@ -277,3 +277,11 @@ public override void ModifyNPCLoot(NPC npc, NPCLoot npcLoot)
 }
 ```
 Much more readable, in my opinion
+
+## How to use LootExtensions
+### Loot Predicates
+A `LootPredicate<R>` is a generic delegate that is called on `IItemDropRule` implementations. The parameter of the function is a rule of type `R` and the function should return true or false. `LootPredicates` are executed on all rules that the recursive find/remove methods touch. Returning true in a predicate in the context of a recursive removal method means that rule will be removed. Returning true in the context of a recursive find method will add that rule to the list of found rules. More explanations on recursive removing/finding methods below.
+
+### Recursive Removing
+The following methods are used for recursive removing:
+- `ILoot.RemoveWhere<R>(LootPredicate<R> predicate, bool includeGlobalDrops = false, int? nthChild = null, bool reattachChains = false, bool stopAtFirst = false)`. This method will recursively dig through the `ILoot` and remove any rules of type `R` that match the given LootPredicate<R>
