@@ -282,6 +282,45 @@ Much more readable, in my opinion.
 ### Loot Predicates
 A `LootPredicate<R>` is a generic delegate that is called on `IItemDropRule` implementations in the context of the recursive find/removal methods. The parameter of the function is a rule of type `R` and the function should return true or false. `LootPredicates` are executed on all rules that the recursive find/remove methods touch. Returning true in a predicate in the context of a recursive removal method means that rule will be removed. Returning true in the context of a recursive find method will add that rule to the list of found rules. More explanations on recursive removing/finding methods below.
 
+```cs
+static bool FindSkull(CommonDrop cd)
+{
+    return cd.itemId == ItemID.Skull;
+}
+
+public override void ModifyItemLoot(Item item, ItemLoot itemLoot)
+{
+    LootExtensions.LootPredicate<CommonDrop> findSkullDrop;
+
+    // Use an existing method
+    findSkullDrop = FindSkull;
+
+    // Or use a lamba expression 
+    findSkullDrop = delegate (CommonDrop cd)
+    {
+        return cd.itemId == ItemID.BoneSword;
+    };
+
+    // Or use a shorthand lamba expression
+    findSkullDrop = cd => cd.itemId == ItemID.Skull;
+
+    // Plug into a recursive method 
+    itemLoot.FindRuleWhere<CommonDrop>(findSkullDrop);
+
+    // We don't even need the <CommonDrop> because it is inferred (since the predicate variable has <CommonDrop>)
+    itemLoot.FindRuleWhere(findSkullDrop);
+
+    // These above examples are just to understand that LootPredicates are delegates and can be treated as variables
+    // Normally we use shorthand lambda expressions and we inline them in the recursive methods, like below:
+
+    // In this case, it is inferred that the 'cd' parameter is a CommonDrop (since the method has <CommonDrop>)
+    itemLoot.FindRuleWhere<CommonDrop>(cd => cd.itemId == ItemID.Skull);
+
+    // In this case, it is inferred that 'ofo' parameter is a OneFromOptionsDropRule
+    itemLoot.FindRuleWhere<OneFromOptionsDropRule>(ofo => ofo.ContainsOption(ItemID.Frostbrand));
+}
+```
+
 ### Recursive Removing
 The following methods are used for recursive removing:
 - `void ILoot.RemoveWhere<R>(LootPredicate<R> predicate, bool includeGlobalDrops = false, int? nthChild = null, bool reattachChains = false, bool stopAtFirst = false)`. This method will recursively dig through the `ILoot` and remove any rules of type `R` that match the given `LootPredicate<R>`. It searches through the root rules, their children (nested and chained), as well as their children, so on and so forth. For example you could do `npcLoot.RemoveWhere<CommonDrop>()` (note how there is no predicate, which defaults to a predicate that returns true no matter what), and it would remove ALL CommonDrops from the loot pool. If you did `npcLoot.RemoveWhere<CommonDrop>(stopAtFirst: true)` it would remove the first CommonDrop found within the loot pool.
