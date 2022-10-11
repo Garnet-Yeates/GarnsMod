@@ -13,9 +13,9 @@ can be removed from the loot tree using the `ILoot.RemoveWhere()` method. In the
 Rule-Chaining is the process of attaching another rule (or several rules) onto another rule with an `IItemDropRuleChainAttempt`. Every `IItemDropRule` in 
 the tModLoader codebase can have other rules chained to them, because all `IItemDropRule` subclasses have a `ChainedRules` list. There are 3 types of 
 `IItemDropRuleChainAttempt` that are used throughout vanilla code / tModLoader: 
-- `TryIfFailedRandomRoll` when a rule is executed but fails to roll the drop
-- `TryIfSucceeded` when a rule is executed and succeeds to roll the drop
-- `TryIfDoesntFillConditions` when the conditions are not met for a rule to to be executed in the first place  
+- `TryIfFailedRandomRoll` when a rule is executed but fails to roll the drop.
+- `TryIfSucceeded` when a rule is executed and succeeds to roll the drop.
+- `TryIfDoesntFillConditions` when the conditions are not met for a rule to to be executed in the first place  .
 
 A rule that is chained onto another rule is considered to be the 'chained child' of that rule. Chained children are referenced
 by an `IItemDropRuleChainAttempt` within their chained parent's `ChainedRules` list.
@@ -23,7 +23,7 @@ In the diagram below, there are about 10 different chains attached onto various 
 
 ### Nested Rules
 Rule-Nesting is a capability that some `IItemDropRule` implementations have in tModLoader. Any `IItemDropRule` in the codebase that implements `INestedItemDropRule` is
-a rule that is able to execute other rules. Examples of `INestedItemDropRule` include (but are not limited to) `DropBasedOnExpertMode`, `OneFromRulesRule`, `SequentialRulesRule`. A rule that is able to be executed by another rule is considered to be nested inside said rule. We refer to these as 'nested child' and we refer to their parent as the 'nested parent'
+a rule that is able to execute other rules. Examples of `INestedItemDropRule` include (but are not limited to) `DropBasedOnExpertMode`, `OneFromRulesRule`, `SequentialRulesRule`. A rule that is able to be executed by another rule is considered to be nested inside said rule. We refer to these as 'nested child' and we refer to their parent as the 'nested parent'.
 
 ### Diagram For Reference
 Below here is a diagram for Plantera's `NPCLoot` tree. This diagram is based on this vanilla tModLoader code:
@@ -87,7 +87,7 @@ if (npc.type == NPCID.Plantera)
 }
 ```
 Not only is this code a bit messy, it also comes with potential compatibility issues:
-- Due to hard-coding, the structure of the loot tree matters. What I mean by this, is if any other mod makes a change to the loot tree to add or remove rules between any of the rules we are iterating through, then the hard-coded loops will fail to find it. An example of this could be a different mod adding another `LeadingConditionRule` between `firstTimeKillingPlantera` and the `OneFromRulesRule` (maybe `secondTimeKillingPlantera`?). If they were to do this, our for-loops would fail to account for the possibility of another `LeadingConditionRule` coming before our `OneFromRulesRule` that we are looking for. Essentially, any changes to the parent-child structure that would move rules down or up a level on the loot tree would never be accounted for. This is why tModLoader recommends not removing rules (only mutating) for compatibility  
+- Due to hard-coding, the structure of the loot tree matters. What I mean by this, is if any other mod makes a change to the loot tree to add or remove rules between any of the rules we are iterating through, then the hard-coded loops will fail to find it. An example of this could be a different mod adding another `LeadingConditionRule` between `firstTimeKillingPlantera` and the `OneFromRulesRule` (maybe `secondTimeKillingPlantera`?). If they were to do this, our for-loops would fail to account for the possibility of another `LeadingConditionRule` coming before our `OneFromRulesRule` that we are looking for. Essentially, any changes to the parent-child structure that would move rules down or up a level on the loot tree would never be accounted for. This is why tModLoader recommends not removing rules (only mutating) for compatibility.  
 
 ## Use Cases of LootExtensions
 Now that we have a solid understanding of the limitations behind the default system, we can learn about how LootExtensions can be used to overcome these issues.
