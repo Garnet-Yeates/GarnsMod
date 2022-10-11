@@ -336,6 +336,8 @@ public override void ModifyItemLoot(Item item, ItemLoot itemLoot)
 
     // Any OneFromOptionsDropRule will be found
     LootExtensions.LootPredicate<OneFromOptionsDropRule> findOptions = rule => true;
+    
+    // Then plug these into RecursiveRemove or RecursiveFind methods, such as RemoveRule, RemoveChild / FindRulesWhere, HasRule, etc
 }
 ```
 
