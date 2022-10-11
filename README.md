@@ -295,12 +295,6 @@ public override void ModifyItemLoot(Item item, ItemLoot itemLoot)
     // Use an existing method
     findSkullDrop = FindSkull;
 
-    // Or use a lamba expression 
-    findSkullDrop = delegate (CommonDrop cd)
-    {
-        return cd.itemId == ItemID.BoneSword;
-    };
-
     // Or use a shorthand lamba expression
     findSkullDrop = cd => cd.itemId == ItemID.Skull;
 
