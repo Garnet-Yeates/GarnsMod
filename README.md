@@ -359,13 +359,13 @@ The following methods are used for recursive finding:
 - I omit the descriptions of these because they work very similar to the removal methods except they are for finding.
 
 ### <P, C, R> Generic Overloads
-All of the above methods have a `<P, C, R>` generic overload. These overloads are simply syntax sugar. What they are doing underneath is adding the following expression to the supplied `LootPredicate<R>`:
+All of the above methods have a `<P, C, R>` generic overload. These overloads are simply syntax sugar. What they are doing underneath is adding the following expression to the supplied `LootPredicate<R>`
 ```cs
 rule.HasParentRule() && rule.IsChained() && rule.ChainFromImmediateParent() is C && rule.ImmediateParentRule() is P
 ```
 
 ### <N, R> Generic Overloads
-All of the above methods have a `<N, R>` generic overload. These overloads are also syntax sugar. What they are doing underneath is adding the following expression to the supplied `LootPredicate<R>`:
+All of the above methods have a `<N, R>` generic overload. These overloads are also syntax sugar. What they are doing underneath is adding the following expression to the supplied `LootPredicate<R>`
 ```cs
 rule.HasParentRule() && rule.IsNested() && rule.ImmediateParentRule() is N
 ```
