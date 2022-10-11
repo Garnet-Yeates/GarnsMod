@@ -18,9 +18,10 @@ namespace GarnsMod.CodingTools
         /// </summary>
         public delegate IItemDropRuleChainAttempt ChainReattcher(IItemDropRule ruleToChain);
 
+
         /// <summary>
         /// A <see cref="LootPredicate{R}"/> is the same as a regular predicate but the type param R must be an <see cref="IItemDropRule"/>.
-        /// Lootpredicates are used to find a specific rule that matches the supplied set of conditions.<br/>
+        /// Loot Predicates are used to find a specific rule that matches the supplied set of conditions.<br/>
         /// <br/>
         /// These predicates can be used inside any of the top-level recursive extension methods:<br/><br/>
         /// <see cref="RemoveWhere{R}(ILoot, LootPredicate{R}, bool, int?, bool, ChainReattcher, bool)"/><br/>
@@ -32,16 +33,22 @@ namespace GarnsMod.CodingTools
         /// <br/>
         /// <see cref="HasRuleWhere{R}(ILoot, LootPredicate{R}, bool, int?)"/><br/>
         /// <see cref="FindRuleWhere{R}(ILoot, LootPredicate{R}, bool, ChainReattcher, int?)"/><br/>
+        /// <see cref="FindRulesWhere{R}(ILoot, LootPredicate{R}, bool, ChainReattcher, int?)"/><br/>
         /// <see cref="HasChildWhere{R}(IItemDropRule, LootPredicate{R}, int?)"/><br/>
         /// <see cref="FindChildWhere{R}(IItemDropRule, LootPredicate{R}, ChainReattcher, int?)"/><br/>
+        /// <see cref="FindChildrenWhere{R}(IItemDropRule, LootPredicate{R}, ChainReattcher, int?)"/><br/>
         /// <see cref="HasRuleWhere{P, C, R}(ILoot, LootPredicate{R}, bool, int?)"/><br/>
         /// <see cref="FindRuleWhere{P, C, R}(ILoot, LootPredicate{R}, bool, ChainReattcher, int?)"/><br/>
+        /// <see cref="FindRulesWhere{P, C, R}(ILoot, LootPredicate{R}, bool, ChainReattcher, int?)"/><br/>
         /// <see cref="HasChildWhere{P, C, R}(IItemDropRule, LootPredicate{R}, int?)"/><br/>
         /// <see cref="FindChildWhere{P, C, R}(IItemDropRule, LootPredicate{R}, ChainReattcher, int?)"/><br/>
+        /// <see cref="FindChildrenWhere{P, C, R}(IItemDropRule, LootPredicate{R}, ChainReattcher, int?)"/><br/>
         /// <see cref="HasRuleWhere{N, R}(ILoot, LootPredicate{R}, bool, int?)"/><br/>
         /// <see cref="FindRuleWhere{N, R}(ILoot, LootPredicate{R}, bool, int?)"/><br/>
+        /// <see cref="FindRulesWhere{N, R}(ILoot, LootPredicate{R}, bool, int?)"/><br/>
         /// <see cref="HasChildWhere{N, R}(IItemDropRule, LootPredicate{R}, int?)"/><br/>
         /// <see cref="FindChildWhere{N, R}(IItemDropRule, LootPredicate{R}, int?)"/><br/>
+        /// <see cref="FindChildrenWhere{N, R}(IItemDropRule, LootPredicate{R}, int?)"/><br/>
         /// <br/>
         /// There are also special helper extension methods for <see cref="IItemDropRule"/>s that can <i>only</i> be used within these predicates:<br/><br/>
         /// <see cref="ParentRule(IItemDropRule, int)"/><br/>
@@ -85,7 +92,7 @@ namespace GarnsMod.CodingTools
         /// Note: A rule (a) is considered the chained parent to another rule (b) if (b) is an <see cref="IItemDropRuleChainAttempt"/>.RuleToChain in (a)'s <see cref="IItemDropRule.ChainedRules"/> array<br/>
         /// Note: A rule (a) is considered the nested parent to another rule (b) if (a) is an <see cref="INestedItemDropRule"/> that executes (b). Examples of <see cref="INestedItemDropRule"/> include (not limited to) <see cref="OneFromRulesRule"/>, <see cref="DropBasedOnExpertMode"/>, <see cref="SequentialRulesRule"/>        
         /// </summary>
-        public static bool RemoveWhere<R>(this ILoot loot, LootPredicate<R> predicate = null, bool includeGlobalDrops = false, int? nthChild = null, bool reattachChains = false, ChainReattcher chainReattacher = null, bool stopAtFirst = true) where R : class, IItemDropRule
+        public static bool RemoveWhere<R>(this ILoot loot, LootPredicate<R> predicate = null, bool includeGlobalDrops = false, int? nthChild = null, bool reattachChains = false, ChainReattcher chainReattacher = null, bool stopAtFirst = false) where R : class, IItemDropRule
         {
             bool removedAny = false;
 
@@ -125,7 +132,7 @@ namespace GarnsMod.CodingTools
         /// Note: A rule (a) is considered the chained parent to another rule (b) if (b) is an <see cref="IItemDropRuleChainAttempt"/>.RuleToChain in (a)'s <see cref="IItemDropRule.ChainedRules"/> array<br/>
         /// Note: A rule (a) is considered the nested parent to another rule (b) if (a) is an <see cref="INestedItemDropRule"/> that executes (b). Examples of <see cref="INestedItemDropRule"/> include (not limited to) <see cref="OneFromRulesRule"/>, <see cref="DropBasedOnExpertMode"/>, <see cref="SequentialRulesRule"/>        
         /// </summary>
-        public static bool RemoveChildrenWhere<R>(this IItemDropRule rootRule, LootPredicate<R> predicate = null, int? nthChild = null, bool reattachChains = false, ChainReattcher chainReattacher = null, bool stopAtFirst = true) where R : class, IItemDropRule
+        public static bool RemoveChildrenWhere<R>(this IItemDropRule rootRule, LootPredicate<R> predicate = null, int? nthChild = null, bool reattachChains = false, ChainReattcher chainReattacher = null, bool stopAtFirst = false) where R : class, IItemDropRule
         {
             return RecursiveRemoveEntryPoint(null, predicate, rootRule, reattachChains, chainReattacher, stopAtFirst, 0, nthChild);
         }
@@ -147,13 +154,13 @@ namespace GarnsMod.CodingTools
 
         #endregion
 
-        // The following methods are syntax sugar and apply the following 3 checks to your predicate automatically: rule => rule.HasParentRule() && rule.IsChained() && rule.ChainFromImmediateParent() is C
+        // The following methods are syntax sugar and apply the following 4 checks to your predicate automatically: rule => rule.HasParentRule() && rule.IsChained() && rule.ChainFromImmediateParent() is C && rule.ImmediateParentRule() is P
         #region Chained Rule Overloads
 
         /// <summary>
         /// Performs the following processes/checks on each child rule, "<paramref name="currRule"/>" of this <paramref name="rootRule"/><br/><br/>
         ///
-        /// <code>if (<paramref name="currRule"/> was chained onto a parent rule of type <typeparamref name="P"/> via an <see cref="IItemDropRuleChainAttempt"/> of type <typeparamref name="C"/>, and <paramref name="currRule"/> is of type <typeparamref name="R"/>, and <paramref name="currRule"/> matches the <paramref name="predicate"/>)</code>
+        /// <code>if (<paramref name="currRule"/> is chained onto a parent rule of type <typeparamref name="P"/> via an <see cref="IItemDropRuleChainAttempt"/> of type <typeparamref name="C"/>, and <paramref name="currRule"/> is of type <typeparamref name="R"/>, and <paramref name="currRule"/> matches the <paramref name="predicate"/>)</code>
         /// Then it will remove currRule from this loot pool, and possibly re-attach currRule's children onto currRule's parent if <paramref name="reattachChains"/> is set to true.
         /// If <paramref name="reattachChains"/> is true but the rule has no parent (i.e it is directly inside this ILoot, as opposed to being the child of a rule inside this ILoot), the chains can't be reattached (they don't exist). If 
         /// <paramref name="reattachChains"/> is set to false (or there are no chains) it will terminate here because this means the loot chained after this rule is lost no matter what, so there is no reason to make modifications to this rule's children. 
@@ -170,7 +177,7 @@ namespace GarnsMod.CodingTools
         /// Note: A rule (a) is considered the chained parent to another rule (b) if (b) is an <see cref="IItemDropRuleChainAttempt"/>.RuleToChain in (a)'s <see cref="IItemDropRule.ChainedRules"/> array<br/>
         /// Note: A rule (a) is considered the nested parent to another rule (b) if (a) is an <see cref="INestedItemDropRule"/> that executes (b). Examples of <see cref="INestedItemDropRule"/> include (not limited to) <see cref="OneFromRulesRule"/>, <see cref="DropBasedOnExpertMode"/>, <see cref="SequentialRulesRule"/>
         /// </summary>
-        public static bool RemoveWhere<P, C, R>(this ILoot loot, LootPredicate<R> predicate = null, bool includeGlobalDrops = false, int? nthChild = null, bool reattachChains = false, ChainReattcher chainReattacher = null, bool stopAtFirst = true) where P : class, IItemDropRule where C : class, IItemDropRuleChainAttempt where R : class, IItemDropRule
+        public static bool RemoveWhere<P, C, R>(this ILoot loot, LootPredicate<R> predicate = null, bool includeGlobalDrops = false, int? nthChild = null, bool reattachChains = false, ChainReattcher chainReattacher = null, bool stopAtFirst = false) where P : class, IItemDropRule where C : class, IItemDropRuleChainAttempt where R : class, IItemDropRule
         {
             bool removedAny = false;
 
@@ -193,7 +200,7 @@ namespace GarnsMod.CodingTools
         /// <summary>
         /// Performs the following processes/checks on each child rule, "<paramref name="currRule"/>" of this <paramref name="rootRule"/><br/><br/>
         ///
-        /// <code>if (<paramref name="currRule"/> was chained onto a parent rule of type <typeparamref name="P"/> via an <see cref="IItemDropRuleChainAttempt"/> of type <typeparamref name="C"/>, and <paramref name="currRule"/> is of type <typeparamref name="R"/>, and <paramref name="currRule"/> matches the <paramref name="predicate"/>)</code>
+        /// <code>if (<paramref name="currRule"/> is chained onto a parent rule of type <typeparamref name="P"/> via an <see cref="IItemDropRuleChainAttempt"/> of type <typeparamref name="C"/>, and <paramref name="currRule"/> is of type <typeparamref name="R"/>, and <paramref name="currRule"/> matches the <paramref name="predicate"/>)</code>
         /// Then it will remove currRule from this loot pool, and possibly re-attach currRule's children onto currRule's parent if <paramref name="reattachChains"/> is set to true.
         /// If <paramref name="reattachChains"/> is set to false it will terminate here because this means the loot chained after this rule is lost no matter what, so there is no reason to make modifications to this rule's children. 
         /// If <paramref name="reattachChains"/> is true, and <paramref name="stopAtFirst"/> is set to false, it will then repeat this same predicate-checking process on the children of the child (nested and chained children) recursively until it
@@ -209,7 +216,7 @@ namespace GarnsMod.CodingTools
         /// Note: A rule (a) is considered the chained parent to another rule (b) if (b) is an <see cref="IItemDropRuleChainAttempt"/>.RuleToChain in (a)'s <see cref="IItemDropRule.ChainedRules"/> array<br/>
         /// Note: A rule (a) is considered the nested parent to another rule (b) if (a) is an <see cref="INestedItemDropRule"/> that executes (b). Examples of <see cref="INestedItemDropRule"/> include (not limited to) <see cref="OneFromRulesRule"/>, <see cref="DropBasedOnExpertMode"/>, <see cref="SequentialRulesRule"/>        
         /// </summary>
-        public static bool RemoveChildrenWhere<P, C, R>(this IItemDropRule rootRule, LootPredicate<R> predicate = null, int? nthChild = null, bool reattachChains = false, ChainReattcher chainReattacher = null, bool stopAtFirst = true) where P : class, IItemDropRule where C : class, IItemDropRuleChainAttempt where R : class, IItemDropRule
+        public static bool RemoveChildrenWhere<P, C, R>(this IItemDropRule rootRule, LootPredicate<R> predicate = null, int? nthChild = null, bool reattachChains = false, ChainReattcher chainReattacher = null, bool stopAtFirst = false) where P : class, IItemDropRule where C : class, IItemDropRuleChainAttempt where R : class, IItemDropRule
         {
             return RecursiveRemoveEntryPoint<P, C, R>(null, predicate, rootRule, reattachChains, chainReattacher, stopAtFirst, 0, nthChild);
         }
@@ -248,7 +255,7 @@ namespace GarnsMod.CodingTools
         /// Note: A rule (a) is considered the chained parent to another rule (b) if (b) is an <see cref="IItemDropRuleChainAttempt"/>.RuleToChain in (a)'s <see cref="IItemDropRule.ChainedRules"/> array<br/>
         /// Note: A rule (a) is considered the nested parent to another rule (b) if (a) is an <see cref="INestedItemDropRule"/> that executes (b). Examples of <see cref="INestedItemDropRule"/> include (not limited to) <see cref="OneFromRulesRule"/>, <see cref="DropBasedOnExpertMode"/>, <see cref="SequentialRulesRule"/>        
         /// </summary>
-        public static bool RemoveWhere<N, R>(this ILoot loot, LootPredicate<R> predicate = null, bool includeGlobalDrops = false, bool stopAtFirst = true, int? nthChild = null) where N : class, IItemDropRule, INestedItemDropRule where R : class, IItemDropRule
+        public static bool RemoveWhere<N, R>(this ILoot loot, LootPredicate<R> predicate = null, bool includeGlobalDrops = false, bool stopAtFirst = false, int? nthChild = null) where N : class, IItemDropRule where R : class, IItemDropRule
         {
             foreach (IItemDropRule rootRule in loot.Get(includeGlobalDrops))
             {
@@ -276,7 +283,7 @@ namespace GarnsMod.CodingTools
         /// Note: A rule (a) is considered the chained parent to another rule (b) if (b) is an <see cref="IItemDropRuleChainAttempt"/>.RuleToChain in (a)'s <see cref="IItemDropRule.ChainedRules"/> array<br/>
         /// Note: A rule (a) is considered the nested parent to another rule (b) if (a) is an <see cref="INestedItemDropRule"/> that executes (b). Examples of <see cref="INestedItemDropRule"/> include (not limited to) <see cref="OneFromRulesRule"/>, <see cref="DropBasedOnExpertMode"/>, <see cref="SequentialRulesRule"/>        
         /// </summary>
-        public static bool RemoveChildrenWhere<N, R>(this IItemDropRule rootRule, LootPredicate<R> predicate = null, bool stopAtFirst = true, int? nthChild = null) where N : class, IItemDropRule, INestedItemDropRule where R : class, IItemDropRule
+        public static bool RemoveChildrenWhere<N, R>(this IItemDropRule rootRule, LootPredicate<R> predicate = null, bool stopAtFirst = false, int? nthChild = null) where N : class, IItemDropRule where R : class, IItemDropRule
         {
             return RecursiveRemoveEntryPoint<N, R>(null, predicate, rootRule, stopAtFirst, 0, nthChild);
         }
@@ -287,8 +294,15 @@ namespace GarnsMod.CodingTools
         /// can use RecursiveRemoveMain within RecursiveFind predicates without causing issues with the dictionary being modified during the predicates]) Note: can't think of many use cases
         /// for having RecursiveRemove within RecursiveFind predicates, but there are definitely some. It would be more common to use RecursiveFind within RecursiveRemove
         /// </summary>
-        private static bool RecursiveRemoveEntryPoint<N, R>(ILoot loot, LootPredicate<R> predicate, IItemDropRule rootRule, bool stopAtFirst, int n, int? nthChild) where N : class, IItemDropRule, INestedItemDropRule where R : class, IItemDropRule
+        private static bool RecursiveRemoveEntryPoint<N, R>(ILoot loot, LootPredicate<R> predicate, IItemDropRule rootRule, bool stopAtFirst, int n, int? nthChild) where N : class, IItemDropRule where R : class, IItemDropRule
         {
+            // They can use IItemDropRule for N to specify any nested parent, but otherwise N MUST inherit from INestedItemDropRule
+            // I don't use generic constraint (for compile-time checking) for this because I want them to be able to use IItemDropRule as N to be non-specific
+            if (typeof(N) != typeof(IItemDropRule) && !typeof(N).IsAssignableTo(typeof(INestedItemDropRule)))
+            {
+                throw new InvalidOperationException("N must be of type INestedItemDropRule to be used in <N, R> LootExtensions");
+            }
+
             UseDictionary();
             predicate ??= (_) => true;
             bool result = RecursiveRemoveMain<R>(loot, rule => rule.HasParentRule() && rule.IsNested() && rule.ImmediateParentRule() is N && predicate(rule), rootRule, false, null, stopAtFirst, n, nthChild);
@@ -511,16 +525,26 @@ namespace GarnsMod.CodingTools
         #region General Recursive Finding
 
         /// <summary>
-        /// Recursively loops through this <see cref="ILoot"/> instance and sees if there is any <see cref="IItemDropRule"/> of type <typeparamref name="R"/> that matches the given <paramref name="predicate"/>. If <paramref name="nthChild"/> is specified, then the rule must be the nth child of the loot pool.
-        /// If a match is found it will return true. If no match is found, it will recursively loop through the children of that child (both nested and chained children) and try to find one, so on and so forth.
-        /// If nothing was found after searching all children recursively, it will return false.<br/><br/>
-        /// 
+        /// Recursively loops through this <see cref="ILoot"/> instance and looks for any rules <see cref="IItemDropRule"/> of type <typeparamref name="R"/> that match the given <paramref name="predicate"/>. If <paramref name="nthChild"/> is specified, then the rule must be the nth child of the loot pool.
+        /// If a match is found it will add it to a list. Regardless of if a match is found, it will recursively loop through the children of that child (both nested and chained children) and try to find more, so on and so forth.
+        /// If nothing was found after searching all children recursively, it will return an empty list.<br/><br/>
+        ///
+        /// If <paramref name="chainReplacer"/> function is supplied and the found rule is chained (not nested), the found rule's chain from its parent will be replaced with the chain that the function returns. The found rule will be the param of the function and it should return some type of 
+        /// <see cref="IItemDropRuleChainAttempt"/> where ChainAttempt.RuleToChain is set to the parameter.<br/><br/>
+        ///        
         /// Note: A rule (a) is considered the chained parent to another rule (b) if (b) is an <see cref="IItemDropRuleChainAttempt"/>.RuleToChain in (a)'s <see cref="IItemDropRule.ChainedRules"/> array<br/>
         /// Note: A rule (a) is considered the nested parent to another rule (b) if (a) is an <see cref="INestedItemDropRule"/> that executes (b). Examples of <see cref="INestedItemDropRule"/> include (not limited to) <see cref="OneFromRulesRule"/>, <see cref="DropBasedOnExpertMode"/>, <see cref="SequentialRulesRule"/>        
-        /// </summary>
-        public static bool HasRuleWhere<R>(this ILoot loot, LootPredicate<R> predicate = null, bool includeGlobalDrops = false, int? nthChild = null) where R : class, IItemDropRule
+        /// </summary> 
+        public static List<R> FindRulesWhere<R>(this ILoot loot, LootPredicate<R> predicate = null, bool includeGlobalDrops = false, ChainReattcher chainReplacer = null, int? nthChild = null) where R : class, IItemDropRule
         {
-            return loot.FindRuleWhere(predicate, includeGlobalDrops, null, nthChild) is not null;
+            List<R> foundRules = new();
+
+            foreach (IItemDropRule rootRule in loot.Get(includeGlobalDrops))
+            {
+                foundRules.AddRange(RecursiveFindEntryPoint(rootRule, predicate, chainReplacer, false, 1, nthChild));
+            }
+
+            return foundRules;
         }
 
         /// <summary>
@@ -536,15 +560,100 @@ namespace GarnsMod.CodingTools
         /// </summary> 
         public static R FindRuleWhere<R>(this ILoot loot, LootPredicate<R> predicate = null, bool includeGlobalDrops = false, ChainReattcher chainReplacer = null, int? nthChild = null) where R : class, IItemDropRule
         {
+            List<R> foundRules = new();
+
             foreach (IItemDropRule rootRule in loot.Get(includeGlobalDrops))
             {
-                if (RecursiveFindEntryPoint(rootRule, predicate, chainReplacer, 1, nthChild) is R result)
+                foundRules.AddRange(RecursiveFindEntryPoint(rootRule, predicate, chainReplacer, true, 1, nthChild));
+
+                if (foundRules.Any())
                 {
-                    return result;
+                    return foundRules[0];
                 }
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// Recursively loops through this <see cref="ILoot"/> instance and looks for the first <see cref="IItemDropRule"/> of type <typeparamref name="R"/> that matches the given <paramref name="predicate"/>. If <paramref name="nthChild"/> is specified, then the rule must be the nth child of the loot pool.
+        /// If a match is found it will set <paramref name="result"/> to the matched rule and return true. If no match is found, it will recursively loop through the children of that child (both nested and chained children) and try to find one, so on and so forth.
+        /// If nothing was found after searching all children recursively, it will return false.<br/><br/>
+        ///
+        /// If <paramref name="chainReplacer"/> function is supplied, the found rule's chain from its parent will be replaced with the chain that the function returns. The found rule will be the param of the function and it should return some type of 
+        /// <see cref="IItemDropRuleChainAttempt"/> where ChainAttempt.RuleToChain is set to the parameter.<br/><br/>
+        ///        
+        /// Note: A rule (a) is considered the chained parent to another rule (b) if (b) is an <see cref="IItemDropRuleChainAttempt"/>.RuleToChain in (a)'s <see cref="IItemDropRule.ChainedRules"/> array<br/>
+        /// Note: A rule (a) is considered the nested parent to another rule (b) if (a) is an <see cref="INestedItemDropRule"/> that executes (b). Examples of <see cref="INestedItemDropRule"/> include (not limited to) <see cref="OneFromRulesRule"/>, <see cref="DropBasedOnExpertMode"/>, <see cref="SequentialRulesRule"/>        
+        /// </summary> 
+        public static bool TryFindRuleWhere<R>(this ILoot loot, out R result, LootPredicate<R> predicate = null, bool includeGlobalDrops = false, ChainReattcher chainReplacer = null, int? nthChild = null) where R : class, IItemDropRule
+        {
+            result = loot.FindRuleWhere(predicate, includeGlobalDrops, chainReplacer, nthChild);
+            return result is not null;
+        }
+
+        /// <summary>
+        /// Recursively loops through this <see cref="ILoot"/> instance and sees if there is any <see cref="IItemDropRule"/> of type <typeparamref name="R"/> that matches the given <paramref name="predicate"/>. If <paramref name="nthChild"/> is specified, then the rule must be the nth child of the loot pool.
+        /// If a match is found it will return true. If no match is found, it will recursively loop through the children of that child (both nested and chained children) and try to find one, so on and so forth.
+        /// If nothing was found after searching all children recursively, it will return false.<br/><br/>
+        /// 
+        /// Note: A rule (a) is considered the chained parent to another rule (b) if (b) is an <see cref="IItemDropRuleChainAttempt"/>.RuleToChain in (a)'s <see cref="IItemDropRule.ChainedRules"/> array<br/>
+        /// Note: A rule (a) is considered the nested parent to another rule (b) if (a) is an <see cref="INestedItemDropRule"/> that executes (b). Examples of <see cref="INestedItemDropRule"/> include (not limited to) <see cref="OneFromRulesRule"/>, <see cref="DropBasedOnExpertMode"/>, <see cref="SequentialRulesRule"/>        
+        /// </summary>
+        public static bool HasRuleWhere<R>(this ILoot loot, LootPredicate<R> predicate = null, bool includeGlobalDrops = false, int? nthChild = null) where R : class, IItemDropRule
+        {
+            return loot.FindRuleWhere(predicate, includeGlobalDrops, null, nthChild) is not null;
+        }
+
+        /// <summary>
+        /// Recursively loops through this <see cref="IItemDropRule"/>'s children and looks for any children <see cref="IItemDropRule"/> of type <typeparamref name="R"/> that match the given <paramref name="predicate"/>. If <paramref name="nthChild"/> is specified, then the rule must be the nth child of the loot pool.
+        /// If a match is found it will add it to a list. Regardless of if a match is found, it will recursively loop through the children of that child (both nested and chained children) and try to find more, so on and so forth.
+        /// If nothing was found after searching all children recursively, it will return an empty list.<br/><br/>
+        ///
+        /// If <paramref name="chainReplacer"/> function is supplied and the found rule is chained (not nested), the found rule's chain from its parent will be replaced with the chain that the function returns. The found rule will be the param of the function and it should return some type of 
+        /// <see cref="IItemDropRuleChainAttempt"/> where ChainAttempt.RuleToChain is set to the parameter.<br/><br/>
+        ///        
+        /// Note: A rule (a) is considered the chained parent to another rule (b) if (b) is an <see cref="IItemDropRuleChainAttempt"/>.RuleToChain in (a)'s <see cref="IItemDropRule.ChainedRules"/> array<br/>
+        /// Note: A rule (a) is considered the nested parent to another rule (b) if (a) is an <see cref="INestedItemDropRule"/> that executes (b). Examples of <see cref="INestedItemDropRule"/> include (not limited to) <see cref="OneFromRulesRule"/>, <see cref="DropBasedOnExpertMode"/>, <see cref="SequentialRulesRule"/>        
+        /// </summary> 
+        public static List<R> FindChildrenWhere<R>(this IItemDropRule root, LootPredicate<R> predicate = null, ChainReattcher chainReplacer = null, int? nthChild = null) where R : class, IItemDropRule
+        {
+            return RecursiveFindEntryPoint(root, predicate, chainReplacer, false, 0, nthChild);
+        }
+
+        /// <summary>
+        /// Recursively loops through this <see cref="IItemDropRule"/>'s children and looks for the first child <see cref="IItemDropRule"/> of type <typeparamref name="R"/> that matches the given <paramref name="predicate"/>. If <paramref name="nthChild"/> is specified, then the rule must be the nth child of the loot pool.
+        /// If a match is found it will return it. If no match is found, it will recursively loop through the children of that child (both nested and chained children) and try to find one, so on and so forth.
+        /// If nothing was found after searching all children recursively, it will return null.<br/><br/>
+        ///
+        /// If <paramref name="chainReplacer"/> function is supplied, the found rule's chain from its parent will be replaced with the chain that the function returns. The found rule will be the param of the function and it should return some type of 
+        /// <see cref="IItemDropRuleChainAttempt"/> where ChainAttempt.RuleToChain is set to the parameter.<br/><br/>
+        ///        
+        /// Note: A rule (a) is considered the chained parent to another rule (b) if (b) is an <see cref="IItemDropRuleChainAttempt"/>.RuleToChain in (a)'s <see cref="IItemDropRule.ChainedRules"/> array<br/>
+        /// Note: A rule (a) is considered the nested parent to another rule (b) if (a) is an <see cref="INestedItemDropRule"/> that executes (b). Examples of <see cref="INestedItemDropRule"/> include (not limited to) <see cref="OneFromRulesRule"/>, <see cref="DropBasedOnExpertMode"/>, <see cref="SequentialRulesRule"/>        
+        /// </summary> 
+        public static R FindChildWhere<R>(this IItemDropRule root, LootPredicate<R> predicate = null, ChainReattcher chainReplacer = null, int? nthChild = null) where R : class, IItemDropRule
+        {
+            List<R> children = RecursiveFindEntryPoint(root, predicate, chainReplacer, true, 0, nthChild);
+            return children.Any() ? children[0] : null;
+        }
+
+
+        /// <summary>
+        /// Recursively loops through this <see cref="IItemDropRule"/>'s children and looks for the first child <see cref="IItemDropRule"/> of type <typeparamref name="R"/> that matches the given <paramref name="predicate"/>. If <paramref name="nthChild"/> is specified, then the rule must be the nth child of the loot pool.
+        /// If a match is found it will set <paramref name="result"/> to the matched rule and return true. If no match is found, it will recursively loop through the children of that child (both nested and chained children) and try to find one, so on and so forth.
+        /// If nothing was found after searching all children recursively, it will return false.<br/><br/>
+        ///
+        /// If <paramref name="chainReplacer"/> function is supplied, the found rule's chain from its parent will be replaced with the chain that the function returns. The found rule will be the param of the function and it should return some type of 
+        /// <see cref="IItemDropRuleChainAttempt"/> where ChainAttempt.RuleToChain is set to the parameter.<br/><br/>
+        ///        
+        /// Note: A rule (a) is considered the chained parent to another rule (b) if (b) is an <see cref="IItemDropRuleChainAttempt"/>.RuleToChain in (a)'s <see cref="IItemDropRule.ChainedRules"/> array<br/>
+        /// Note: A rule (a) is considered the nested parent to another rule (b) if (a) is an <see cref="INestedItemDropRule"/> that executes (b). Examples of <see cref="INestedItemDropRule"/> include (not limited to) <see cref="OneFromRulesRule"/>, <see cref="DropBasedOnExpertMode"/>, <see cref="SequentialRulesRule"/>        
+        /// </summary> 
+        public static bool TryFindChildWhere<R>(this IItemDropRule root, out R result, LootPredicate<R> predicate = null, ChainReattcher chainReplacer = null, int? nthChild = null) where R : class, IItemDropRule
+        {
+            result = root.FindChildWhere(predicate, chainReplacer, nthChild);
+            return result is not null;
         }
 
         /// <summary>
@@ -561,34 +670,17 @@ namespace GarnsMod.CodingTools
         }
 
         /// <summary>
-        /// Recursively loops through this <see cref="IItemDropRule"/>'s children and looks for the first child <see cref="IItemDropRule"/> of type <typeparamref name="R"/> that matches the given <paramref name="predicate"/>. If <paramref name="nthChild"/> is specified, then the rule must be the nth child of the loot pool.
-        /// If a match is found it will return it. If no match is found, it will recursively loop through the children of that child (both nested and chained children) and try to find one, so on and so forth.
-        /// If nothing was found after searching all children recursively, it will return null.<br/><br/>
-        ///
-        /// If <paramref name="chainReplacer"/> function is supplied, the found rule's chain from its parent will be replaced with the chain that the function returns. The found rule will be the param of the function and it should return some type of 
-        /// <see cref="IItemDropRuleChainAttempt"/> where ChainAttempt.RuleToChain is set to the parameter.<br/><br/>
-        ///        
-        /// Note: A rule (a) is considered the chained parent to another rule (b) if (b) is an <see cref="IItemDropRuleChainAttempt"/>.RuleToChain in (a)'s <see cref="IItemDropRule.ChainedRules"/> array<br/>
-        /// Note: A rule (a) is considered the nested parent to another rule (b) if (a) is an <see cref="INestedItemDropRule"/> that executes (b). Examples of <see cref="INestedItemDropRule"/> include (not limited to) <see cref="OneFromRulesRule"/>, <see cref="DropBasedOnExpertMode"/>, <see cref="SequentialRulesRule"/>        
-        /// </summary> 
-        public static R FindChildWhere<R>(this IItemDropRule root, LootPredicate<R> predicate = null, ChainReattcher chainReplacer = null, int? nthChild = null) where R : class, IItemDropRule
-        {
-            return RecursiveFindEntryPoint(root, predicate, chainReplacer, 0, nthChild);
-        }
-
-        /// <summary>
         /// Main entry point into RecursiveFindMain. RecursiveFindMain should only ever be called by this method or itself. This method marks the dictionary as in use and will clear
         /// it and unmark after (unless some other call earlier on the method call stack was using it first, in which case it will let that method unmark and clear it [this is so that you
         /// can use RecursiveFind within RecursiveRemoveWhere predicates without causing issues with the dictionary being modified during the predicates])
         /// </summary>
-        private static R RecursiveFindEntryPoint<R>(IItemDropRule root, LootPredicate<R> predicate, ChainReattcher chainReplacer, int n, int? nthChild) where R : class, IItemDropRule
+        private static List<R> RecursiveFindEntryPoint<R>(IItemDropRule root, LootPredicate<R> predicate, ChainReattcher chainReplacer, bool stopAtFirst, int n, int? nthChild) where R : class, IItemDropRule
         {
             UseDictionary();
-            // dd
             predicate ??= (_) => true;
-            R result = RecursiveFindMain(predicate, null, chainReplacer, root, n, nthChild);
+            List<R> foundRules = RecursiveFindMain(predicate, null, chainReplacer, root, stopAtFirst, n, nthChild);
             StopUsingDictionary();
-            return result;
+            return foundRules;
         }
 
         #endregion
@@ -597,16 +689,26 @@ namespace GarnsMod.CodingTools
         #region Chained Rule Overloads
 
         /// <summary>
-        /// Recursively loops through this <see cref="ILoot"/> instance and sees if there is any <see cref="IItemDropRule"/> of type <typeparamref name="R"/> that is chained onto a parent rule of type <typeparamref name="P"/> via an <see cref="IItemDropRuleChainAttempt"/> of type <typeparamref name="C"/> that matches the given <paramref name="predicate"/>. If <paramref name="nthChild"/> is specified, then the rule must be the nth child of the loot pool.
-        /// If a match is found it will return true. If no match is found, it will recursively loop through the children of that child (both nested and chained children) and try to find one, so on and so forth.
-        /// If nothing was found after searching all children recursively, it will return false.<br/><br/>
+        /// Recursively loops through this <see cref="ILoot"/> instance and looks for any <see cref="IItemDropRule"/> of type <typeparamref name="R"/> that is chained onto a parent rule of type <typeparamref name="P"/> via an <see cref="IItemDropRuleChainAttempt"/> of type <typeparamref name="C"/> that matches the given <paramref name="predicate"/>. If <paramref name="nthChild"/> is specified, then the rule must be the nth child of the loot pool.
+        /// If a match is found it will add it to a list. Regardless of if a match is found, it will recursively loop through the children of that child (both nested and chained children) and try to find one, so on and so forth.
+        /// If nothing was found after searching all children recursively, it will return an empty list.<br/><br/>
+        ///
+        /// If <paramref name="chainReplacer"/> function is supplied, the found rule's chain from its parent will be replaced with the chain that the function returns. The found rule will be the param of the function and it should return some type of 
+        /// <see cref="IItemDropRuleChainAttempt"/> where ChainAttempt.RuleToChain is set to the parameter.<br/><br/>
         ///        
         /// Note: A rule (a) is considered the chained parent to another rule (b) if (b) is an <see cref="IItemDropRuleChainAttempt"/>.RuleToChain in (a)'s <see cref="IItemDropRule.ChainedRules"/> array<br/>
         /// Note: A rule (a) is considered the nested parent to another rule (b) if (a) is an <see cref="INestedItemDropRule"/> that executes (b). Examples of <see cref="INestedItemDropRule"/> include (not limited to) <see cref="OneFromRulesRule"/>, <see cref="DropBasedOnExpertMode"/>, <see cref="SequentialRulesRule"/>        
         /// </summary> 
-        public static bool HasRuleWhere<P, C, R>(this ILoot loot, LootPredicate<R> predicate = null, bool includeGlobalDrops = false, int? nthChild = null) where P : class, IItemDropRule where C : class, IItemDropRuleChainAttempt where R : class, IItemDropRule
+        public static List<R> FindRulesWhere<P, C, R>(this ILoot loot, LootPredicate<R> predicate = null, bool includeGlobalDrops = false, ChainReattcher chainReplacer = null, int? nthChild = null) where P : class, IItemDropRule where C : class, IItemDropRuleChainAttempt where R : class, IItemDropRule
         {
-            return loot.FindRuleWhere<P, C, R>(predicate, includeGlobalDrops, null, nthChild) is not null;
+            List<R> foundRules = new();
+
+            foreach (IItemDropRule rootRule in loot.Get(includeGlobalDrops))
+            {
+                foundRules.AddRange(RecursiveFindEntryPoint<P, C, R>(rootRule, predicate, chainReplacer, false, 1, nthChild));
+            }
+
+            return foundRules;
         }
 
         /// <summary>
@@ -622,15 +724,99 @@ namespace GarnsMod.CodingTools
         /// </summary> 
         public static R FindRuleWhere<P, C, R>(this ILoot loot, LootPredicate<R> predicate = null, bool includeGlobalDrops = false, ChainReattcher chainReplacer = null, int? nthChild = null) where P : class, IItemDropRule where C : class, IItemDropRuleChainAttempt where R : class, IItemDropRule
         {
+            List<R> foundRules = new();
+
             foreach (IItemDropRule rootRule in loot.Get(includeGlobalDrops))
             {
-                if (RecursiveFindEntryPoint<P, C, R>(rootRule, predicate, chainReplacer, 1, nthChild) is R result)
+                foundRules.AddRange(RecursiveFindEntryPoint<P, C, R>(rootRule, predicate, chainReplacer, true, 1, nthChild));
+
+                if (foundRules.Any())
                 {
-                    return result;
+                    return foundRules[0];
                 }
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// Recursively loops through this <see cref="ILoot"/> instance and looks for the first <see cref="IItemDropRule"/> of type <typeparamref name="R"/> that is chained onto a parent rule of type <typeparamref name="P"/> via an <see cref="IItemDropRuleChainAttempt"/> of type <typeparamref name="C"/> that matches the given <paramref name="predicate"/>. If <paramref name="nthChild"/> is specified, then the rule must be the nth child of the loot pool.
+        /// If a match is found it will set <paramref name="result"/> to the matched rule and return true. If no match is found, it will recursively loop through the children of that child (both nested and chained children) and try to find one, so on and so forth.
+        /// If nothing was found after searching all children recursively, it will return false.<br/><br/>
+        ///
+        /// If <paramref name="chainReplacer"/> function is supplied, the found rule's chain from its parent will be replaced with the chain that the function returns. The found rule will be the param of the function and it should return some type of 
+        /// <see cref="IItemDropRuleChainAttempt"/> where ChainAttempt.RuleToChain is set to the parameter.<br/><br/>
+        ///        
+        /// Note: A rule (a) is considered the chained parent to another rule (b) if (b) is an <see cref="IItemDropRuleChainAttempt"/>.RuleToChain in (a)'s <see cref="IItemDropRule.ChainedRules"/> array<br/>
+        /// Note: A rule (a) is considered the nested parent to another rule (b) if (a) is an <see cref="INestedItemDropRule"/> that executes (b). Examples of <see cref="INestedItemDropRule"/> include (not limited to) <see cref="OneFromRulesRule"/>, <see cref="DropBasedOnExpertMode"/>, <see cref="SequentialRulesRule"/>        
+        /// </summary> 
+        public static bool TryFindRuleWhere<P, C, R>(this ILoot loot, R result, LootPredicate<R> predicate = null, bool includeGlobalDrops = false, ChainReattcher chainReplacer = null, int? nthChild = null) where P : class, IItemDropRule where C : class, IItemDropRuleChainAttempt where R : class, IItemDropRule
+        {
+            result = loot.FindRuleWhere<P, C, R>(predicate, includeGlobalDrops, chainReplacer, nthChild);
+            return result is not null;
+        }
+
+        /// <summary>
+        /// Recursively loops through this <see cref="ILoot"/> instance and sees if there is any <see cref="IItemDropRule"/> of type <typeparamref name="R"/> that is chained onto a parent rule of type <typeparamref name="P"/> via an <see cref="IItemDropRuleChainAttempt"/> of type <typeparamref name="C"/> that matches the given <paramref name="predicate"/>. If <paramref name="nthChild"/> is specified, then the rule must be the nth child of the loot pool.
+        /// If a match is found it will return true. If no match is found, it will recursively loop through the children of that child (both nested and chained children) and try to find one, so on and so forth.
+        /// If nothing was found after searching all children recursively, it will return false.<br/><br/>
+        ///        
+        /// Note: A rule (a) is considered the chained parent to another rule (b) if (b) is an <see cref="IItemDropRuleChainAttempt"/>.RuleToChain in (a)'s <see cref="IItemDropRule.ChainedRules"/> array<br/>
+        /// Note: A rule (a) is considered the nested parent to another rule (b) if (a) is an <see cref="INestedItemDropRule"/> that executes (b). Examples of <see cref="INestedItemDropRule"/> include (not limited to) <see cref="OneFromRulesRule"/>, <see cref="DropBasedOnExpertMode"/>, <see cref="SequentialRulesRule"/>        
+        /// </summary> 
+        public static bool HasRuleWhere<P, C, R>(this ILoot loot, LootPredicate<R> predicate = null, bool includeGlobalDrops = false, int? nthChild = null) where P : class, IItemDropRule where C : class, IItemDropRuleChainAttempt where R : class, IItemDropRule
+        {
+            return loot.FindRuleWhere<P, C, R>(predicate, includeGlobalDrops, null, nthChild) is not null;
+        }
+
+        /// <summary>
+        /// Recursively loops through this <see cref="IItemDropRule"/>'s children and looks for any <see cref="IItemDropRule"/> of type <typeparamref name="R"/> that is chained onto a parent rule of type <typeparamref name="P"/> via an <see cref="IItemDropRuleChainAttempt"/> of type <typeparamref name="C"/> that matches the given <paramref name="predicate"/>. If <paramref name="nthChild"/> is specified, then the rule must be the nth child of the loot pool.
+        /// If a match is found it will add it to a list. Regardless of if a match is found, it will recursively loop through the children of that child (both nested and chained children) and try to find one, so on and so forth.
+        /// If nothing was found after searching all children recursively, it will return an empty list.<br/><br/>
+        ///
+        /// If <paramref name="chainReplacer"/> function is supplied, the found rule's chain from its parent will be replaced with the chain that the function returns. The found rule will be the param of the function and it should return some type of 
+        /// <see cref="IItemDropRuleChainAttempt"/> where ChainAttempt.RuleToChain is set to the parameter.<br/><br/>
+        ///        
+        /// Note: A rule (a) is considered the chained parent to another rule (b) if (b) is an <see cref="IItemDropRuleChainAttempt"/>.RuleToChain in (a)'s <see cref="IItemDropRule.ChainedRules"/> array<br/>
+        /// Note: A rule (a) is considered the nested parent to another rule (b) if (a) is an <see cref="INestedItemDropRule"/> that executes (b). Examples of <see cref="INestedItemDropRule"/> include (not limited to) <see cref="OneFromRulesRule"/>, <see cref="DropBasedOnExpertMode"/>, <see cref="SequentialRulesRule"/>        
+        /// </summary> 
+        public static List<R> FindChildrenWhere<P, C, R>(this IItemDropRule root, LootPredicate<R> predicate = null, ChainReattcher chainReplacer = null, int? nthChild = null) where P : class, IItemDropRule where C : class, IItemDropRuleChainAttempt where R : class, IItemDropRule
+        {
+            return RecursiveFindEntryPoint<P, C, R>(root, predicate, chainReplacer, false, 0, nthChild);
+        }
+
+        /// <summary>
+        /// Recursively loops through this <see cref="IItemDropRule"/>'s children and looks for the first child <see cref="IItemDropRule"/> of type <typeparamref name="R"/> that is chained onto a parent rule of type <typeparamref name="P"/> via an <see cref="IItemDropRuleChainAttempt"/> of type <typeparamref name="C"/> that matches the given <paramref name="predicate"/>. If <paramref name="nthChild"/> is specified, then the rule must be the nth child of the loot pool.
+        /// If a match is found it will return it. If no match is found, it will recursively loop through the children of that child (both nested and chained children) and try to find one, so on and so forth.
+        /// If nothing was found after searching all children recursively, it will return null.<br/><br/>
+        ///
+        /// If <paramref name="chainReplacer"/> function is supplied, the found rule's chain from its parent will be replaced with the chain that the function returns. The found rule will be the param of the function and it should return some type of 
+        /// <see cref="IItemDropRuleChainAttempt"/> where ChainAttempt.RuleToChain is set to the parameter.<br/><br/>
+        ///        
+        /// Note: A rule (a) is considered the chained parent to another rule (b) if (b) is an <see cref="IItemDropRuleChainAttempt"/>.RuleToChain in (a)'s <see cref="IItemDropRule.ChainedRules"/> array<br/>
+        /// Note: A rule (a) is considered the nested parent to another rule (b) if (a) is an <see cref="INestedItemDropRule"/> that executes (b). Examples of <see cref="INestedItemDropRule"/> include (not limited to) <see cref="OneFromRulesRule"/>, <see cref="DropBasedOnExpertMode"/>, <see cref="SequentialRulesRule"/>        
+        /// </summary> 
+        public static R FindChildWhere<P, C, R>(this IItemDropRule root, LootPredicate<R> predicate = null, ChainReattcher chainReplacer = null, int? nthChild = null) where P : class, IItemDropRule where C : class, IItemDropRuleChainAttempt where R : class, IItemDropRule
+        {
+            List<R> foundRule = RecursiveFindEntryPoint<P, C, R>(root, predicate, chainReplacer, true, 0, nthChild);
+            return foundRule.Any() ? foundRule[0] : null;
+        }
+
+        /// <summary>
+        /// Recursively loops through this <see cref="IItemDropRule"/>'s children and looks for the first child <see cref="IItemDropRule"/> of type <typeparamref name="R"/> that is chained onto a parent rule of type <typeparamref name="P"/> via an <see cref="IItemDropRuleChainAttempt"/> of type <typeparamref name="C"/> that matches the given <paramref name="predicate"/>. If <paramref name="nthChild"/> is specified, then the rule must be the nth child of the loot pool.
+        /// If a match is found it will set <paramref name="result"/> to the matched rule and return true. If no match is found, it will recursively loop through the children of that child (both nested and chained children) and try to find one, so on and so forth.
+        /// If nothing was found after searching all children recursively, it will return false.<br/><br/>
+        ///
+        /// If <paramref name="chainReplacer"/> function is supplied, the found rule's chain from its parent will be replaced with the chain that the function returns. The found rule will be the param of the function and it should return some type of 
+        /// <see cref="IItemDropRuleChainAttempt"/> where ChainAttempt.RuleToChain is set to the parameter.<br/><br/>
+        ///        
+        /// Note: A rule (a) is considered the chained parent to another rule (b) if (b) is an <see cref="IItemDropRuleChainAttempt"/>.RuleToChain in (a)'s <see cref="IItemDropRule.ChainedRules"/> array<br/>
+        /// Note: A rule (a) is considered the nested parent to another rule (b) if (a) is an <see cref="INestedItemDropRule"/> that executes (b). Examples of <see cref="INestedItemDropRule"/> include (not limited to) <see cref="OneFromRulesRule"/>, <see cref="DropBasedOnExpertMode"/>, <see cref="SequentialRulesRule"/>        
+        /// </summary> 
+        public static bool TryFindChildWhere<P, C, R>(this IItemDropRule root, out R result, LootPredicate<R> predicate = null, ChainReattcher chainReplacer = null, int? nthChild = null) where P : class, IItemDropRule where C : class, IItemDropRuleChainAttempt where R : class, IItemDropRule
+        {
+            result = root.FindChildWhere<P, C, R>(predicate, chainReplacer, nthChild);
+            return result is not null;
         }
 
         /// <summary>
@@ -647,33 +833,17 @@ namespace GarnsMod.CodingTools
         }
 
         /// <summary>
-        /// Recursively loops through this <see cref="IItemDropRule"/>'s children and looks for the first child <see cref="IItemDropRule"/> of type <typeparamref name="R"/> that is chained onto a parent rule of type <typeparamref name="P"/> via an <see cref="IItemDropRuleChainAttempt"/> of type <typeparamref name="C"/> that matches the given <paramref name="predicate"/>. If <paramref name="nthChild"/> is specified, then the rule must be the nth child of the loot pool.
-        /// If a match is found it will return it. If no match is found, it will recursively loop through the children of that child (both nested and chained children) and try to find one, so on and so forth.
-        /// If nothing was found after searching all children recursively, it will return null.<br/><br/>
-        ///
-        /// If <paramref name="chainReplacer"/> function is supplied, the found rule's chain from its parent will be replaced with the chain that the function returns. The found rule will be the param of the function and it should return some type of 
-        /// <see cref="IItemDropRuleChainAttempt"/> where ChainAttempt.RuleToChain is set to the parameter.<br/><br/>
-        ///        
-        /// Note: A rule (a) is considered the chained parent to another rule (b) if (b) is an <see cref="IItemDropRuleChainAttempt"/>.RuleToChain in (a)'s <see cref="IItemDropRule.ChainedRules"/> array<br/>
-        /// Note: A rule (a) is considered the nested parent to another rule (b) if (a) is an <see cref="INestedItemDropRule"/> that executes (b). Examples of <see cref="INestedItemDropRule"/> include (not limited to) <see cref="OneFromRulesRule"/>, <see cref="DropBasedOnExpertMode"/>, <see cref="SequentialRulesRule"/>        
-        /// </summary> 
-        public static R FindChildWhere<P, C, R>(this IItemDropRule root, LootPredicate<R> predicate = null, ChainReattcher chainReplacer = null, int? nthChild = null) where P : class, IItemDropRule where C : class, IItemDropRuleChainAttempt where R : class, IItemDropRule
-        {
-            return RecursiveFindEntryPoint<P, C, R>(root, predicate, chainReplacer, 0, nthChild);
-        }
-
-        /// <summary>
         /// Main entry point into RecursiveFindMain. RecursiveFindMain should only ever be called by this method or itself. This method marks the dictionary as in use and will clear
         /// it and unmark after (unless some other call earlier on the method call stack was using it first, in which case it will let that method unmark and clear it [this is so that you
         /// can use RecursiveFind within RecursiveRemoveWhere predicates without causing issues with the dictionary being modified during the predicates])
         /// </summary>
-        public static R RecursiveFindEntryPoint<P, C, R>(IItemDropRule root, LootPredicate<R> predicate, ChainReattcher chainReplacer, int n, int? nthChild) where P : class, IItemDropRule where C : class, IItemDropRuleChainAttempt where R : class, IItemDropRule
+        public static List<R> RecursiveFindEntryPoint<P, C, R>(IItemDropRule root, LootPredicate<R> predicate, ChainReattcher chainReplacer, bool stopAtFirst, int n, int? nthChild) where P : class, IItemDropRule where C : class, IItemDropRuleChainAttempt where R : class, IItemDropRule
         {
             UseDictionary();
             predicate ??= (_) => true;
-            R result = RecursiveFindMain<R>(rule => rule.HasParentRule() && rule.IsChained() && rule.ImmediateParentRule() is P && rule.ChainFromImmediateParent() is C && predicate(rule), null, chainReplacer, root, n, nthChild);
+            List<R> foundRules = RecursiveFindMain<R>(rule => rule.HasParentRule() && rule.IsChained() && rule.ImmediateParentRule() is P && rule.ChainFromImmediateParent() is C && predicate(rule), null, chainReplacer, root, stopAtFirst, n, nthChild);
             StopUsingDictionary();
-            return result;
+            return foundRules;
         }
 
         #endregion
@@ -682,6 +852,65 @@ namespace GarnsMod.CodingTools
         #region Nested Rule Overloads
 
         /// <summary>
+        /// Recursively loops through this <see cref="ILoot"/> instance and looks for any <see cref="IItemDropRule"/> of type <typeparamref name="R"/> that is directly nested inside an <see cref="INestedItemDropRule"/> of type <typeparamref name="N"/> that matches the given <paramref name="predicate"/>. If <paramref name="nthChild"/> is specified, then the rule must be the nth child of the loot pool.
+        /// If a match is found it will add it to a list. Regardless of if a match is found, it will recursively loop through the children of that child (both nested and chained children) and try to find more, so on and so forth.
+        /// If nothing was found after searching all children recursively, it will return an empty list.<br/><br/>
+        ///        
+        /// Note: A rule (a) is considered the chained parent to another rule (b) if (b) is an <see cref="IItemDropRuleChainAttempt"/>.RuleToChain in (a)'s <see cref="IItemDropRule.ChainedRules"/> array<br/>
+        /// Note: A rule (a) is considered the nested parent to another rule (b) if (a) is an <see cref="INestedItemDropRule"/> that executes (b). Examples of <see cref="INestedItemDropRule"/> include (not limited to) <see cref="OneFromRulesRule"/>, <see cref="DropBasedOnExpertMode"/>, <see cref="SequentialRulesRule"/>        
+        /// </summary> 
+        public static List<R> FindRulesWhere<N, R>(this ILoot loot, LootPredicate<R> predicate = null, bool includeGlobalDrops = false, int? nthChild = null) where N : class, IItemDropRule where R : class, IItemDropRule
+        {
+            List<R> foundRules = new();
+
+            foreach (IItemDropRule rootRule in loot.Get(includeGlobalDrops))
+            {
+                foundRules.AddRange(RecursiveFindEntryPoint<N, R>(rootRule, predicate, false, 1, nthChild));
+            }
+
+            return foundRules;
+        }
+
+        /// <summary>
+        /// Recursively loops through this <see cref="ILoot"/> instance and sees if there is any <see cref="IItemDropRule"/> of type <typeparamref name="R"/> that is directly nested inside an <see cref="INestedItemDropRule"/> of type <typeparamref name="N"/> that matches the given <paramref name="predicate"/>. If <paramref name="nthChild"/> is specified, then the rule must be the nth child of the loot pool.
+        /// If a match is found it will return it. If no match is found, it will recursively loop through the children of that child (both nested and chained children) and try to find one, so on and so forth.
+        /// If nothing was found after searching all children recursively, it will return null.<br/><br/>
+        ///        
+        /// Note: A rule (a) is considered the chained parent to another rule (b) if (b) is an <see cref="IItemDropRuleChainAttempt"/>.RuleToChain in (a)'s <see cref="IItemDropRule.ChainedRules"/> array<br/>
+        /// Note: A rule (a) is considered the nested parent to another rule (b) if (a) is an <see cref="INestedItemDropRule"/> that executes (b). Examples of <see cref="INestedItemDropRule"/> include (not limited to) <see cref="OneFromRulesRule"/>, <see cref="DropBasedOnExpertMode"/>, <see cref="SequentialRulesRule"/>        
+        /// </summary> 
+        public static R FindRuleWhere<N, R>(this ILoot loot, LootPredicate<R> predicate = null, bool includeGlobalDrops = false, int? nthChild = null) where N : class, IItemDropRule where R : class, IItemDropRule
+        {
+            List<R> foundRules = new();
+
+            foreach (IItemDropRule rootRule in loot.Get(includeGlobalDrops))
+            {
+                foundRules.AddRange(RecursiveFindEntryPoint<N, R>(rootRule, predicate, true, 1, nthChild));
+
+                if (foundRules.Any()) ;
+                {
+                    return foundRules[0];
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Recursively loops through this <see cref="ILoot"/> instance and sees if there is any <see cref="IItemDropRule"/> of type <typeparamref name="R"/> that is directly nested inside an <see cref="INestedItemDropRule"/> of type <typeparamref name="N"/> that matches the given <paramref name="predicate"/>. If <paramref name="nthChild"/> is specified, then the rule must be the nth child of the loot pool.
+        /// If a match is found it will set <paramref name="result"/> to the matched rule and return true. If no match is found, it will recursively loop through the children of that child (both nested and chained children) and try to find one, so on and so forth.
+        /// If nothing was found after searching all children recursively, it will return false.<br/><br/>
+        ///        
+        /// Note: A rule (a) is considered the chained parent to another rule (b) if (b) is an <see cref="IItemDropRuleChainAttempt"/>.RuleToChain in (a)'s <see cref="IItemDropRule.ChainedRules"/> array<br/>
+        /// Note: A rule (a) is considered the nested parent to another rule (b) if (a) is an <see cref="INestedItemDropRule"/> that executes (b). Examples of <see cref="INestedItemDropRule"/> include (not limited to) <see cref="OneFromRulesRule"/>, <see cref="DropBasedOnExpertMode"/>, <see cref="SequentialRulesRule"/>        
+        /// </summary> 
+        public static bool TryFindRuleWhere<N, R>(this ILoot loot, out R result, LootPredicate<R> predicate = null, bool includeGlobalDrops = false, int? nthChild = null) where N : class, IItemDropRule where R : class, IItemDropRule
+        {
+            result = loot.FindRuleWhere<N, R>(predicate, includeGlobalDrops, nthChild);
+            return result is not null;
+        }
+
+        /// <summary>
         /// Recursively loops through this <see cref="ILoot"/> instance and sees if there is any <see cref="IItemDropRule"/> of type <typeparamref name="R"/> that is directly nested inside an <see cref="INestedItemDropRule"/> of type <typeparamref name="N"/> that matches the given <paramref name="predicate"/>. If <paramref name="nthChild"/> is specified, then the rule must be the nth child of the loot pool.
         /// If a match is found it will return true. If no match is found, it will recursively loop through the children of that child (both nested and chained children) and try to find one, so on and so forth.
         /// If nothing was found after searching all children recursively, it will return false.<br/><br/>
@@ -689,29 +918,50 @@ namespace GarnsMod.CodingTools
         /// Note: A rule (a) is considered the chained parent to another rule (b) if (b) is an <see cref="IItemDropRuleChainAttempt"/>.RuleToChain in (a)'s <see cref="IItemDropRule.ChainedRules"/> array<br/>
         /// Note: A rule (a) is considered the nested parent to another rule (b) if (a) is an <see cref="INestedItemDropRule"/> that executes (b). Examples of <see cref="INestedItemDropRule"/> include (not limited to) <see cref="OneFromRulesRule"/>, <see cref="DropBasedOnExpertMode"/>, <see cref="SequentialRulesRule"/>        
         /// </summary> 
-        public static bool HasRuleWhere<N, R>(this ILoot loot, LootPredicate<R> predicate = null, bool includeGlobalDrops = false, int? nthChild = null) where N : class, IItemDropRule, INestedItemDropRule where R : class, IItemDropRule
+        public static bool HasRuleWhere<N, R>(this ILoot loot, LootPredicate<R> predicate = null, bool includeGlobalDrops = false, int? nthChild = null) where N : class, IItemDropRule where R : class, IItemDropRule
         {
             return loot.FindRuleWhere<N, R>(predicate, includeGlobalDrops, nthChild) is not null;
         }
 
         /// <summary>
-        /// Recursively loops through this <see cref="ILoot"/> instance and sees if there is any <see cref="IItemDropRule"/> of type <typeparamref name="R"/> that is directly nested inside an <see cref="INestedItemDropRule"/> of type <typeparamref name="N"/> that matches the given <paramref name="predicate"/>. If <paramref name="nthChild"/> is specified, then the rule must be the nth child of the loot pool.
+        /// Recursively loops through this <see cref="IItemDropRule"/>'s children and looks for any child <see cref="IItemDropRule"/> of type <typeparamref name="R"/> that is directly nested inside an <see cref="INestedItemDropRule"/> of type <typeparamref name="N"/> that matches the given <paramref name="predicate"/>. If <paramref name="nthChild"/> is specified, then the rule must be the nth child of the loot pool.
+        /// If a match is found it will add it to a list. Regardless of if a match is found, it will recursively loop through the children of that child (both nested and chained children) and try to find more, so on and so forth.
+        /// If nothing was found after searching all children recursively, it will return an empty list.<br/><br/>
+        ///        
+        /// Note: A rule (a) is considered the chained parent to another rule (b) if (b) is an <see cref="IItemDropRuleChainAttempt"/>.RuleToChain in (a)'s <see cref="IItemDropRule.ChainedRules"/> array<br/>
+        /// Note: A rule (a) is considered the nested parent to another rule (b) if (a) is an <see cref="INestedItemDropRule"/> that executes (b). Examples of <see cref="INestedItemDropRule"/> include (not limited to) <see cref="OneFromRulesRule"/>, <see cref="DropBasedOnExpertMode"/>, <see cref="SequentialRulesRule"/>        
+        /// </summary> 
+        public static List<R> FindChildrenWhere<N, R>(this IItemDropRule root, LootPredicate<R> predicate = null, int? nthChild = null) where N : class, IItemDropRule where R : class, IItemDropRule
+        {
+            return RecursiveFindEntryPoint<N, R>(root, predicate, false, 0, nthChild);
+        }
+
+        /// <summary>
+        /// Recursively loops through this <see cref="IItemDropRule"/>'s children and sees if there is any child <see cref="IItemDropRule"/> of type <typeparamref name="R"/> that is directly nested inside an <see cref="INestedItemDropRule"/> of type <typeparamref name="N"/> that matches the given <paramref name="predicate"/>. If <paramref name="nthChild"/> is specified, then the rule must be the nth child of the loot pool.
         /// If a match is found it will return it. If no match is found, it will recursively loop through the children of that child (both nested and chained children) and try to find one, so on and so forth.
         /// If nothing was found after searching all children recursively, it will return null.<br/><br/>
         ///        
         /// Note: A rule (a) is considered the chained parent to another rule (b) if (b) is an <see cref="IItemDropRuleChainAttempt"/>.RuleToChain in (a)'s <see cref="IItemDropRule.ChainedRules"/> array<br/>
         /// Note: A rule (a) is considered the nested parent to another rule (b) if (a) is an <see cref="INestedItemDropRule"/> that executes (b). Examples of <see cref="INestedItemDropRule"/> include (not limited to) <see cref="OneFromRulesRule"/>, <see cref="DropBasedOnExpertMode"/>, <see cref="SequentialRulesRule"/>        
         /// </summary> 
-        public static R FindRuleWhere<N, R>(this ILoot loot, LootPredicate<R> predicate = null, bool includeGlobalDrops = false, int? nthChild = null) where N : class, IItemDropRule, INestedItemDropRule where R : class, IItemDropRule
+        public static R FindChildWhere<N, R>(this IItemDropRule root, LootPredicate<R> predicate = null, int? nthChild = null) where N : class, IItemDropRule where R : class, IItemDropRule
         {
-            foreach (IItemDropRule rootRule in loot.Get(includeGlobalDrops))
-            {
-                if (RecursiveFindEntryPoint<N, R>(rootRule, predicate, 1, nthChild) is R result)
-                {
-                    return result;
-                }
-            }
-            return null;
+            List<R> foundRule = RecursiveFindEntryPoint<N, R>(root, predicate, true, 0, nthChild);
+            return foundRule.Any() ? foundRule[0] : null;
+        }
+
+        /// <summary>
+        /// Recursively loops through this <see cref="IItemDropRule"/>'s children and sees if there is any child <see cref="IItemDropRule"/> of type <typeparamref name="R"/> that is directly nested inside an <see cref="INestedItemDropRule"/> of type <typeparamref name="N"/> that matches the given <paramref name="predicate"/>. If <paramref name="nthChild"/> is specified, then the rule must be the nth child of the loot pool.
+        /// If a match is found it will set <paramref name="result"/> to the matched rule and return true. If no match is found, it will recursively loop through the children of that child (both nested and chained children) and try to find one, so on and so forth.
+        /// If nothing was found after searching all children recursively, it will return false.<br/><br/>
+        ///        
+        /// Note: A rule (a) is considered the chained parent to another rule (b) if (b) is an <see cref="IItemDropRuleChainAttempt"/>.RuleToChain in (a)'s <see cref="IItemDropRule.ChainedRules"/> array<br/>
+        /// Note: A rule (a) is considered the nested parent to another rule (b) if (a) is an <see cref="INestedItemDropRule"/> that executes (b). Examples of <see cref="INestedItemDropRule"/> include (not limited to) <see cref="OneFromRulesRule"/>, <see cref="DropBasedOnExpertMode"/>, <see cref="SequentialRulesRule"/>        
+        /// </summary> 
+        public static bool TryFindChildWhere<N, R>(this IItemDropRule root, out R result, LootPredicate<R> predicate = null, int? nthChild = null) where N : class, IItemDropRule where R : class, IItemDropRule
+        {
+            result = root.FindChildWhere<N, R>(predicate, nthChild);
+            return result is not null;
         }
 
         /// <summary>
@@ -722,22 +972,9 @@ namespace GarnsMod.CodingTools
         /// Note: A rule (a) is considered the chained parent to another rule (b) if (b) is an <see cref="IItemDropRuleChainAttempt"/>.RuleToChain in (a)'s <see cref="IItemDropRule.ChainedRules"/> array<br/>
         /// Note: A rule (a) is considered the nested parent to another rule (b) if (a) is an <see cref="INestedItemDropRule"/> that executes (b). Examples of <see cref="INestedItemDropRule"/> include (not limited to) <see cref="OneFromRulesRule"/>, <see cref="DropBasedOnExpertMode"/>, <see cref="SequentialRulesRule"/>        
         /// </summary> 
-        public static bool HasChildWhere<N, R>(this IItemDropRule root, LootPredicate<R> predicate = null, int? nthChild = null) where N : class, IItemDropRule, INestedItemDropRule where R : class, IItemDropRule
+        public static bool HasChildWhere<N, R>(this IItemDropRule root, LootPredicate<R> predicate = null, int? nthChild = null) where N : class, IItemDropRule where R : class, IItemDropRule
         {
             return root.FindChildWhere<N, R>(predicate, nthChild) is not null;
-        }
-
-        /// <summary>
-        /// Recursively loops through this <see cref="IItemDropRule"/>'s children and sees if there is any child <see cref="IItemDropRule"/> of type <typeparamref name="R"/> that is directly nested inside an <see cref="INestedItemDropRule"/> of type <typeparamref name="N"/> that matches the given <paramref name="predicate"/>. If <paramref name="nthChild"/> is specified, then the rule must be the nth child of the loot pool.
-        /// If a match is found it will return it. If no match is found, it will recursively loop through the children of that child (both nested and chained children) and try to find one, so on and so forth.
-        /// If nothing was found after searching all children recursively, it will return null.<br/><br/>
-        ///        
-        /// Note: A rule (a) is considered the chained parent to another rule (b) if (b) is an <see cref="IItemDropRuleChainAttempt"/>.RuleToChain in (a)'s <see cref="IItemDropRule.ChainedRules"/> array<br/>
-        /// Note: A rule (a) is considered the nested parent to another rule (b) if (a) is an <see cref="INestedItemDropRule"/> that executes (b). Examples of <see cref="INestedItemDropRule"/> include (not limited to) <see cref="OneFromRulesRule"/>, <see cref="DropBasedOnExpertMode"/>, <see cref="SequentialRulesRule"/>        
-        /// </summary> 
-        public static R FindChildWhere<N, R>(this IItemDropRule root, LootPredicate<R> predicate = null, int? nthChild = null) where N : class, IItemDropRule, INestedItemDropRule where R : class, IItemDropRule
-        {
-            return RecursiveFindEntryPoint<N, R>(root, predicate, 0, nthChild);
         }
 
         /// <summary>
@@ -745,13 +982,18 @@ namespace GarnsMod.CodingTools
         /// it and unmark after (unless some other call earlier on the method call stack was using it first, in which case it will let that method unmark and clear it [this is so that you
         /// can use RecursiveFind within RecursiveRemoveWhere predicates without causing issues with the dictionary being modified during the predicates])
         /// </summary>
-        private static R RecursiveFindEntryPoint<N, R>(IItemDropRule root, LootPredicate<R> predicate, int n, int? nthChild) where N : class, IItemDropRule, INestedItemDropRule where R : class, IItemDropRule
+        private static List<R> RecursiveFindEntryPoint<N, R>(IItemDropRule root, LootPredicate<R> predicate, bool stopAtFirst, int n, int? nthChild) where N : class, IItemDropRule where R : class, IItemDropRule
         {
+            if (typeof(N) != typeof(IItemDropRule) && !typeof(N).IsAssignableTo(typeof(INestedItemDropRule)))
+            {
+                throw new InvalidOperationException("N must be of type INestedItemDropRule to be used in <N, R> LootExtensions");
+            }
+
             UseDictionary();
             predicate ??= (_) => true;
-            R result = RecursiveFindMain<R>(rule => rule.HasParentRule() && rule.IsNested() && rule.ImmediateParentRule() is N && predicate(rule), null, null, root, n, nthChild);
+            List<R> foundRules = RecursiveFindMain<R>(rule => rule.HasParentRule() && rule.IsNested() && rule.ImmediateParentRule() is N && predicate(rule), null, null, root, stopAtFirst, n, nthChild);
             StopUsingDictionary();
-            return result;
+            return foundRules;
         }
 
         #endregion
@@ -769,7 +1011,7 @@ namespace GarnsMod.CodingTools
         /// Note: A rule (a) is considered the chained parent to another rule (b) if (b) is an <see cref="IItemDropRuleChainAttempt"/>.RuleToChain in (a)'s <see cref="IItemDropRule.ChainedRules"/> array<br/>
         /// Note: A rule (a) is considered the nested parent to another rule (b) if (a) is an <see cref="INestedItemDropRule"/> that executes (b). Examples of <see cref="INestedItemDropRule"/> include (not limited to) <see cref="OneFromRulesRule"/>, <see cref="DropBasedOnExpertMode"/>, <see cref="SequentialRulesRule"/>        
         /// </summary> 
-        private static R RecursiveFindMain<R>(LootPredicate<R> predicate, int? indexOfChainToCurrRule, ChainReattcher chainReplacer, IItemDropRule currRule, int n, int? nthChild) where R : class, IItemDropRule
+        private static List<R> RecursiveFindMain<R>(LootPredicate<R> predicate, int? indexOfChainToCurrRule, ChainReattcher chainReplacer, IItemDropRule currRule, bool stopAtFirst, int n, int? nthChild) where R : class, IItemDropRule
         {
             // n == 0 means this RecursiveFindMain call should not check currRule at all. This is used when an EntryPoint is first called on an IItemDropRule (not an ILoot) so that the rule
             // itself isn't queried and returned if it happens to match the <paramref name="predicate"/> (because we only want to predicate its children). n will be initially set to 1 when called on ILoot entry, 0 when called on IItemDropRule entry
@@ -777,46 +1019,66 @@ namespace GarnsMod.CodingTools
             // n must not be 0, currRule must be of type T and match the <paramref name="predicate"/>. Also if nthChild is specified, n must be == nthChild
             if (n != 0 && currRule is R castedRule && predicate(castedRule) && (nthChild is null || nthChild == n))
             {
-                if (chainReplacer is not null && indexOfChainToCurrRule is int i) // indexOfChainToCurrRule not null <==> parent rule is not null, and vice versa if any are null
+                // When we find a chained rule matching the predicate and chainReplacer is supplied, use it to replace chains
+                if (chainReplacer is not null && indexOfChainToCurrRule is int i) // indexOfChainToCurrRule not null => rule has chained parent
                 {
                     currRule.ImmediateParentRule().ChainedRules[i] = chainReplacer(currRule);
                 }
-                return castedRule;
+
+                List<R> foundRules = new() { castedRule };
+
+                if (!stopAtFirst)
+                {
+                    // I could pass down the list through the method for efficiency so we're not calling addrange n times where n is the number of rules found, but order of growth
+                    // doesn't really matter here. This would grow n^2 though: 1+2+3+4+5+..+n iterations
+                    foundRules.AddRange(ContinueRecursion());
+                }
+
+                return foundRules;
             }
             else
+            {
+                return ContinueRecursion();
+            }
+
+            List<R> ContinueRecursion()
             {
                 if (nthChild is not null && (n + 1) > nthChild) // Stop trying to search if they specified that it must be nth child and we are gonna be further than that specified n next iteration
                 {
                     return null;
                 }
 
-                // Try nested rules first
+                List<R> foundRules = new();
+
+                // Try nested children first
                 if (currRule is INestedItemDropRule ruleThatExecutesOthers)
                 {
                     foreach (IItemDropRule nestedRule in GetRulesNestedInsideThisRule(ruleThatExecutesOthers))
                     {
                         nestedRule.RegisterAsNestedChild(ruleThatExecutesOthers);
-                        if (RecursiveFindMain(predicate, null, chainReplacer, nestedRule, n + 1, nthChild) is R result)
+                        foundRules.AddRange(RecursiveFindMain(predicate, null, chainReplacer, nestedRule, stopAtFirst, n + 1, nthChild));
+                        if (foundRules.Any() && stopAtFirst)
                         {
-                            return result;
+                            return foundRules;
                         }
                     }
                 }
 
-                // Then try chained rules
+                // Then try chained children
                 for (int i = 0; i < currRule.ChainedRules.Count; i++)
                 {
                     IItemDropRuleChainAttempt chainAttempt = currRule.ChainedRules[i];
                     IItemDropRule child = chainAttempt.RuleToChain;
                     child.RegisterAsChainedChild(currRule, chainAttempt);
 
-                    if (RecursiveFindMain(predicate, i, chainReplacer, child, n + 1, nthChild) is R result)
+                    foundRules.AddRange(RecursiveFindMain(predicate, i, chainReplacer, child, stopAtFirst, n + 1, nthChild));
+                    if (foundRules.Any() && stopAtFirst)
                     {
-                        return result;
+                        return foundRules;
                     }
                 }
 
-                return null;
+                return foundRules;
             }
         }
 
@@ -826,7 +1088,6 @@ namespace GarnsMod.CodingTools
 
         // Data structures used within recursive calls for parent tracking. Only use these within predicates, or else it will throw an InvalidOperationException
         #region Volatile Parent Dictionary (All the extensions used here can only be used in the context of RecursiveMain functions or in the context of the predicates that RecursiveMain functions execute)
-
 
         /// <summary>
         /// Used to temporarily store data about which IItemDropRule is the "parent" of another IItemDropRule, as well as storing the ChainAttempt 
@@ -1107,7 +1368,7 @@ namespace GarnsMod.CodingTools
         /// Can only be used in the context of RemoveWhere/FindWhere/Has recursive predicates, as it uses a Dictionary to find the parent, and the dictionary is only populated
         /// (accurate) during these calls and is cleared after. Mainly used inside predicates of Remove/Find as a means of being more exact about what
         /// rule we are predicateing
-        public static bool HasParentRuleWhere<N, R>(this IItemDropRule rule, LootPredicate<R> predicate, int? nthParent = null) where N : class, IItemDropRule, INestedItemDropRule where R : class, IItemDropRule
+        public static bool HasParentRuleWhere<N, R>(this IItemDropRule rule, LootPredicate<R> predicate, int? nthParent = null) where N : class, IItemDropRule where R : class, IItemDropRule
         {
             return rule.FindParentRuleWhere<N, R>(predicate, nthParent) is not null;
         }
@@ -1121,7 +1382,7 @@ namespace GarnsMod.CodingTools
         /// (accurate) during these calls and is cleared after. Mainly used inside predicates of Remove/Find as a means of being more exact about what
         /// rule we are predicateing        
         /// </summary>
-        public static R FindParentRuleWhere<N, R>(this IItemDropRule rule, LootPredicate<R> predicate, int? nthParent = null) where N : class, IItemDropRule, INestedItemDropRule where R : class, IItemDropRule
+        public static R FindParentRuleWhere<N, R>(this IItemDropRule rule, LootPredicate<R> predicate, int? nthParent = null) where N : class, IItemDropRule where R : class, IItemDropRule
         {
             return rule.FindParentRuleWhere<R>(rule => rule.HasParentRule() && rule.IsNested() && rule.ImmediateParentRule() is N && predicate(rule), nthParent);
         }
