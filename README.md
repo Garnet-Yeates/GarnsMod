@@ -303,5 +303,19 @@ The following methods are used for recursive finding:
 
 ### When to Use Specificity Generic Overloads
 The `<P, C, R>` and `<N, R>` generic overloads are not really needed in most cases. In general, you will just use the `<R>` overload and don't need to narrow down the search based on what rule the current rule is Nested/Chained in. However there are situations where you would want to use them. Take this example (from within the same Plantera example)
-![Collision Example](https://i.gyazo.com/fc7a88174d41a232281ed62880f16f66.png)
+![Collision Example](https://i.gyazo.com/63605cc4021aa0e31599434c623bd6ad.png)
+In this example, we have a situation where there the same `CommonDrop` appears twice in the tree. Using the normal `<R>` overload would make it so that this drop is removed in both places.
+```cs
+// This would remove the Grenade Launcher in both places
+npcLoot.RemoveWhere<CommonDrop>(drop => drop.itemId == ItemID.GrenadeLauncher);
 
+// This would remove the chained Grenade Launcher drop (the left one)
+npcLoot.RemoveWhere<LeadingConditionRule, TryIfSucceeded, CommonDrop>(drop => drop.itemId == ItemID.GrenadeLauncher);
+// This would also remove the chained one, but it doesn't care about what chain type it is or what it's chained to (better for compatibility if other mods change)
+npcLoot.RemoveWhere<IItemDropRule, IItemDropRuleChainAttempt, CommonDrop>(drop => drop.itemId == ItemID.GrenadeLauncher);
+
+// This would remove the nested Grenade Launcher drop (the right one)
+npcLoot.RemoveWhere<OneFromRulesRule, CommonDrop>(drop => drop.itemId == ItemID.GrenadeLauncher);
+// This would also remove the nested one, but it doesn't care about what it is nested onto
+npcLoot.RemoveWhere<IItemDropRule, IItemDropRuleChainAttempt, CommonDrop>(drop => drop.itemId == ItemID.GrenadeLauncher);
+```
