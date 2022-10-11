@@ -289,7 +289,7 @@ The following methods are used for recursive removing:
 - There is also a `<P, C, R>` generic overload that is used to be more specific. It stands for ParentType, ChainType, RuleType (not the COVID test we all had to take). For example you could do `RemoveWhere<CommonDrop, TryIfFailedRandomRoll, ItemDropWithConditionRule>` which would only remove an `ItemDropWithConditionRule` that is chained to a `CommonDrop` with a `TryIfFailedRandomRoll` chain. The `ItemDropWithConditionRule` must match the `LootPredicate<ItemDropWithConditionRule>`
 - There is also a `<N, R>` generic overload that is used to be more specific. It stands for NestedParentType, RuleType. This would only check for a rule of type `R` that is nested inside of a rule of type `N`. `R` must match the `LootPredicate<R>`.
 
-### Recursive Fidning
+### Recursive Finding
 The following methods are used for recursive finding:
 - `List<R> ILoot.FindRulesWhere<R>(LootPredicate<R> predicate, bool includeGlobalDrops = false, ChainReplacer chainReplacer = null, int? nthChild = null)`
 - `R ILoot.FindRuleWhere<R>(LootPredicate<R> predicate, bool includeGlobalDrops = false, ChainReplacer chainReplacer = null, int? nthChild = null)`
