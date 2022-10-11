@@ -26,7 +26,7 @@ Rule-Nesting is a capability that some `IItemDropRule` implementations have in t
 a rule that is able to execute other rules. Examples of `INestedItemDropRule` include (but are not limited to) `DropBasedOnExpertMode`, `OneFromRulesRule`, `SequentialRulesRule`. A rule that is able to be executed by another rule is considered to be nested inside said rule. We refer to these as 'nested child' and we refer to their parent as the 'nested parent'.
 
 ### Diagram For Reference
-Below here is a diagram for Plantera's `NPCLoot` tree. This diagram is based on this vanilla tModLoader code:
+Below here is a diagram for Plantera's `NPCLoot` tree. This diagram is based on this vanilla code:
 ```cs
 private void RegisterBoss_Plantera()
 {
