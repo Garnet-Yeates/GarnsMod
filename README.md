@@ -92,4 +92,157 @@ Not only is this code a bit messy, it also comes with potential compatibility is
 ## Use Cases of LootExtensions
 Now that we have a solid understanding of the limitations behind the default system, we can learn about how LootExtensions can be used to overcome these issues.
 ### The Power of Recursion
-The main principle of the LootExtensions system is that it uses recursion for its `FindRuleWhere<R>` and `RemoveWhere<R>` methods (and their overloads). The first benefit of this is code simplicity. Instead of having to hard-code nested loops, we can let the recursive methods of LootExtensions do their magic of finding rules (both chained and nested) within the loot tree. Another amazing benefit to this is code compatibility. The issue described above in the default system is completely solved by using recursion because recursive methods are dynamic in nature. The structure of the loot tree will never matter, as long as the rule we are searching for matches our supplied Type (<R>) and `LootPredicate` (more on these below in the section showing how to use the LootExtensions system)
+The main principle of the LootExtensions system is that it uses recursion for its `FindRuleWhere<R>` and `RemoveWhere<R>` methods (and their overloads). The first benefit of this is code simplicity. Instead of having to hard-code nested loops, we can let the recursive methods of LootExtensions do their magic of finding rules (both chained and nested) within the loot tree. Another amazing benefit to this is code compatibility. The issue described above in the default system is completely solved by using recursion because recursive methods are dynamic in nature. The structure of the loot tree will never matter, as long as the rule we are searching for matches our supplied Type (`<R>`) and `LootPredicate` (more on these below in the section showing how to use the LootExtensions system)
+
+### The Power of Code Simplicity
+Let's take a look at a bunch of examples using the default system vs using LootExtensions to make modifications to vanilla loot trees. Note that the `&& false` within the default system `if` statements are to make it so the default code doesn't run. Notice how most of the LootExtensions examples are one line of code.
+```cs
+public override void ModifyNPCLoot(NPC npc, NPCLoot npcLoot)
+{
+    // Remove PossessedHatchet from Golem
+    // Vanilla Loot Tree:
+    // LeadingConditionRule(NotExpert)
+    //     TryIfSucceeded Chain => OneFromRulesRule containing Possessed Hatchet
+    //         Nested IItemDropRule Option => CommonDrop(PossessedHatchet)
+    if (npc.type == NPCID.Golem)
+    {
+        // DEFAULT TMODLOADER
+        // Use hard-coded loops to iterate and find a OneFromRulesRule whose options contains a possessed hatchet
+        // Due to hard-coding, the structure of the loot tree matters. The CommonDrop must be the direct nested child of the OneFromRulesRule, which must be the direct chained
+        // child of LeadingConditionRule, chained with a TryIfSucceeded chain attempt, and the LeadingConditionRule must be the direct child of the loot itself
+        // After finding it, remove the PossessedHatchet CommonDrop from being nested inside of the OneFromRulesRule
+        foreach (IItemDropRule rootRule in npcLoot.Get(false))
+        {
+            if (false && rootRule is LeadingConditionRule leadingCondition && leadingCondition.condition is Conditions.NotExpert)
+            {
+                foreach (IItemDropRuleChainAttempt chainAttempt in leadingCondition.ChainedRules)
+                {
+                    if (chainAttempt is TryIfSucceeded successChain && successChain.RuleToChain is OneFromRulesRule oneFromRules)
+                    {
+                        foreach (IItemDropRule nestedRule in oneFromRules.options)
+                        {
+                            if (nestedRule is CommonDrop cd && cd.itemId == ItemID.PossessedHatchet)
+                            {
+                                // Use LINQ to remove with one line of code
+                                oneFromRules.options = oneFromRules.options.Where(option => !(option is CommonDrop cd && cd.itemId == ItemID.PossessedHatchet)).ToArray();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // EXTENSIONS
+        // Find and remove any CommonDrop in the loot tree (including CommonDrops nested inside other rules like this one). The CommonDrop's ItemID must be PossessedHatchet in order to be removed.
+        // The structure of the loot tree doesn't matter
+        npcLoot.RemoveWhere<CommonDrop>(cd => cd.itemId == ItemID.PossessedHatchet);
+    }
+
+    // Remove venus magnum from plantera
+    // Vanilla loot tree (showing only relevant branches):
+    // LeadingConditionRule(NotExpert)
+    //     TryIfSucceeded Chain => LeadingConditionRule(FirstTimeKillingPlantera)
+    //         TryIfFailedRandomRoll Chain => OneFromRulesRule containing venus magnum
+    //             Nested IItemDropRule Option => CommonDrop(ItemID.VenusMagnum) 
+    if (npc.type == NPCID.Plantera)
+    {
+        // DEFAULT TMODLOADER
+        // Use hard-coded loops to iterate and find a OneFromRulesRule whose options contains a venus magnum
+        // Due to hard coding, the structure of the loot tree matters
+        foreach (IItemDropRule rootRule in npcLoot.Get(false))
+        {
+            if (false && rootRule is LeadingConditionRule notExpert && notExpert.condition is Conditions.NotExpert)
+            {
+                foreach (IItemDropRuleChainAttempt chainAttempt in notExpert.ChainedRules)
+                {
+                    if (chainAttempt is TryIfSucceeded && chainAttempt.RuleToChain is LeadingConditionRule firstTime && firstTime.condition is Conditions.FirstTimeKillingPlantera)
+                    {
+                        foreach (IItemDropRuleChainAttempt chainAttempt2 in firstTime.ChainedRules)
+                        {
+                            if (chainAttempt2 is TryIfDoesntFillConditions && chainAttempt2.RuleToChain is OneFromRulesRule oneFromRules)
+                            {
+                                // Use LINQ to make code shorter
+                                oneFromRules.options = oneFromRules.options.Where(option => !(option is CommonDrop cd && cd.itemId == ItemID.VenusMagnum)).ToArray();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // EXTENSIONS
+        // Find and remove any CommonDrop(s) from the loot tree. The CommonDrop's ItemID must be VenusMagnum in order to be removed.
+        // The structure of the loot tree doesn't matter
+        npcLoot.RemoveWhere<CommonDrop>(cd => cd.itemId == ItemID.VenusMagnum);
+    }
+
+    // Remove BookOfSkulls from Skeletron.
+    // Vanilla Loot Tree:
+    // ItemDropWithConditionRule
+    //     TryIfFailedRandomRoll Chain => CommonDrop(SkeletronHand)
+    //         TryIfFailedRandomRollChain => CommonDrop(BookOfSkulls) 
+    if (npc.type == NPCID.SkeletronHead)
+    {
+        // DEFAULT TMODLOADER
+        // Use hard-coded loops to find it
+        foreach (IItemDropRule rule in npcLoot.Get())
+        {
+            if (false && rule is ItemDropWithConditionRule skeletronMaskRule && skeletronMaskRule.itemId == ItemID.SkeletronMask && skeletronMaskRule.condition is Conditions.NotExpert)
+            {
+                foreach (IItemDropRuleChainAttempt maskChain in skeletronMaskRule.ChainedRules)
+                {
+                    if (maskChain is TryIfFailedRandomRoll && maskChain.RuleToChain is CommonDrop skeletronHandRule && skeletronHandRule.itemId == ItemID.SkeletronHand)
+                    {
+                        IEnumerable<IItemDropRuleChainAttempt> withoutBookOfSkulls = skeletronHandRule.ChainedRules.Where(attempt => !(attempt.RuleToChain is CommonDrop bookOfSkullsDrop && bookOfSkullsDrop.itemId == ItemID.BookofSkulls));
+                        skeletronHandRule.ChainedRules.Clear();
+                        skeletronHandRule.ChainedRules.AddRange(withoutBookOfSkulls);
+                    }
+                }
+            }
+        }
+
+        // EXTENSIONS
+        // Any BookOfSkulls CommonDrop anywhere within the loot will be removed. Doesn't care about if it has a parent or if/how it is chained to its parent.
+        npcLoot.RemoveWhere<CommonDrop>(bookofSkullsDrop => bookofSkullsDrop.itemId == ItemID.BookofSkulls);
+    }
+
+    // Remove BoneSword from Skeleton and re-attach its children to the parent it was removed from (so we don't lose Skull drop)
+    // Vanilla Loot Tree:
+    // CommonDrop(AncientIronHelmet)
+    //     TryIfFailedRandomRoll Chain => CommonDrop(AncientGoldHelmet)
+    //         TryIfFailedRandomRoll Chain => CommonDrop(BoneSword) <= This is what we want to remove, but without losing Skull drop too
+    //             TryIfFailedRandomRoll Chain => CommonDrop(Skull)
+    if (npc.type == NPCID.Skeleton)
+    {
+        // DEFAULT TMODLOADER
+        // Use hard-coded loops to remove BoneSwordDrop from Skeleton NPC, then re-attach BoneSword's chained rules 
+        // onto AncientGoldHelmetDrop so that the things chained after BoneSword (Skull Drop) are not lost
+        foreach (IItemDropRule rule in npcLoot.Get())
+        {
+            if (false && rule is CommonDrop ancientIronDrop && ancientIronDrop.itemId == ItemID.AncientIronHelmet)
+            {
+                foreach (IItemDropRuleChainAttempt chainFromAncientIron in ancientIronDrop.ChainedRules)
+                {
+                    if (chainFromAncientIron.RuleToChain is CommonDrop ancientGoldDrop && ancientGoldDrop.itemId == ItemID.AncientGoldHelmet)
+                    {
+                        foreach (IItemDropRuleChainAttempt chainFromAncientGold in new List<IItemDropRuleChainAttempt>(ancientGoldDrop.ChainedRules))
+                        {
+                            if (chainFromAncientGold.RuleToChain is CommonDrop boneSwordRule && boneSwordRule.itemId == ItemID.BoneSword)
+                            {
+                                ancientGoldDrop.ChainedRules.Remove(chainFromAncientGold);
+
+                                ancientGoldDrop.ChainedRules.AddRange(boneSwordRule.ChainedRules);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // EXTENSIONS 
+        // Any BoneSword CommonDrop anywhere within the loot will be removed. Doesn't care about if it has a parent or if/how it is chained to its parent.
+        // Chains are automatically re-attached due to 'reattachChains' param being set to true (false by default)
+        npcLoot.RemoveWhere<CommonDrop>(boneSwordDrop => boneSwordDrop.itemId == ItemID.BoneSword, reattachChains: true);
+    }
+}
+```
