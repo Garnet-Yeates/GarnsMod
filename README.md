@@ -57,7 +57,7 @@ private void RegisterBoss_Plantera()
         ItemDropRule.Common(3018))); // Seedler
 }
 ```
-![This is an image](https://i.gyazo.com/50a33252786ab59cb10af26d712ef3e7.png)
+![Plantera Loot Tree](https://i.gyazo.com/50a33252786ab59cb10af26d712ef3e7.png)
 
 ## Limitations of the Default System
 Now that we understand how the loot tree works, we can understand the limitations of the base `RemoveWhere` method. If we wanted to remove the Venus Magnum `CommonDrop` from Plantera (which is at the bottom of the loot tree), the `RemoveWhere` method is not going to cut it. This is because the `RemoveWhere` will only target the 4 top-level root rules to remove them from the `ILoot` itself (it will not look any deeper than that). By default, removing the Venus Magnum from Plantera requires us to hard-code loops to dig through the `ChainedRules` list of several rules (and also dig through some fileds within `INestedItemDropRule`, such as `OneFromRulesRule.options`) in order to navigate to the rules that we want to remove. Let's show an example of trying to remove the venus magnum from Plantera:
@@ -300,3 +300,8 @@ The following methods are used for recursive finding:
 - `bool IItemDropRule.TryFindChildWhere<R>(out R result, LootPredicate<R> predicate, bool includeGlobalDrops = false, ChainReplacer chainReplacer = null, int? nthChild = null)`
 - `bool IItemDropRule.HasChildWhere<R>(LootPredicate<R> predicate, bool includeGlobalDrops = false, int? nthChild = null)`
 - I omit the descriptions of these because they work very similar to the removal methods except they are for finding. Note there are `<P, C, R>` and `<N, R>` overloads for these as well.
+
+### When to Use Specificity Generic Overloads
+The `<P, C, R>` and `<N, R>` generic overloads are not really needed in most cases. In general, you will just use the `<R>` overload and don't need to narrow down the search based on what rule the current rule is Nested/Chained in. However there are situations where you would want to use them. Take this example (from within the same Plantera example)
+![Collision Example](https://i.gyazo.com/fc7a88174d41a232281ed62880f16f66.png)
+
