@@ -246,3 +246,34 @@ public override void ModifyNPCLoot(NPC npc, NPCLoot npcLoot)
     }
 }
 ```
+If we remove the explanation comments and condense the code down to just using the extensions, we get this:
+```cs
+public override void ModifyNPCLoot(NPC npc, NPCLoot npcLoot)
+{
+    // Remove PossessedHatchet from Golem
+    if (npc.type == NPCID.Golem)
+    {
+        npcLoot.RemoveWhere<CommonDrop>(cd => cd.itemId == ItemID.PossessedHatchet);
+    }
+
+    // Remove venus magnum from Plantera
+    if (npc.type == NPCID.Plantera)
+    {
+        npcLoot.RemoveWhere<CommonDrop>(cd => cd.itemId == ItemID.VenusMagnum);
+    }
+
+    // Remove BookOfSkulls from Skeletron
+    if (npc.type == NPCID.SkeletronHead)
+    {
+        npcLoot.RemoveWhere<CommonDrop>(bookofSkullsDrop => bookofSkullsDrop.itemId == ItemID.BookofSkulls, reattachChains: true);
+    }
+
+    // Remove Bone Sword from Skeleton.
+    // BoneSword has SkullDrop chained after it, and we don't want to lose that drop, so we tell the algorithm to re-attach the chains
+    if (npc.type == NPCID.Skeleton)
+    {
+        npcLoot.RemoveWhere<CommonDrop>(boneSwordDrop => boneSwordDrop.itemId == ItemID.BoneSword, reattachChains: true);
+    }
+}
+```
+Much more readable, in my opinion
