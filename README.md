@@ -314,8 +314,8 @@ npcLoot.RemoveWhere<LeadingConditionRule, TryIfSucceeded, CommonDrop>(drop => dr
 // This would also remove the chained one, but it doesn't care about what chain type it is or what it's chained to (better for compatibility if other mods change)
 npcLoot.RemoveWhere<IItemDropRule, IItemDropRuleChainAttempt, CommonDrop>(drop => drop.itemId == ItemID.GrenadeLauncher);
 
-// This would remove the nested Grenade Launcher drop (the right one)
+// This would remove the nested Grenade Launcher drop (the right one). 
 npcLoot.RemoveWhere<OneFromRulesRule, CommonDrop>(drop => drop.itemId == ItemID.GrenadeLauncher);
 // This would also remove the nested one, but it doesn't care about what it is nested onto
-npcLoot.RemoveWhere<IItemDropRule, IItemDropRuleChainAttempt, CommonDrop>(drop => drop.itemId == ItemID.GrenadeLauncher);
+npcLoot.RemoveWhere<IItemDropRule, CommonDrop>(drop => drop.itemId == ItemID.GrenadeLauncher);
 ```
