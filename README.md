@@ -276,7 +276,7 @@ public override void ModifyNPCLoot(NPC npc, NPCLoot npcLoot)
     }
 }
 ```
-Much more readable, in my opinion
+Much more readable, in my opinion.
 
 ## How to use LootExtensions
 ### Loot Predicates
