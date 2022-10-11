@@ -284,7 +284,19 @@ A `LootPredicate<R>` is a generic delegate that is called on `IItemDropRule` imp
 
 ### Recursive Removing
 The following methods are used for recursive removing:
-- `ILoot.RemoveWhere<R>(LootPredicate<R> predicate, bool includeGlobalDrops = false, int? nthChild = null, bool reattachChains = false, bool stopAtFirst = false)`. This method will recursively dig through the `ILoot` and remove any rules of type `R` that match the given `LootPredicate<R>`. It searches through the root rules, their children (nested and chained), as well as their children, so on and so forth. For example you could do `npcLoot.RemoveWhere<CommonDrop>()` (note how there is no predicate, which defaults to a predicate that returns true no matter what), and it would remove ALL CommonDrops from the loot pool. If you did `npcLoot.RemoveWhere<CommonDrop>(stopAtFirst: true)` it would remove the first CommonDrop found within the loot pool.
-- `IItemDropRule.RemoveChildrenWhere` same as the one above, but it is called on an `IItemDropRule` within the `ILoot` instead of on the `ILoot` itself.
+- `void ILoot.RemoveWhere<R>(LootPredicate<R> predicate, bool includeGlobalDrops = false, int? nthChild = null, bool reattachChains = false, bool stopAtFirst = false)`. This method will recursively dig through the `ILoot` and remove any rules of type `R` that match the given `LootPredicate<R>`. It searches through the root rules, their children (nested and chained), as well as their children, so on and so forth. For example you could do `npcLoot.RemoveWhere<CommonDrop>()` (note how there is no predicate, which defaults to a predicate that returns true no matter what), and it would remove ALL CommonDrops from the loot pool. If you did `npcLoot.RemoveWhere<CommonDrop>(stopAtFirst: true)` it would remove the first CommonDrop found within the loot pool.
+- `IItemDropRule.RemoveChildrenWhere<R>` same as the one above, but it is called on an `IItemDropRule` within the `ILoot` instead of on the `ILoot` itself.
 - There is also a `<P, C, R>` generic overload that is used to be more specific. It stands for ParentType, ChainType, RuleType (not the COVID test we all had to take). For example you could do `RemoveWhere<CommonDrop, TryIfFailedRandomRoll, ItemDropWithConditionRule>` which would only remove an `ItemDropWithConditionRule` that is chained to a `CommonDrop` with a `TryIfFailedRandomRoll` chain. The `ItemDropWithConditionRule` must match the `LootPredicate<ItemDropWithConditionRule>`
 - There is also a `<N, R>` generic overload that is used to be more specific. It stands for NestedParentType, RuleType. This would only check for a rule of type `R` that is nested inside of a rule of type `N`. `R` must match the `LootPredicate<R>`.
+
+### Recursive Fidning
+The following methods are used for recursive finding:
+- `List<R> ILoot.FindRulesWhere<R>(LootPredicate<R> predicate, bool includeGlobalDrops = false, ChainReplacer chainReplacer = null, int? nthChild = null)`
+- `R ILoot.FindRuleWhere<R>(LootPredicate<R> predicate, bool includeGlobalDrops = false, ChainReplacer chainReplacer = null, int? nthChild = null)`
+- `bool ILoot.TryFindRuleWhere<R>(out R result, LootPredicate<R> predicate, bool includeGlobalDrops = false, ChainReplacer chainReplacer = null, int? nthChild = null)`
+- `bool ILoot.HasRuleWhere<R>(LootPredicate<R> predicate, bool includeGlobalDrops = false, int? nthChild = null)`
+- `List<R> IItemDropRule.FindChildrenWhere<R>(LootPredicate<R> predicate, bool includeGlobalDrops = false, ChainReplacer chainReplacer = null, int? nthChild = null)`
+- `R IItemDropRule.FindChildWhere<R>(LootPredicate<R> predicate, bool includeGlobalDrops = false, ChainReplacer chainReplacer = null, int? nthChild = null)`
+- `bool IItemDropRule.TryFindChildWhere<R>(out R result, LootPredicate<R> predicate, bool includeGlobalDrops = false, ChainReplacer chainReplacer = null, int? nthChild = null)`
+- `bool IItemDropRule.HasChildWhere<R>(LootPredicate<R> predicate, bool includeGlobalDrops = false, int? nthChild = null)`
+- I omit the descriptions of these because they work very similar to the removal methods except they are for finding. Note there are `<P, C, R>` and `<N, R>` overloads for these as well.
