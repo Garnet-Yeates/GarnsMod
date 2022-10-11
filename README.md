@@ -310,8 +310,32 @@ public override void ModifyItemLoot(Item item, ItemLoot itemLoot)
     // In this case, it is inferred that the 'cd' parameter is a CommonDrop (since the method has <CommonDrop>)
     itemLoot.FindRuleWhere<CommonDrop>(cd => cd.itemId == ItemID.Skull);
 
-    // In this case, it is inferred that 'ofo' parameter is a OneFromOptionsDropRule
+    // In this case, it is inferred that 'ofo' parameter is a OneFromOptionsDropRule (since the method has <OneFromOptionsDropRule>)
     itemLoot.FindRuleWhere<OneFromOptionsDropRule>(ofo => ofo.ContainsOption(ItemID.Frostbrand));
+}
+```
+
+#### Examples
+```cs
+public override void ModifyItemLoot(Item item, ItemLoot itemLoot)
+{
+    // Any rule that isn't a root (top-level) rule will be found
+    LootExtensions.LootPredicate<IItemDropRule> findRuleWithParent = rule => rule.HasParentRule();
+
+    // Any CommonDrop that isn't a root (top-level) rule will be found
+    LootExtensions.LootPredicate<CommonDrop> findCommonDropWithParent = rule => rule.HasParentRule();
+
+    // Any non top-level, nested CommonDrop will be found
+    LootExtensions.LootPredicate<CommonDrop> findNestedCommon = rule => rule.HasParentRule() && rule.IsNested();
+
+    // Any non top-level, chained CommonDrop will be found
+    LootExtensions.LootPredicate<CommonDrop> findChainedCommon = rule => rule.HasParentRule() && rule.IsChained();
+
+    // Any OneFromOptionsDropRule containing ItemID.Frostbrand in its itemIds array will be found
+    LootExtensions.LootPredicate<OneFromOptionsDropRule> findOptionsContainingFrostbrand = rule => rule.ContainsOption(ItemID.Frostbrand);
+
+    // Any OneFromOptionsDropRule will be found
+    LootExtensions.LootPredicate<OneFromOptionsDropRule> findOptions = rule => true;
 }
 ```
 
