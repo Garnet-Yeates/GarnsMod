@@ -372,7 +372,7 @@ rule.HasParentRule() && rule.IsNested() && rule.ImmediateParentRule() is N
 
 ### When to Use Generic Overloads
 The `<P, C, R>` and `<N, R>` generic overloads are not really needed in most cases. In general, you will just use the `<R>` overload and don't need to narrow down the search based on what rule the current rule is Nested/Chained in. However there are situations where you would want to use them. Take this example (from within the same Plantera example)
-![Collision Example](https://i.gyazo.com/63605cc4021aa0e31599434c623bd6ad.png)
+![Collision Example](https://i.gyazo.com/3bf51d5c3fd08006c9734fb0edb6f911.png)
 In this example, we have a situation where there the same `CommonDrop` appears twice in the tree. Using the normal `<R>` overload would make it so that this drop is removed in both places.
 ```cs
 // This would remove the Grenade Launcher in both places
