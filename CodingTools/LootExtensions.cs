@@ -887,7 +887,7 @@ namespace GarnsMod.CodingTools
             {
                 foundRules.AddRange(RecursiveFindEntryPoint<N, R>(rootRule, predicate, true, 1, nthChild));
 
-                if (foundRules.Any()) ;
+                if (foundRules.Any())
                 {
                     return foundRules[0];
                 }
