@@ -5,9 +5,9 @@ The main use case for LootExtensions stems from the fact that the `ILoot.RemoveW
 drawbacks of `ILoot.RemoveWhere` and the default system, we must learn what 'surface level' or 'root rules' are, as well as learning what child rules are (both `nested` and `chained` children).
 
 ### Surface Level / Root Rules
-Surface level rules are the rules that appear directly under the `ILoot` instance. These rules can be iterated over / mutated by using the `ILoot.Get()` method and they
+Surface level rules are the rules that appear directly under the `ILoot` instance. These rules can be directly iterated over / mutated by using the `ILoot.Get()` method and they
 can be removed from the loot tree using the `ILoot.RemoveWhere()` method. In the diagram below, the root rules are the 4 rules under the `ILoot` 
-(`DropBasedOnMasterMode`, `ItemDropWithConditionRule`, `LeadingConditionRule(NotExpert)`, and `DropBasedOnExpertMode`).
+(`DropBasedOnMasterMode`, `ItemDropWithConditionRule`, `LeadingConditionRule(NotExpert)`, and `DropBasedOnExpertMode`). If we want to access rules below the root rules, we cannot use `RemoveWhere` and we must manually loop through chained and nested rules to remove them ourselves.
 
 ### Chained Rules
 Rule-Chaining is the process of attaching another rule (or several rules) onto another rule with an `IItemDropRuleChainAttempt`. Every `IItemDropRule` in 
@@ -17,7 +17,7 @@ the tModLoader codebase can have other rules chained to them, because all `IItem
 - `TryIfSucceeded` when a rule is executed and succeeds to roll the drop.
 - `TryIfDoesntFillConditions` when the conditions are not met for a rule to to be executed in the first place  .
 
-A rule that is chained onto another rule is considered to be the 'chained child' of that rule. Chained children are referenced
+A rule that is chained onto another rule is considered to be the 'chained child' of that rule. Their parent rule is considered to be the 'chained parent'. Chained children are referenced
 by an `IItemDropRuleChainAttempt` within their chained parent's `ChainedRules` list.
 In the diagram below, there are about 10 different chains attached onto various `IItemDropRule` instances in the loot. View the diagram in fullscreen to get a better look at them.
 
@@ -363,12 +363,12 @@ Finds all `IItemDropRules` of type `R` within the loot that match the `LootPredi
 ```CS
 R FindRuleWhere<R>(LootPredicate<R> predicate, bool includeGlobalDrops = false, int? nthChild = null);
 ```
-Finds the first `IItemDropRule` of type `R` within the loot that match the `LootPredicate<R>`. If `nthChild` is supplied, it will only return a rule that is the the `nthChild` of the loot. Returns `null` if no rule is found.
+Finds the first `IItemDropRule` of type `R` within the loot that matches the `LootPredicate<R>`. If `nthChild` is supplied, it will only return a rule that is the the `nthChild` of the loot. Returns `null` if no rule is found.
 <br></br>
 ```cs
 bool TryFindRuleWhere<R>(out R result, LootPredicate<R> predicate, bool includeGlobalDrops = false, int? nthChild = null);
 ```
-Tries to find the first `IItemDropRule` of type `R` within the loot that match the `LootPredicate<R>`. If `nthChild` is supplied, it will only find a rule that is the the `nthChild` of the loot. Returns `false` if no rule is found. If a rule is found, then `result` `out` parameter is set to the found rule.
+Tries to find the first `IItemDropRule` of type `R` within the loot that matches the `LootPredicate<R>`. If `nthChild` is supplied, it will only find a rule that is the the `nthChild` of the loot. Returns `false` if no rule is found. If a rule is found, then `result` `out` parameter is set to the found rule.
 <br></br>
 ```cs
 bool HasRuleWhere<R>(LootPredicate<R> predicate, bool includeGlobalDrops = false, int? nthChild = null);
@@ -383,27 +383,27 @@ These can be called on any `IItemDropRule`, such as `CommonDrop`, `OneFromOption
 List<R> FindChildrenWhere<R>(LootPredicate<R> predicate, bool includeGlobalDrops = false, ChainReplacer chainReplacer = null,
     int? nthChild = null);
 ```
-Finds all `IItemDropRules` of type `R` within the loot that match the `LootPredicate<R>`. If `nthChild` is supplied, it will only find rules that are the the `nthChild` of the loot (i.e if 1 is supplied for nthChild, it will only find root rules). Returns an empty `List<R>` if none are found.
+Finds all `IItemDropRules` of type `R` that are below this rule on the loot tree, that match the `LootPredicate<R>`. If `nthChild` is supplied, it will only find rules that are the the `nthChild` of this rule (i.e if 1 is supplied for nthChild, it will only find children directly under this rule). Returns an empty `List<R>` if none are found.
 <br></br>
 
 ```CS
 R FindChildWhere<R>(LootPredicate<R> predicate, bool includeGlobalDrops = false, ChainReplacer chainReplacer = null, 
     int? nthChild = null);
 ```
-Finds the first `IItemDropRule` of type `R` within the loot that match the `LootPredicate<R>`. If `nthChild` is supplied, it will only return a rule that is the the `nthChild` of the loot. Returns `null` if no rule is found.
+Finds the first `IItemDropRule` of type `R` below this rule on the loot tree, that matches the `LootPredicate<R>`. If `nthChild` is supplied, it will only return a rule that is the the `nthChild` of this rule. Returns `null` if no rule is found.
 <br></br>
 
 ```CS
 bool TryFindChildWhere<R>(out R result, LootPredicate<R> predicate, bool includeGlobalDrops = false, 
     ChainReplacer chainReplacer = null, int? nthChild = null);
 ```  
-Tries to find the first `IItemDropRule` of type `R` within the loot that match the `LootPredicate<R>`. If `nthChild` is supplied, it will only find a rule that is the the `nthChild` of the loot. Returns `false` if no rule is found. If a rule is found, then `result` `out` parameter is set to the found rule.
+Tries to find the first `IItemDropRule` of type `R` below this rule on the loot tree, that matches the `LootPredicate<R>`. If `nthChild` is supplied, it will only find a rule that is the the `nthChild` of this rule. Returns `false` if no rule is found. If a rule is found, then `result` `out` parameter is set to the found rule.
 <br></br>
 
 ```CS
 bool HasChildWhere<R>(LootPredicate<R> predicate, bool includeGlobalDrops = false, int? nthChild = null);
 ```
-Determines if this `ILoot` has a rule of type `R` that matches the `LootPredicate<R>`. If `nthChild` is specified, the rule must be the `nthChild` of the `ILoot`.
+Determines if this `IItemDropRule` has a rule of type `R` below it on the loot tree, that matches the `LootPredicate<R>`. If `nthChild` is specified, the rule must be the `nthChild` of this rule.
 <br></br>
 
 ### <P, C, R> Generic Overloads
