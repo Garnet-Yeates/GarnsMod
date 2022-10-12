@@ -280,8 +280,8 @@ public override void ModifyNPCLoot(NPC npc, NPCLoot npcLoot)
 ```
 Much more readable, in my opinion.
 
-## How to use LootExtensions
-### Loot Predicates
+# How to use LootExtensions
+## Loot Predicates
 A `LootPredicate<R>` is a generic delegate that is called on `IItemDropRule` implementations in the context of the recursive find/removal methods. The parameter of the function is a rule of type `R` and the function should return true or false. `LootPredicates` are executed on all rules that the recursive find/remove methods touch. Returning true in a predicate in the context of a recursive removal method means that rule will be removed. Returning true in the context of a recursive find method will add that rule to the list of found rules. More explanations on recursive removing/finding methods below.
 
 ```cs
@@ -317,7 +317,7 @@ public override void ModifyItemLoot(Item item, ItemLoot itemLoot)
 }
 ```
 
-#### Examples
+### Examples
 ```cs
 public override void ModifyItemLoot(Item item, ItemLoot itemLoot)
 {
@@ -343,39 +343,58 @@ public override void ModifyItemLoot(Item item, ItemLoot itemLoot)
 }
 ```
 
-### Recursive Removing
+## Recursive Removing
 The following methods are used for recursive removing:
-- `void ILoot.RemoveWhere<R>(LootPredicate<R> predicate, bool includeGlobalDrops = false, int? nthChild = null, bool reattachChains = false, bool stopAtFirst = false)`. This method will recursively dig through the `ILoot` and remove any rules of type `R` that match the given `LootPredicate<R>`. It searches through the root rules, their children (nested and chained), as well as their children, so on and so forth. For example you could do `npcLoot.RemoveWhere<CommonDrop>()` (note how there is no predicate, which defaults to a predicate that returns true no matter what), and it would remove ALL CommonDrops from the loot pool. If you did `npcLoot.RemoveWhere<CommonDrop>(stopAtFirst: true)` it would remove the first CommonDrop found within the loot pool.
-- `IItemDropRule.RemoveChildrenWhere<R>` same as the one above, but it is called on an `IItemDropRule` within the `ILoot` instead of on the `ILoot` itself.  
 
-### Recursive Finding
+### ILoot Extensions
+```cs
+bool RemoveWhere<R>(LootPredicate<R> predicate, bool includeGlobalDrops = false, int? nthChild = null, 
+    bool reattachChains = false, bool stopAtFirst = false);
+```
+This method will recursively dig through the `ILoot` and remove any rules of type `R` that match the given `LootPredicate<R>`. It searches through the root rules, their children (nested and chained), as well as their children, so on and so forth. For example you could do `npcLoot.RemoveWhere<CommonDrop>()` (note how there is no predicate, which defaults to a predicate that returns true no matter what), and it would remove ALL CommonDrops from the loot pool. If you did `npcLoot.RemoveWhere<CommonDrop>(stopAtFirst: true)` it would remove the first CommonDrop found within the loot pool. Returns true if any rules were removed
+<br></br>
+
+### IItemDropRule Extensions
+```cs
+bool RemoveChildrenWhere<R>(LootPredicate<R> predicate, bool includeGlobalDrops = false, int? nthChild = null, 
+    bool reattachChains = false, bool stopAtFirst = false);
+```
+This method will recursively dig through the children of this `IItemDropRule` and remove any rules of type `R` that match the given `LootPredicate<R>`. It searches through this rule's children (nested and chained), their children, as well as their children, so on and so forth. For example you could do `rule.RemoveWhere<CommonDrop>()` and it would remove ALL CommonDrops that descend from this CommonDrop. 
+<br></br>
+
+## Recursive Finding
 
 The following extension methods are used for recursive finding:
 
-#### ILoot Extensions
+### ILoot Extensions
 
 These can be called on any `ILoot`, such as `NPCLoot` or `ItemLoot`
+
 ```cs
 List<R> FindRulesWhere<R>(LootPredicate<R> predicate, bool includeGlobalDrops = false, int? nthChild = null);
 ```
 Finds all `IItemDropRules` of type `R` within the loot that match the `LootPredicate<R>`. If `nthChild` is supplied, it will only find rules that are the the `nthChild` of the loot (i.e if 1 is supplied for nthChild, it will only find root rules). Returns an empty `List<R>` if none are found.
 <br></br>
+
 ```CS
 R FindRuleWhere<R>(LootPredicate<R> predicate, bool includeGlobalDrops = false, int? nthChild = null);
 ```
 Finds the first `IItemDropRule` of type `R` within the loot that matches the `LootPredicate<R>`. If `nthChild` is supplied, it will only return a rule that is the the `nthChild` of the loot. Returns `null` if no rule is found.
 <br></br>
+
 ```cs
 bool TryFindRuleWhere<R>(out R result, LootPredicate<R> predicate, bool includeGlobalDrops = false, int? nthChild = null);
 ```
 Tries to find the first `IItemDropRule` of type `R` within the loot that matches the `LootPredicate<R>`. If `nthChild` is supplied, it will only find a rule that is the the `nthChild` of the loot. Returns `false` if no rule is found. If a rule is found, then `result` `out` parameter is set to the found rule.
 <br></br>
+
 ```cs
 bool HasRuleWhere<R>(LootPredicate<R> predicate, bool includeGlobalDrops = false, int? nthChild = null);
 ```
 Determines if this `ILoot` has a rule of type `R` that matches the `LootPredicate<R>`. If `nthChild` is specified, the rule must be the `nthChild` of the `ILoot`.
 <br></br>
-#### IItemDropRule Extensions
+
+### IItemDropRule Extensions
 
 These can be called on any `IItemDropRule`, such as `CommonDrop`, `OneFromOptionsDropRule`, `OneFromRulesRule`, etc
 
@@ -406,19 +425,19 @@ bool HasChildWhere<R>(LootPredicate<R> predicate, bool includeGlobalDrops = fals
 Determines if this `IItemDropRule` has a rule of type `R` below it on the loot tree, that matches the `LootPredicate<R>`. If `nthChild` is specified, the rule must be the `nthChild` of this rule.
 <br></br>
 
-### <P, C, R> Generic Overloads
+## <P, C, R> Generic Overloads
 All of the above methods have a `<P, C, R>` generic overload. These overloads are simply syntax sugar. What they are doing underneath is adding the following expression to the supplied `LootPredicate<R>`
 ```cs
 rule.HasParentRule() && rule.IsChained() && rule.ChainFromImmediateParent() is C && rule.ImmediateParentRule() is P
 ```
 
-### <N, R> Generic Overloads
+## <N, R> Generic Overloads
 All of the above methods have a `<N, R>` generic overload. These overloads are also syntax sugar. What they are doing underneath is adding the following expression to the supplied `LootPredicate<R>`
 ```cs
 rule.HasParentRule() && rule.IsNested() && rule.ImmediateParentRule() is N
 ```
 
-### When to Use Generic Overloads
+## When to Use Generic Overloads
 The `<P, C, R>` and `<N, R>` generic overloads are not really needed in most cases. In general, you will just use the `<R>` overload and don't need to narrow down the search based on what rule the current rule is Nested/Chained in. However there are situations where you would want to use them. Take this example (from within the same Plantera example)
 ![Collision Example](https://i.gyazo.com/3bf51d5c3fd08006c9734fb0edb6f911.png)
 In this example, we have a situation where there the same `CommonDrop` appears twice in the tree. Using the normal `<R>` overload would make it so that this drop is removed in both places.
