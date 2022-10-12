@@ -1,6 +1,6 @@
-# LootExtensions
+# LootExtensions Overview
 
-## Understanding ILoot and how LootExtensions helps modify it
+## Understanding the Loot Tree
 The main use case for LootExtensions stems from the fact that the `ILoot.RemoveWhere` method only targets surface level rules. Not only this, but the default procedures for finding child rules (considering we cannot use RemoveWhere for this) rely on hard-coding and create compatibility issues. To fully understand the
 drawbacks of `ILoot.RemoveWhere` and the default system, we must learn what 'surface level' or 'root rules' are, as well as learning what child rules are (both `nested` and `chained` children).
 
