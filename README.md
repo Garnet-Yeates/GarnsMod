@@ -304,9 +304,6 @@ public override void ModifyItemLoot(Item item, ItemLoot itemLoot)
     // Plug into a recursive method 
     itemLoot.FindRuleWhere<CommonDrop>(findSkullDrop);
 
-    // We don't even need the <CommonDrop> because it is inferred (since the predicate variable has <CommonDrop>)
-    itemLoot.FindRuleWhere(findSkullDrop);
-
     // These above examples are just to understand that LootPredicates are delegates and can be treated as variables
     // Normally we use shorthand lambda expressions and we inline them in the recursive methods, like below:
 
@@ -349,16 +346,16 @@ The following methods are used for recursive removing:
 
 ### ILoot Extensions
 ```cs
-bool RemoveWhere<R>(LootPredicate<R> predicate, bool includeGlobalDrops = false, int? nthChild = null, 
-    bool reattachChains = false, bool stopAtFirst = false);
+bool RemoveWhere<R>(LootPredicate<R> predicate, bool includeGlobalDrops = false, 
+    int? nthChild = null, bool reattachChains = false, bool stopAtFirst = false)
 ```
 This method will recursively dig through the `ILoot` and remove any rules of type `R` that match the given `LootPredicate<R>`. It searches through the root rules, their children (nested and chained), as well as their children, so on and so forth. For example you could do `npcLoot.RemoveWhere<CommonDrop>()` (note how there is no predicate, which defaults to a predicate that returns true no matter what), and it would remove ALL CommonDrops from the loot pool. If you did `npcLoot.RemoveWhere<CommonDrop>(stopAtFirst: true)` it would remove the first CommonDrop found within the loot pool. Returns true if any rules were removed
 <br></br>
 
 ### IItemDropRule Extensions
 ```cs
-bool RemoveChildrenWhere<R>(LootPredicate<R> predicate, bool includeGlobalDrops = false, int? nthChild = null, 
-    bool reattachChains = false, bool stopAtFirst = false);
+bool RemoveChildrenWhere<R>(LootPredicate<R> predicate, bool includeGlobalDrops = false, 
+    int? nthChild = null, bool reattachChains = false, bool stopAtFirst = false)
 ```
 This method will recursively dig through the children of this `IItemDropRule` and remove any rules of type `R` that match the given `LootPredicate<R>`. It searches through this rule's children (nested and chained), their children, as well as their children, so on and so forth. For example you could do `rule.RemoveWhere<CommonDrop>()` and it would remove ALL CommonDrops that descend from this CommonDrop. 
 <br></br>
@@ -372,25 +369,26 @@ The following extension methods are used for recursive finding:
 These can be called on any `ILoot`, such as `NPCLoot` or `ItemLoot`
 
 ```cs
-List<R> FindRulesWhere<R>(LootPredicate<R> predicate, bool includeGlobalDrops = false, int? nthChild = null);
+List<R> FindRulesWhere<R>(LootPredicate<R> predicate, bool includeGlobalDrops = false, int? nthChild = null)
 ```
 Finds all `IItemDropRules` of type `R` within the loot that match the `LootPredicate<R>`. If `nthChild` is supplied, it will only find rules that are the the `nthChild` of the loot (i.e if 1 is supplied for nthChild, it will only find root rules). Returns an empty `List<R>` if none are found.
 <br></br>
 
 ```CS
-R FindRuleWhere<R>(LootPredicate<R> predicate, bool includeGlobalDrops = false, int? nthChild = null);
+R FindRuleWhere<R>(LootPredicate<R> predicate, bool includeGlobalDrops = false, int? nthChild = null)
 ```
 Finds the first `IItemDropRule` of type `R` within the loot that matches the `LootPredicate<R>`. If `nthChild` is supplied, it will only return a rule that is the the `nthChild` of the loot. Returns `null` if no rule is found.
 <br></br>
 
 ```cs
-bool TryFindRuleWhere<R>(out R result, LootPredicate<R> predicate, bool includeGlobalDrops = false, int? nthChild = null);
+bool TryFindRuleWhere<R>(out R result, LootPredicate<R> predicate, bool includeGlobalDrops = false, 
+    int? nthChild = null)
 ```
 Tries to find the first `IItemDropRule` of type `R` within the loot that matches the `LootPredicate<R>`. If `nthChild` is supplied, it will only find a rule that is the the `nthChild` of the loot. Returns `false` if no rule is found. If a rule is found, then `result` `out` parameter is set to the found rule.
 <br></br>
 
 ```cs
-bool HasRuleWhere<R>(LootPredicate<R> predicate, bool includeGlobalDrops = false, int? nthChild = null);
+bool HasRuleWhere<R>(LootPredicate<R> predicate, bool includeGlobalDrops = false, int? nthChild = null)
 ```
 Determines if this `ILoot` has a rule of type `R` that matches the `LootPredicate<R>`. If `nthChild` is specified, the rule must be the `nthChild` of the `ILoot`.
 <br></br>
@@ -400,28 +398,28 @@ Determines if this `ILoot` has a rule of type `R` that matches the `LootPredicat
 These can be called on any `IItemDropRule`, such as `CommonDrop`, `OneFromOptionsDropRule`, `OneFromRulesRule`, etc
 
 ```cs
-List<R> FindChildrenWhere<R>(LootPredicate<R> predicate, bool includeGlobalDrops = false, ChainReplacer chainReplacer = null,
-    int? nthChild = null);
+List<R> FindChildrenWhere<R>(LootPredicate<R> predicate, bool includeGlobalDrops = false, 
+    ChainReplacer chainReplacer = null, int? nthChild = null)
 ```
 Finds all `IItemDropRules` of type `R` that are below this rule on the loot tree, that match the `LootPredicate<R>`. If `nthChild` is supplied, it will only find rules that are the the `nthChild` of this rule (i.e if 1 is supplied for nthChild, it will only find children directly under this rule). Returns an empty `List<R>` if none are found.
 <br></br>
 
 ```CS
-R FindChildWhere<R>(LootPredicate<R> predicate, bool includeGlobalDrops = false, ChainReplacer chainReplacer = null, 
-    int? nthChild = null);
+R FindChildWhere<R>(LootPredicate<R> predicate, bool includeGlobalDrops = false, 
+    ChainReplacer chainReplacer = null, int? nthChild = null)
 ```
 Finds the first `IItemDropRule` of type `R` below this rule on the loot tree, that matches the `LootPredicate<R>`. If `nthChild` is supplied, it will only return a rule that is the the `nthChild` of this rule. Returns `null` if no rule is found.
 <br></br>
 
 ```CS
 bool TryFindChildWhere<R>(out R result, LootPredicate<R> predicate, bool includeGlobalDrops = false, 
-    ChainReplacer chainReplacer = null, int? nthChild = null);
+    ChainReplacer chainReplacer = null, int? nthChild = null)
 ```  
 Tries to find the first `IItemDropRule` of type `R` below this rule on the loot tree, that matches the `LootPredicate<R>`. If `nthChild` is supplied, it will only find a rule that is the the `nthChild` of this rule. Returns `false` if no rule is found. If a rule is found, then `result` `out` parameter is set to the found rule.
 <br></br>
 
 ```CS
-bool HasChildWhere<R>(LootPredicate<R> predicate, bool includeGlobalDrops = false, int? nthChild = null);
+bool HasChildWhere<R>(LootPredicate<R> predicate, bool includeGlobalDrops = false, int? nthChild = null)
 ```
 Determines if this `IItemDropRule` has a rule of type `R` below it on the loot tree, that matches the `LootPredicate<R>`. If `nthChild` is specified, the rule must be the `nthChild` of this rule.
 <br></br>
