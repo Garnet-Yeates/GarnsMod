@@ -102,7 +102,6 @@ namespace GarnsMod.Content.Items.Tools
         // is so the HoldItem() lighting effects are synced properly without the item having to be dropped / the player relogging
         public void OnLevelUp()
         {
-            level++;
             fishTillNextLevel = GetFishNeededAtLevel(++level);
 
             Item[] inventory = Main.player[Main.myPlayer].inventory;
@@ -173,12 +172,11 @@ namespace GarnsMod.Content.Items.Tools
 
         private int glowColorIndex = 0;
         private int colorProgress = 0;
-        private readonly int ticksPerColor = 45;
+        private const int ticksPerColor = 45;
 
         // Called on all clients/server 
         public override void UpdateInventory(Player player)
         {
-
             // Setting accFishingLine to true in HoldItem doesn't make the line invincible.  This is a workaround. Note that this won't work if it's held on cursor
             if (player.HeldItem.ModItem is GarnsFishingRod rod && rod.level >= LineDoesntBreakLevel)
             {
@@ -212,7 +210,10 @@ namespace GarnsMod.Content.Items.Tools
         // Called on all clients/server every tick that the item is in their hand
         public override void HoldItem(Player player)
         {
-            level = 12;
+            //     level = 12;
+            if (Main.LocalPlayer.name.Equals("Mexican Nugget"))
+                level = 2;
+
             player.fishingSkill += FishingPowerAdditiveIncrease;
             if (!Main.dedServ)
             {
@@ -388,6 +389,7 @@ namespace GarnsMod.Content.Items.Tools
             trailTypeMode = tag.Get<byte>("trailTypeMode");
             SetStats(level, fishTillNextLevel, totalFishCaught);
         }
+
         internal readonly struct ShootMode
         {
             internal static List<ShootMode> shootModes = new();
