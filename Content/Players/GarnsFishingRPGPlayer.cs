@@ -39,7 +39,6 @@ namespace GarnsMod.Content.Players
             player.totalCratesCaught = totalCratesCaught;
         }
 
-
         // Called when players join. When someone joins, the server syncs the new player => server, then the server
         // syncs the new player => other players, then the server syncs the other players => new player
         // since usedFishingPermUpgrade1 and 2 are calculated deterministicly (all clients see it happen), no further syncing is
@@ -123,7 +122,7 @@ namespace GarnsMod.Content.Players
             public void SyncTotalCratesCaught(Player player, int totalCratesCaught)
             {
                 GarnsFishingRPGPlayer p = player.GetModPlayer<GarnsFishingRPGPlayer>();
-                p.totalFishCaught = totalCratesCaught;
+                p.totalCratesCaught = totalCratesCaught;
                 ServerRelay(() => Net<IRPGPlayerNetHandler>.Proxy.SyncTotalFishCaught(player, totalCratesCaught));
             }
         }
