@@ -14,5 +14,8 @@
     <Reference Include="KokoLib">
       <HintPath>..\..\ModReader\KokoLib\KokoLib.dll</HintPath>
     </Reference>
+    <Reference Include="LootLib">
+      <HintPath>..\..\ModReader\LootLib\LootLib.dll</HintPath>
+    </Reference>
   </ItemGroup>
 </Project>
