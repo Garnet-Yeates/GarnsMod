@@ -163,7 +163,7 @@ namespace GarnsMod.Content.Items.Weapons.Ranged
     // - Right clicking shoots stynger bolt
     //
     // It does some slightly advanced engine hacky-logic to control exactly which calls to ItemLoader.CanChooseAmmo are affected. This make it so that when ItemSlots are drawn,
-    // the displayed ammunition count shows [stynger bolt counts + bullet counts] instead of [bullet counts], with a weird [stynger bolt count] for one frame after a stynger bolt is shot
+    // the displayed ammunition count shows [stynger bolt counts + bullet counts], instead of [bullet counts] with a weird [stynger bolt count] for one frame after a stynger bolt is shot
     public class GarnGunHackyLogic : ModItem
     {
         public override string Texture => $"{nameof(GarnsMod)}/Content/Items/Weapons/Ranged/GarnGun";
@@ -211,7 +211,7 @@ namespace GarnsMod.Content.Items.Weapons.Ranged
         // This class does a lot of "engine dancing" if you will. CanChooseAmmo hooks are called in many different parts of the engine (One to display ammo counts, one to decide if item can be used (ItemCheck_CheckCanUse),
         // and one to pick the ammo that is actually shot (PickAmmo, inside ItemCheck_Shoot) as well as in many other places (seeing it a lot in Projectile.cs). We use withinShootLogic flag to figure out where we are
         // in the engine when these hooks are called. This allows us to make CanChooseAmmo behave differently based on where it is called (i.e for ammo counts: display combinations of ammos, for shooting/using item logic:
-        // restrict: to using one type of ammo / item based on alt function. Set to true at the beginning of ItemUse_CheckItemUse and will be set to false when Shoot() hook is called (or timeout if shoot hook is never called)
+        // restrict to using one type of ammo / item based on alt function. Set to true at the beginning of ItemUse_CheckItemUse and will be set to false when Shoot() hook is called (or timeout if shoot hook is never reached)
         // 'withinShootLogic' means that we are somewhere in ItemCheck_CheckCanUse or somewhere in ItemCheck_Shoot (ItemCheck_Shoot is procedurally called a bit after ItemCheck_CheckCanUse)
         private bool withinShootLogic;
 
