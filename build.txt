@@ -1,4 +1,4 @@
 displayName = Garn's Mod
 author = Garnet
 version = 0.1
-modReferences = KokoLib
+modReferences = LootLib, KokoLib
