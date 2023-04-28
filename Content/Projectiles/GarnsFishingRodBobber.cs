@@ -83,7 +83,7 @@ namespace GarnsMod.Content.Projectiles
                 if (CapturedItem)
                 {
                     Dust d = Dust.NewDustPerfect(Projectile.position + VanillaDrawOffset, DustID.RainbowTorch, new(0, 0), 0, FishingLineColor, 1f);
-                    d.noGravity = false;
+                    d.noGravity = true;
                 }
             }
 
