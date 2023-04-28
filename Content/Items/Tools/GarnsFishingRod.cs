@@ -210,10 +210,6 @@ namespace GarnsMod.Content.Items.Tools
         // Called on all clients/server every tick that the item is in their hand
         public override void HoldItem(Player player)
         {
-            //     level = 12;
-            if (Main.LocalPlayer.name.Equals("Mexican Nugget"))
-                level = 2;
-
             player.fishingSkill += FishingPowerAdditiveIncrease;
             if (!Main.dedServ)
             {
