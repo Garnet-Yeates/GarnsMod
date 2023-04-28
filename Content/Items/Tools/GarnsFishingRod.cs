@@ -137,7 +137,7 @@ namespace GarnsMod.Content.Items.Tools
         public static int GetFishNeededAtLevel(int level)
         {
             const float b = 450; // b is base amount of fish needed to be caught at level 1
-            const float p = 0.8f; // p being below 1 means it gets easier and easier to level up as you level up
+            const float p = 1.1f; // p being below 1 means it gets easier and easier to level up as you level up
             return (int)(b * Math.Pow(level, p));
 
             // https://www.desmos.com/calculator/xnhxbfvdcn
